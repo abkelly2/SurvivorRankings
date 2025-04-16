@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Light Your Torch - Survivor Rankings</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Trebuchet MS', Arial, sans-serif;
+        height: 100vh;
+        overflow: hidden;
+        background-image: url('./images/S44_Tribal_Council.webp');
+        background-size: 100%;
+        background-position: center 90%;
+        color: #fff;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+      }
+
+      .overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        padding-top: 5%;
+        align-items: center;
+        z-index: 1;
+      }
+
+      h1 {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        color: #ffcc00;
+        text-align: center;
+      }
+
+      p {
+        font-size: 1.5rem;
+        max-width: 600px;
+        text-align: center;
+        margin-bottom: 2rem;
+      }
+
+      #torch-container {
+        position: fixed;
+        bottom: 30%;
+        right: 15%;
+        width: 80px;
+        height: 160px;
+        z-index: 100;
+        cursor: grab;
+      }
+
+      /* Replace image-based torch with CSS-based torch */
+      .torch-handle {
+        width: 20px;
+        height: 100px;
+        background-color: #8B4513;
+        margin: 0 auto;
+        border-radius: 5px;
+        position: relative;
+      }
+
+      .torch-head {
+        width: 50px;
+        height: 50px;
+        background-color: #CD853F;
+        border-radius: 50% 50% 0 0;
+        position: absolute;
+        top: -30px;
+        left: 50%;
+        transform: translateX(-50%);
+        overflow: hidden;
+      }
+
+      .torch-flame {
+        display: none;
+        width: 40px;
+        height: 60px;
+        background: radial-gradient(ellipse at bottom, #FFD700, #FF8C00, #FF4500);
+        border-radius: 50% 50% 20% 20%;
+        position: absolute;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        animation: flameFlicker 0.5s infinite alternate;
+      }
+
+      @keyframes flameFlicker {
+        0% { height: 60px; opacity: 0.9; }
+        100% { height: 70px; opacity: 1; }
+      }
+
+      .torch-lit .torch-flame {
+        display: block;
+      }
+
+      .fire-pit {
+        width: 240px;
+        height: 200px;
+        background: radial-gradient(ellipse at center, 
+          rgba(255, 80, 0, 0.05) 0%, 
+          rgba(255, 120, 0, 0.03) 40%, 
+          rgba(255, 160, 0, 0.02) 70%, 
+          rgba(255, 200, 0, 0.01) 100%);
+        border-radius: 50% 50% 10% 10%;
+        position: absolute;
+        bottom: 15%;
+        left: 40%;
+        transform: translateX(-50%);
+        z-index: 2;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        animation: none;
+      }
+
+      .fire-pit:before {
+        content: "";
+        width: 160px;
+        height: 50px;
+        background-color: transparent;
+        border-radius: 40% 40% 5px 5px;
+        position: absolute;
+        bottom: -5px;
+        z-index: -1;
+      }
+
+      .instructions {
+        position: absolute;
+        bottom: 5%;
+        width: 100%;
+        text-align: center;
+        font-size: 1.2rem;
+        color: #ffcc00;
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes flicker {
+        0% { opacity: 0.8; }
+        100% { opacity: 1; }
+      }
+
+      @keyframes pulse {
+        0% { opacity: 0.7; }
+        50% { opacity: 1; }
+        100% { opacity: 0.7; }
+      }
+
+      @keyframes fadeOut {
+        from { opacity: 1; }
+        to { opacity: 0; }
+      }
+
+      .fading-out {
+        animation: fadeOut 3s forwards;
+      }
+      
+      .torch-lit {
+        filter: drop-shadow(0 0 10px rgba(255, 200, 0, 0.8));
+      }
+      
+      .center-animation {
+        transition: all 1.5s ease-in-out;
+        position: fixed !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        z-index: 200 !important;
+      }
+      
+      .center-message {
+        position: fixed;
+        top: 60%;
+        left: 0;
+        width: 100%;
+        text-align: center;
+        color: #ffcc00;
+        font-size: 1.8rem;
+        opacity: 0;
+        transition: opacity 1s ease-in;
+        text-shadow: 0 0 10px rgba(255, 200, 0, 0.5);
+        z-index: 201;
+      }
+      
+      .center-message.visible {
+        opacity: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="overlay">
+      <h1>Welcome to Survivor Rankings</h1>
+      <p>The tribe has spoken. It's time to make your voice heard in ranking your favorite Survivor contestants!</p>
+    </div>
+    
+    <div class="instructions">Click and hold your torch, then drag it to the fire to light it</div>
+    
+    <div id="torch-container">
+      <!-- CSS-based torch instead of image -->
+      <div class="torch-handle">
+        <div class="torch-head">
+          <div class="torch-flame"></div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="fire-pit" id="fire-pit"></div>
+
+    <script>
+      const torchContainer = document.getElementById('torch-container');
+      const firePit = document.getElementById('fire-pit');
+      const overlay = document.querySelector('.overlay');
+      
+      let isDragging = false;
+      let offsetX, offsetY;
+      
+      // Touch event handlers
+      torchContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
+      document.addEventListener('touchmove', handleTouchMove, { passive: false });
+      document.addEventListener('touchend', handleTouchEnd);
+      
+      // Mouse event handlers
+      torchContainer.addEventListener('mousedown', handleMouseDown);
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      
+      function handleTouchStart(e) {
+        e.preventDefault();
+        const touch = e.touches[0];
+        startDrag(touch.clientX, touch.clientY);
+      }
+      
+      function handleMouseDown(e) {
+        startDrag(e.clientX, e.clientY);
+      }
+      
+      function startDrag(clientX, clientY) {
+        isDragging = true;
+        torchContainer.style.cursor = 'grabbing';
+        
+        const torchRect = torchContainer.getBoundingClientRect();
+        offsetX = clientX - torchRect.left;
+        offsetY = clientY - torchRect.top;
+      }
+      
+      function handleTouchMove(e) {
+        if (!isDragging) return;
+        e.preventDefault();
+        
+        const touch = e.touches[0];
+        moveTorch(touch.clientX, touch.clientY);
+      }
+      
+      function handleMouseMove(e) {
+        if (!isDragging) return;
+        moveTorch(e.clientX, e.clientY);
+      }
+      
+      function moveTorch(clientX, clientY) {
+        // Convert position from fixed to absolute
+        torchContainer.style.position = 'absolute';
+        
+        // Update position
+        torchContainer.style.left = (clientX - offsetX) + 'px';
+        torchContainer.style.top = (clientY - offsetY) + 'px';
+        
+        // Remove bottom and right positioning that could conflict
+        torchContainer.style.bottom = '';
+        torchContainer.style.right = '';
+        
+        // Add a slight rotation effect based on movement
+        const rotationAngle = Math.sin((clientX / window.innerWidth) * Math.PI) * 15;
+        torchContainer.style.transform = `rotate(${rotationAngle}deg)`;
+        
+        // Check if torch is over fire pit
+        const torchRect = torchContainer.getBoundingClientRect();
+        const fireRect = firePit.getBoundingClientRect();
+        
+        if (isOverlapping(torchRect, fireRect)) {
+          lightTorchAnimation();
+        }
+      }
+      
+      function handleTouchEnd() {
+        endDrag();
+      }
+      
+      function handleMouseUp() {
+        endDrag();
+      }
+      
+      function endDrag() {
+        isDragging = false;
+        torchContainer.style.cursor = 'grab';
+      }
+      
+      function isOverlapping(rect1, rect2) {
+        return !(
+          rect1.right < rect2.left || 
+          rect1.left > rect2.right || 
+          rect1.bottom < rect2.top || 
+          rect1.top > rect2.bottom
+        );
+      }
+      
+      function lightTorchAnimation() {
+        // Add animation classes
+        torchContainer.classList.add('torch-lit', 'center-animation');
+        
+        // Create and show center message
+        const centerMessage = document.createElement('div');
+        centerMessage.className = 'center-message';
+        centerMessage.textContent = 'Your torch has been lit! The game begins...';
+        document.body.appendChild(centerMessage);
+        
+        // Make message visible with small delay
+        setTimeout(() => {
+          centerMessage.classList.add('visible');
+        }, 1000);
+        
+        // Fade out overlay and instructions
+        document.querySelector('.overlay').classList.add('fading-out');
+        document.querySelector('.instructions').classList.add('fading-out');
+        firePit.classList.add('fading-out');
+        
+        // Start flame animation
+        const flame = torchContainer.querySelector('.torch-flame');
+        flame.style.display = 'block';
+        
+        // Redirect after animation (5 seconds)
+        setTimeout(() => {
+          // Using pathname ensures this works in any environment
+          const redirectPath = window.location.pathname.includes('torch.html') ? 
+            '/' : 
+            '/?torch=true';
+          
+          window.location.href = redirectPath;
+        }, 5000);
+      }
+    </script>
+  </body>
+</html> 

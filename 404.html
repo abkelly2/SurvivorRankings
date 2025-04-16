@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Redirecting...</title>
+    <script>
+      // Save the attempted URL to sessionStorage
+      sessionStorage.setItem('redirectPath', window.location.pathname + window.location.search);
+      
+      // Redirect to the main page
+      const segmentCount = 1; // Adjust based on your GitHub Pages setup
+      const location = window.location;
+      const redirect = location.protocol + '//' + location.hostname + 
+                      (location.port ? ':' + location.port : '') +
+                      location.pathname.split('/').slice(0, 1 + segmentCount).join('/') + 
+                      '/index.html';
+      window.location.replace(redirect);
+    </script>
+    <style>
+      body {
+        background-color: #222;
+        color: #fff;
+        font-family: Arial, sans-serif;
+        text-align: center;
+        padding-top: 100px;
+      }
+      h1 {
+        color: #ffcc00;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Redirecting...</h2>
+    <p>If you are not redirected automatically, please click <a href="index.html">here</a>.</p>
+  </body>
+</html>

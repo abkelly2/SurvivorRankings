@@ -1,0 +1,3 @@
+This directory will contain contestant images.
+For now, you can use placeholder images or add your own contestant images here.
+Each image should be named according to the pattern in the survivorData.js file. 

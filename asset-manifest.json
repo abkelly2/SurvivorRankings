@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/SurvivorRankings/static/css/main.1c28d594.css",
+    "main.js": "/SurvivorRankings/static/js/main.02428c88.js",
+    "static/media/survivor-background.jpg": "/SurvivorRankings/static/media/survivor-background.59581a1053fda5fdcbca.jpg",
+    "static/media/survivant.ttf": "/SurvivorRankings/static/media/survivant.3190e12296566d229896.ttf",
+    "index.html": "/SurvivorRankings/index.html",
+    "main.1c28d594.css.map": "/SurvivorRankings/static/css/main.1c28d594.css.map",
+    "main.02428c88.js.map": "/SurvivorRankings/static/js/main.02428c88.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.1c28d594.css",
+    "static/js/main.02428c88.js"
+  ]
+}
