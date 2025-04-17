@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="Survivor Rankings - Rank your favorite Survivor contestants"
+    />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <title>Survivor Rankings</title>
+    <script>
+      // Check if this is the user's first visit
+      if (!localStorage.getItem('survivorVisited')) {
+        // Set the flag for future visits
+        localStorage.setItem('survivorVisited', 'true');
+        // Redirect to torch lighting intro page
+        window.location.href = 'torch.html';
+      }
+    </script>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+    
+    <!-- Hidden audio element with lower volume -->
+    <audio id="themeMusic" loop>
+      <source src="./sounds/survivor-theme.mp3" type="audio/mpeg">
+    </audio>
+    
+    <script>
+      // Wait for document to be fully loaded
+      document.addEventListener('DOMContentLoaded', function() {
+        const themeMusic = document.getElementById('themeMusic');
+        
+        // Set volume to a lower level (0.2 = 20% volume)
+        themeMusic.volume = 0.008;
+        
+        // Try to autoplay at page load
+        const playPromise = themeMusic.play();
+          
+        if (playPromise !== undefined) {
+          playPromise.catch(error => {
+            // Autoplay was prevented by browser policy (common in many browsers)
+            console.log("Autoplay prevented by browser policy:", error);
+            
+            // Add an invisible one-time click handler to the document to enable audio
+            // This is required because most browsers require user interaction before playing audio
+            const unlockAudio = function() {
+              themeMusic.play().catch(e => console.log("Still couldn't play audio:", e));
+              document.removeEventListener('click', unlockAudio);
+            };
+            
+            document.addEventListener('click', unlockAudio);
+          });
+        }
+      });
+    </script>
+  </body>
+</html> 

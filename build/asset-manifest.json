@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/static/css/main.52e59df4.css",
+    "main.js": "/static/js/main.61e3bfae.js",
+    "static/media/survivor-background.jpg": "/static/media/survivor-background.59581a1053fda5fdcbca.jpg",
+    "static/media/survivant.ttf": "/static/media/survivant.3190e12296566d229896.ttf",
+    "index.html": "/index.html",
+    "main.52e59df4.css.map": "/static/css/main.52e59df4.css.map",
+    "main.61e3bfae.js.map": "/static/js/main.61e3bfae.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.52e59df4.css",
+    "static/js/main.61e3bfae.js"
+  ]
+}

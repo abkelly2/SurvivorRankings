@@ -1,0 +1,866 @@
+.user-list-creator {
+  background-color: rgba(0, 0, 0, 0.6);
+  border-radius: 10px;
+  padding: 20px;
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 204, 0, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.list-details {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.list-name-input {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.list-name-input label {
+  color: #ffcc00;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.list-name-input input {
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 204, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.3);
+  color: white;
+  font-size: 1rem;
+}
+
+.list-name-input input:focus {
+  outline: none;
+  border-color: #ffcc00;
+  box-shadow: 0 0 5px rgba(255, 204, 0, 0.5);
+}
+
+.list-tags {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.list-tags label {
+  color: #ffcc00;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.spoiler-tip {
+  background-color: rgba(255, 204, 0, 0.1);
+  border: 1px solid rgba(255, 204, 0, 0.3);
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tip-icon {
+  font-size: 1.2rem;
+}
+
+.tip-text {
+  color: #e0e0e0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tag-button {
+  padding: 8px 14px;
+  border-radius: 20px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.85rem;
+}
+
+.tag-button:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.tag-button.active {
+  background-color: rgba(255, 204, 0, 0.3);
+  border-color: #ffcc00;
+  color: #ffcc00;
+}
+
+.user-ranking-container {
+  margin-bottom: 20px;
+}
+
+.user-ranking-container h3 {
+  color: #ffcc00;
+  margin-bottom: 5px;
+  font-size: 1.1rem;
+  font-family: 'Survivant', sans-serif;
+}
+
+.instructions {
+  color: #ddd;
+  font-size: 0.9rem;
+  margin-bottom: 15px;
+  font-style: italic;
+}
+
+.user-ranking-list {
+  background-color: rgba(30, 30, 30, 0.6);
+  border: 2px dashed rgba(255, 204, 0, 0.3);
+  border-radius: 8px;
+  padding: 15px;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all 0.2s ease;
+  align-items: flex-start;
+}
+
+.user-ranking-list.drag-over {
+  background-color: rgba(40, 40, 40, 0.8);
+  border: 2px dashed #ffcc00;
+  box-shadow: 0 0 10px rgba(255, 204, 0, 0.3);
+}
+
+.empty-list-message {
+  color: #aaa;
+  font-style: italic;
+  text-align: center;
+  padding: 50px 0;
+  width: 100%;
+  position: relative;
+}
+
+.user-ranking-list .ranking-item {
+  display: flex;
+  align-items: center;
+  background-color: #fff;
+  padding: 10px 15px;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  cursor: grab;
+  transition: all 0.2s ease;
+  position: relative;
+  padding-left: 30px;
+  width: 70%;
+  max-width: 600px;
+  min-width: 400px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-wrap: nowrap;
+}
+
+.user-ranking-list .ranking-item:hover {
+  background-color: #f9f9f9;
+  transform: translateY(-2px);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+}
+
+.ranking-item.dragging-item {
+  opacity: 0.6;
+  background-color: #f0f0f0;
+  transform: scale(0.98);
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+}
+
+.ranking-item::before {
+  content: "⋮⋮";
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #bbbbbb;
+  font-size: 12px;
+  opacity: 0.3;
+  cursor: grab;
+}
+
+.ranking-number {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: #000;
+  color: #ffcc00;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.9rem;
+  margin-right: 15px;
+  flex-shrink: 0;
+}
+
+.ranking-item .contestant-image {
+  width: 85px;
+  height: 85px;
+  object-fit: contain;
+  border-radius: 0;
+  margin-right: 15px;
+  flex-shrink: 0;
+}
+
+.ranking-item .contestant-image.season-logo {
+  object-fit: contain;
+  background-color: #000;
+  padding: 5px;
+  border-radius: 0;
+}
+
+/* Specific styling for season logos in the user creator list */
+.user-ranking-list .ranking-item .contestant-image.season-logo {
+  background-color: #000;
+  padding: 5px;
+  border-radius: 0;
+  width: 85px;
+  height: 85px;
+  object-fit: contain;
+  margin-right: 15px;
+}
+
+.ranking-item .contestant-name,
+.ranking-item .season-name {
+  font-size: 1.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: calc(100% - 100px); /* Give room for other elements */
+  white-space: nowrap; /* Keep text on one line with ellipsis */
+  min-width: 0; /* Allow flex item to shrink below content size */
+  flex-grow: 1;
+  color: #333;
+}
+
+.ranking-item .contestant-name {
+  font-weight: 600;
+}
+
+.ranking-item .season-name {
+  font-family: 'Survivant', sans-serif !important;
+  font-size: 1.5em !important;
+  color: #000 !important;
+  text-align: center;
+  font-weight: 600;
+  line-height: 1.2;
+  text-shadow: none;
+  padding: 0;
+  margin-top: 0;
+}
+
+.user-ranking-list .ranking-item .season-name {
+  font-family: 'Survivant', sans-serif !important;
+  font-size: 1.2em !important;
+  color: #000 !important;
+  text-align: left;
+  margin-left: 5px;
+}
+
+.list-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  max-width: 450px;
+  justify-content: center;
+}
+
+.save-list-button {
+  padding: 8px 15px;
+}
+
+.cancel-button {
+  padding: 12px 24px;
+  background: transparent;
+  color: #f5f5f5;
+  border: 1px solid #f5f5f5;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex: 1;
+}
+
+.cancel-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: #ffcc00;
+  color: #ffcc00;
+}
+
+.clear-button {
+  padding: 12px 24px;
+  background: transparent;
+  color: #f5f5f5;
+  border: 1px solid #ff6b6b;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex: 1;
+}
+
+.clear-button:hover {
+  background: rgba(255, 107, 107, 0.1);
+  border-color: #ff6b6b;
+  color: #ff6b6b;
+  box-shadow: 0 2px 4px rgba(255, 107, 107, 0.2);
+}
+
+.error-message {
+  color: #ff6b6b;
+  font-size: 0.9rem;
+  text-align: center;
+  background-color: rgba(255, 0, 0, 0.1);
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 0, 0, 0.3);
+  width: 100%;
+}
+
+.success-message {
+  color: #66bb6a;
+  font-size: 0.9rem;
+  text-align: center;
+  background-color: rgba(0, 255, 0, 0.1);
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 255, 0, 0.3);
+  width: 100%;
+}
+
+.remove-contestant-button {
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 1.2rem;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin-left: 8px;
+  transition: all 0.2s ease;
+  border-radius: 50%;
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+.remove-contestant-button:hover {
+  background-color: rgba(255, 0, 0, 0.1);
+  color: #ff5252;
+  opacity: 1;
+}
+
+.ranking-item:hover .remove-contestant-button {
+  opacity: 0.8;
+}
+
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+  /* Center the entire layout by adjusting margin */
+  body {
+    box-sizing: border-box;
+    margin: 0 auto;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+  
+  /* App container */
+  #root, .App {
+    width: 100%; 
+    max-width: 100%;
+    overflow-x: hidden;
+    margin: 0 auto;
+    box-sizing: border-box;
+  }
+  
+  .main-content-area {
+    margin: 0 auto;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
+  }
+  
+  .user-list-creator {
+    padding: 15px 10px;
+    margin: 0 auto; /* Center the container */
+    width: 96%; /* Make slightly less than 100% to center it */
+    max-width: 96%;
+    overflow-x: hidden; /* Prevent horizontal scrolling */
+    position: relative;
+    left: -2%; /* Shift slightly left to center better */
+  }
+  
+  .list-details {
+    padding: 0 5px; /* Reduce padding to move content left */
+    width: 95%; /* Slightly narrower to center it */
+    margin: 0 auto; /* Center the container */
+  }
+  
+  .list-name-input,
+  .list-description-input,
+  .spoiler-tip,
+  .list-tags {
+    width: 100%;
+    margin: 0 auto;
+  }
+  
+  /* Center tags */
+  .tags-container {
+    justify-content: center;
+  }
+  
+  .tag-button {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+  
+  .user-ranking-container {
+    width: 96%;
+    margin: 0 auto 20px;
+    text-align: center; /* Center the title and instructions */
+    display: flex;
+    flex-direction: column;
+    padding: 8px 0;
+  }
+  
+  .user-ranking-container h3,
+  .instructions {
+    text-align: center;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+  }
+  
+  .user-ranking-list {
+    position: relative;
+    width: 96%;
+    margin: 0 auto;
+    box-sizing: border-box;
+    padding: 10px 5px; /* Reduced padding to center content */
+    overflow-x: hidden; /* Prevent horizontal scrolling */
+    align-items: center; /* Center the ranking items */
+  }
+  
+  /* Mobile-specific styles for empty list message */
+  .empty-list-message {
+    position: relative;
+    padding-bottom: 70px; /* Make room for the tap indicator */
+    font-size: 14px;
+    padding: 15px 10px;
+    text-align: center;
+    width: 100%;
+  }
+  
+  /* Add an indicator on mobile to show the list is clickable */
+  body[data-page="create"] .empty-list-message::after {
+    content: "Tap to show contestants";
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(255, 204, 0, 0.3);
+    color: #ffcc00;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  
+  /* Remove the previous indicator styling */
+  .user-ranking-list:empty::after,
+  .user-ranking-list .empty-list-message::after {
+    display: none;
+  }
+  
+  .user-ranking-list .ranking-item {
+    width: 96%;
+    min-width: 0; /* Override desktop min-width */
+    max-width: 96%;
+    margin: 0 auto 10px;
+    box-sizing: border-box;
+    padding: 8px 10px 8px 25px; /* Smaller padding */
+    overflow: hidden;
+    white-space: normal; /* Allow text wrapping within the container */
+    flex-wrap: nowrap; /* Keep all elements on one line */
+  }
+  
+  .ranking-item .contestant-image,
+  .ranking-item .contestant-image.season-logo {
+    width: 50px;
+    height: 50px;
+    min-width: 50px; /* Prevent shrinking */
+    margin-right: 6px; /* Even less margin to save space */
+  }
+  
+  .ranking-number {
+    width: 22px;
+    height: 22px;
+    font-size: 0.85rem;
+    min-width: 22px;
+    margin-right: 6px; /* Less margin */
+  }
+  
+  .ranking-item .contestant-name {
+    font-size: 0.85rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: calc(100% - 100px); /* Give room for other elements */
+    white-space: nowrap; /* Keep text on one line with ellipsis */
+    min-width: 0; /* Allow flex item to shrink below content size */
+  }
+  
+  .ranking-item .season-name {
+    font-family: 'Survivant', sans-serif !important;
+    font-size: 1.1em !important; /* Slightly smaller on mobile */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: calc(100% - 100px); /* Give room for other elements */
+    white-space: nowrap; /* Keep text on one line with ellipsis */
+    min-width: 0; /* Allow flex item to shrink below content size */
+    text-align: left;
+  }
+  
+  /* Ensure the remove button is visible and usable */
+  .remove-contestant-button {
+    margin-left: 4px;
+    min-width: 20px;
+    width: 20px;
+    height: 20px;
+    font-size: 1rem;
+    flex-shrink: 0; /* Prevent button from shrinking */
+    position: relative; /* Ensure it stays in the flow */
+    right: 0; /* Keep it at the right end */
+  }
+  
+  /* Add a hint for empty lists on mobile */
+  .empty-list-message:after {
+    content: "Tap here to show contestants";
+    display: block;
+    font-size: 12px;
+    margin-top: 5px;
+    opacity: 0.7;
+  }
+  
+  /* Fix action buttons to bottom on mobile */
+  .list-actions {
+    width: 96%;
+    margin: 0 auto;
+  }
+  
+  .action-buttons {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to bottom, #333, #222);
+    padding: 15px 10px;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.2);
+    z-index: 100;
+    display: flex;
+    justify-content: space-around;
+    width: 100%;
+    margin: 0 auto;
+    border-top: 2px solid #ffcc00;
+  }
+  
+  .action-buttons button {
+    min-width: 30%;
+    padding: 12px 15px;
+    font-size: 16px;
+    font-weight: bold;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    margin: 0 5px;
+    border-radius: 6px;
+  }
+  
+  .save-list-button {
+    background: linear-gradient(to bottom, #4CAF50, #45a049);
+    color: white;
+    border: 1px solid #2e7d32;
+  }
+  
+  .clear-button {
+    background: linear-gradient(to bottom, #f44336, #e53935);
+    color: white;
+    border: 1px solid #c62828;
+  }
+  
+  .cancel-button {
+    background: linear-gradient(to bottom, #607D8B, #546E7A);
+    color: white;
+    border: 1px solid #455A64;
+  }
+  
+  /* Ensure there's space at the bottom for the fixed buttons */
+  .user-list-creator {
+    padding-bottom: 70px;
+  }
+  
+  /* Make drag handle more visible */
+  .ranking-item::before {
+    font-size: 16px;
+    opacity: 0.8;
+    left: 8px;
+  }
+  
+  /* Ensure all elements stay within bounds */
+  * {
+    max-width: 100vw;
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 480px) {
+  .user-ranking-list .ranking-item {
+    width: 95%;
+    padding: 6px 8px;
+    padding-left: 20px;
+  }
+  
+  .ranking-item .contestant-image,
+  .user-ranking-list .ranking-item .contestant-image.season-logo {
+    width: 50px;
+    height: 50px;
+    margin-right: 8px;
+  }
+  
+  .ranking-item::before {
+    left: 6px;
+    font-size: 10px;
+  }
+  
+  .ranking-number {
+    width: 20px;
+    height: 20px;
+    font-size: 0.7rem;
+    margin-right: 8px;
+  }
+  
+  .ranking-item .contestant-name {
+    font-size: 0.85em;
+    max-width: calc(100% - 95px); /* Give even more room for other elements */
+  }
+  
+  .ranking-item .season-name {
+    font-family: 'Survivant', sans-serif !important;
+    font-size: 1em !important; /* Even smaller on tiny screens */
+    max-width: calc(100% - 95px); /* Give even more room for other elements */
+  }
+  
+  .user-ranking-list .ranking-item .season-name {
+    font-size: 1em !important;
+  }
+}
+
+.list-description-input {
+  margin-bottom: 15px;
+  width: 100%;
+}
+
+.list-description-input label {
+  display: block;
+  margin-bottom: 5px;
+  color: #ffcc00;
+  font-weight: 500;
+}
+
+.list-description-input textarea {
+  width: 100%;
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid #555;
+  background-color: rgba(0, 0, 0, 0.2);
+  color: #fff;
+  font-size: 0.9rem;
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+}
+
+.list-description-input textarea:focus {
+  outline: none;
+  border-color: #ffcc00;
+  box-shadow: 0 0 0 2px rgba(255, 204, 0, 0.3);
+}
+
+/* Styles for touch dragging on mobile */
+.ranking-item.touch-active {
+  background-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border-color: #ccc;
+  transform: scale(1.01);
+  transition: all 0.15s ease;
+}
+
+.ranking-item.touch-dragging {
+  background-color: #f9f9f9;
+  border: 2px solid #ffcc00;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  opacity: 0.9;
+  z-index: 100;
+  position: relative;
+  transition: none; /* Disable transitions while dragging for smoother movement */
+  touch-action: none; /* Disable browser handling of gestures */
+}
+
+/* Add haptic feedback visual cue */
+@keyframes touch-feedback {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+
+.ranking-item.touch-dragging::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 204, 0, 0.1);
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+/* Better touch handling for mobile */
+@media (max-width: 768px) {
+  /* Make sure list items are easier to grab */
+  .user-ranking-list .ranking-item {
+    touch-action: none; /* Disable browser handling of all touch gestures */
+    user-select: none; /* Prevent text selection during touch */
+    -webkit-user-select: none;
+    max-width: none;
+    min-width: 0;
+    width: 100%;
+    cursor: pointer;
+  }
+  
+  /* Make the drag handle more visible on mobile */
+  .ranking-item::before {
+    font-size: 16px;
+    opacity: 0.8;
+    left: 8px;
+  }
+  
+  /* Add visual indicator for touch dragging */
+  .user-ranking-list.touch-active {
+    background-color: rgba(40, 40, 40, 0.8);
+    border: 2px dashed #ffcc00;
+  }
+  
+  .ranking-item.touch-active {
+    background-color: rgba(250, 250, 250, 0.95);
+    transform: scale(1.02);
+    border-color: #ddd;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+  
+  .ranking-item.touch-dragging {
+    background-color: rgba(255, 255, 255, 0.95);
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+    border: 2px solid #ffcc00;
+    z-index: 1000;
+  }
+
+  /* Add haptic feedback visual indicator */
+  @keyframes pulse-feedback {
+    0% { box-shadow: 0 0 0 rgba(255, 204, 0, 0.2); }
+    50% { box-shadow: 0 0 8px rgba(255, 204, 0, 0.6); }
+    100% { box-shadow: 0 0 0 rgba(255, 204, 0, 0.2); }
+  }
+  
+  .ranking-item.touch-active {
+    animation: pulse-feedback 0.5s infinite;
+  }
+}
+
+/* Ensure the root container doesn't cause horizontal scrolling */
+.App {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+.main-content {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Adjust the drag handle to be more visible and touchable on mobile */
+@media (max-width: 768px) {
+  /* Adjust the icon button sizes for easier tapping */
+  .drag-handle {
+    cursor: grab;
+    opacity: 0.7;
+    font-size: 16px;
+    padding: 4px;
+    margin-right: 6px;
+    touch-action: none;
+  }
+  
+  /* Ensure content container fits properly */
+  .content-container {
+    width: 100%;
+    max-width: 100%;
+    padding: 10px;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+  
+  /* Adjust the dropdown menu position so it doesn't cause overflow */
+  .search-dropdown-container {
+    position: absolute;
+    z-index: 100;
+    width: calc(100% - 20px); /* Account for container padding */
+    max-height: 300px;
+    overflow-y: auto;
+    left: 10px;
+    right: 10px;
+  }
+  
+  .contestant-item, .contestant-details, .season-details {
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+    white-space: normal;
+  }
+  
+  /* Make touch targets larger */
+  input[type="text"], 
+  button,
+  .ranking-item,
+  .contestant-item,
+  .drag-handle {
+    min-height: 44px; /* Apple's recommended minimum size for touch targets */
+  }
+} 
+ 
+ 
+ 

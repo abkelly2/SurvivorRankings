@@ -1,0 +1,216 @@
+.list-view {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+  color: #333;
+}
+
+.list-view-header {
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  border-left: 3px solid #333;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.list-view-header h2 {
+  color: #333;
+  margin: 0 0 15px 0;
+  font-size: 1.8rem;
+  text-align: center;
+  font-family: 'Survivant', sans-serif;
+}
+
+.list-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 15px;
+}
+
+.list-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.list-tag {
+  background-color: #f0f0f0;
+  color: #333;
+  padding: 3px 10px;
+  border-radius: 15px;
+  font-size: 0.85rem;
+  border: 1px solid #ddd;
+}
+
+.back-button {
+  background-color: #f5f5f5;
+  color: #333;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 8px 15px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-bottom: 20px;
+  transition: all 0.2s;
+  font-family: 'Survivant', sans-serif;
+}
+
+.back-button:hover {
+  background-color: #e0e0e0;
+}
+
+.full-list {
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.full-list h3 {
+  color: #333;
+  margin-top: 0;
+  margin-bottom: 20px;
+  text-align: center;
+  font-size: 1.3rem;
+  font-family: 'Survivant', sans-serif;
+}
+
+.contestants-list {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+  background-color: white;
+  border-radius: 4px;
+  padding: 8px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 2px dashed #ccc;
+}
+
+.list-contestant-item {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  margin-bottom: 8px;
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s;
+  position: relative;
+  min-height: 80px;
+}
+
+.list-contestant-item:hover {
+  background-color: #f9f9f9;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.contestant-rank {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #ffffff;
+  color: #000000;
+  border-radius: 50%;
+  font-weight: bold;
+  margin-right: 8px;
+  font-size: 12px;
+  flex-shrink: 0;
+  border: 1px solid #dddddd;
+}
+
+.contestant-image {
+  width: 90px;
+  height: 90px;
+  border-radius: 0;
+  object-fit: contain;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.contestant-name {
+  font-weight: 600;
+  color: #000000 !important;
+  font-size: clamp(12px, 1.2vw, 20px);
+  flex-grow: 1;
+  font-family: 'Survivant', sans-serif;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  min-width: 0;
+  text-overflow: initial;
+  overflow: visible;
+  line-height: 1.2;
+  hyphens: auto;
+}
+
+.empty-message {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100px;
+  color: #999;
+  font-style: italic;
+  text-align: center;
+  padding: 0 20px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1100px) {
+  .contestant-image {
+    width: 75px;
+    height: 75px;
+    margin-right: 6px;
+  }
+  
+  .list-contestant-item {
+    min-height: 85px;
+    padding: 6px;
+  }
+  
+  .contestant-rank {
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
+    margin-right: 6px;
+  }
+}
+
+@media (max-width: 880px) {
+  .contestant-image {
+    width: 60px;
+    height: 60px;
+    margin-right: 5px;
+  }
+  
+  .list-contestant-item {
+    min-height: 70px;
+    padding: 5px;
+  }
+}
+
+@media (max-width: 600px) {
+  .list-meta {
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .contestant-image {
+    width: 50px;
+    height: 50px;
+    margin-right: 5px;
+  }
+  
+  .list-contestant-item {
+    min-height: 60px;
+    padding: 5px;
+  }
+} 

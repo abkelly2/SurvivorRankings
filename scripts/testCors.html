@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Firebase Storage CORS Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .image-container {
+      margin-top: 20px;
+    }
+    img {
+      max-width: 100%;
+      height: auto;
+      border: 1px solid #ddd;
+    }
+    .error {
+      color: red;
+      margin-top: 10px;
+    }
+    .success {
+      color: green;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Firebase Storage CORS Test</h1>
+  <p>This page tests if CORS is properly configured for your Firebase Storage bucket.</p>
+  
+  <div class="image-container">
+    <h2>Test Image 1: Using Firebase SDK</h2>
+    <img id="image1" src="" alt="Test Image 1" onerror="handleImageError(this, 'image1')">
+    <div id="status1"></div>
+  </div>
+  
+  <div class="image-container">
+    <h2>Test Image 2: Using Direct URL</h2>
+    <img id="image2" src="" alt="Test Image 2" onerror="handleImageError(this, 'image2')">
+    <div id="status2"></div>
+  </div>
+  
+  <script type="module">
+    // Import Firebase
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getStorage, ref, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+    
+    // Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyBBgnuqzrprlrjoXOdtQUVQxqmjIn41fSw",
+      authDomain: "survivorranks-ee419.firebaseapp.com",
+      projectId: "survivorranks-ee419",
+      storageBucket: "survivorranks-ee419.appspot.com",
+      messagingSenderId: "287417667596",
+      appId: "1:287417667596:web:d32b706f03baf878795e29",
+      measurementId: "G-XTHMW1YS7Z"
+    };
+    
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const storage = getStorage(app);
+    
+    // Test image path
+    const imagePath = 'Headshots/Season 1/S1_richard_t.webp';
+    
+    // Test 1: Using Firebase SDK
+    async function testFirebaseSDK() {
+      try {
+        const imageRef = ref(storage, imagePath);
+        const url = await getDownloadURL(imageRef);
+        document.getElementById('image1').src = url;
+        document.getElementById('status1').innerHTML = '<p class="success">Success! Firebase SDK can access the image.</p>';
+        console.log('Firebase SDK URL:', url);
+      } catch (error) {
+        document.getElementById('status1').innerHTML = `<p class="error">Error: ${error.message}</p>`;
+        console.error('Firebase SDK Error:', error);
+      }
+    }
+    
+    // Test 2: Using Direct URL
+    function testDirectURL() {
+      const directUrl = `https://firebasestorage.googleapis.com/v0/b/survivorranks-ee419.appspot.com/o/${encodeURIComponent(imagePath)}?alt=media`;
+      document.getElementById('image2').src = directUrl;
+      console.log('Direct URL:', directUrl);
+    }
+    
+    // Run tests
+    testFirebaseSDK();
+    testDirectURL();
+    
+    // Handle image load errors
+    window.handleImageError = function(img, id) {
+      document.getElementById(`status${id.slice(-1)}`).innerHTML = '<p class="error">Error: Failed to load image. CORS might not be properly configured.</p>';
+      console.error(`Error loading image ${id}`);
+    };
+  </script>
+</body>
+</html> 
