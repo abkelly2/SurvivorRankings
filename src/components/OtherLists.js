@@ -442,35 +442,91 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
     window.scrollTo(0, 0);
   };
   
-  // Load images for the selected list when it changes
+  // Add new useEffect for loading preview images
   useEffect(() => {
-    const loadImages = async () => {
+    const loadPreviewImages = async () => {
+      if (!sortedLists || sortedLists.length === 0) return;
+      
+      const newImageUrls = { ...contestantImageUrls };
+      let hasNewImages = false;
+      
+      for (const list of sortedLists) {
+        // Only process first 3 contestants for preview
+        const previewContestants = list.contestants?.slice(0, 3) || [];
+        
+        for (const contestant of previewContestants) {
+          if (!contestantImageUrls[contestant.id]) {
+            if (contestant.isSeason) {
+              try {
+                const url = await getSeasonLogoUrl(contestant.id);
+                newImageUrls[contestant.id] = url;
+                hasNewImages = true;
+              } catch (error) {
+                console.error(`Error loading logo for season ${contestant.id}:`, error);
+                newImageUrls[contestant.id] = '/placeholder.jpg';
+              }
+            } else {
+              // Find the season ID for this contestant
+              let seasonId = null;
+              for (const season of survivorSeasons) {
+                if (season.contestants.some(c => c.id === contestant.id)) {
+                  seasonId = season.id;
+                  break;
+                }
+              }
+              
+              if (seasonId) {
+                try {
+                  // Remove the 's' prefix from seasonId if it exists
+                  const numericSeasonId = seasonId.startsWith('s') ? seasonId.substring(1) : seasonId;
+                  const url = await getContestantImageUrl(contestant, numericSeasonId);
+                  newImageUrls[contestant.id] = url;
+                  hasNewImages = true;
+                } catch (error) {
+                  console.error(`Error loading image for ${contestant.name}:`, error);
+                  newImageUrls[contestant.id] = '/placeholder.jpg';
+                }
+              }
+            }
+          }
+        }
+      }
+      
+      // Only update state if we have new images
+      if (hasNewImages) {
+        setContestantImageUrls(newImageUrls);
+      }
+    };
+    
+    loadPreviewImages();
+  }, [sortedLists, contestantImageUrls]);
+
+  // Modify the existing image loading useEffect to avoid duplicate work
+  useEffect(() => {
+    const loadFullListImages = async () => {
       if (!selectedList || !selectedList.contestants || selectedList.contestants.length === 0) return;
       
       const newImageUrls = { ...contestantImageUrls };
+      let hasNewImages = false;
       
       for (const contestant of selectedList.contestants) {
         if (!contestantImageUrls[contestant.id]) {
           if (contestant.isSeason) {
-            // Load season logo
             try {
               const url = await getSeasonLogoUrl(contestant.id);
               newImageUrls[contestant.id] = url;
+              hasNewImages = true;
             } catch (error) {
               console.error(`Error loading logo for season ${contestant.id}:`, error);
-              newImageUrls[contestant.id] = '/images/placeholder.jpg';
+              newImageUrls[contestant.id] = '/placeholder.jpg';
             }
           } else {
-            // First try to use the contestant's seasonId if available
-            let seasonId = contestant.seasonId;
-            
-            // If seasonId is not available, find it from survivorSeasons
-            if (!seasonId) {
-              for (const season of survivorSeasons) {
-                if (season.contestants && season.contestants.some(c => c.id === contestant.id)) {
-                  seasonId = season.id;
-                  break;
-                }
+            // Find the season ID for this contestant
+            let seasonId = null;
+            for (const season of survivorSeasons) {
+              if (season.contestants.some(c => c.id === contestant.id)) {
+                seasonId = season.id;
+                break;
               }
             }
             
@@ -480,23 +536,24 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
                 const numericSeasonId = seasonId.startsWith('s') ? seasonId.substring(1) : seasonId;
                 const url = await getContestantImageUrl(contestant, numericSeasonId);
                 newImageUrls[contestant.id] = url;
+                hasNewImages = true;
               } catch (error) {
                 console.error(`Error loading image for ${contestant.name}:`, error);
-                newImageUrls[contestant.id] = '/images/placeholder.jpg';
+                newImageUrls[contestant.id] = '/placeholder.jpg';
               }
-            } else {
-              console.warn(`Unable to find season for contestant: ${contestant.name}`);
-              newImageUrls[contestant.id] = '/images/placeholder.jpg';
             }
           }
         }
       }
       
-      setContestantImageUrls(newImageUrls);
+      // Only update state if we have new images
+      if (hasNewImages) {
+        setContestantImageUrls(newImageUrls);
+      }
     };
     
-    loadImages();
-  }, [selectedList]);
+    loadFullListImages();
+  }, [selectedList, contestantImageUrls]);
   
   // Function to fetch comments for a specific list
   const fetchComments = async (listUserId, listId) => {
@@ -799,80 +856,6 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
     }
   }, [initialSelectedList]);
   
-  // Add new useEffect for loading images in list cards
-  useEffect(() => {
-    const loadListCardImages = async () => {
-      if (!sortedLists || sortedLists.length === 0) return;
-      
-      const newImageUrls = { ...contestantImageUrls };
-      
-      // Get all contestants from the preview (first 3) of each list
-      const allPreviewContestants = sortedLists.flatMap(list => 
-        (list.contestants || []).slice(0, 3)
-      );
-      
-      // Create a map to help find a contestant's season
-      const seasonMap = {};
-      
-      // Build the season map from survivorSeasons data
-      survivorSeasons.forEach(season => {
-        if (season.contestants) {
-          season.contestants.forEach(contestant => {
-            seasonMap[contestant.id] = season.id;
-          });
-        }
-      });
-      
-      for (const contestant of allPreviewContestants) {
-        if (!contestant) continue;
-        
-        if (!newImageUrls[contestant.id]) {
-          if (contestant.isSeason) {
-            try {
-              const url = await getSeasonLogoUrl(contestant.id);
-              newImageUrls[contestant.id] = url;
-            } catch (error) {
-              console.error(`Error loading logo for season ${contestant.id}:`, error);
-              newImageUrls[contestant.id] = '/images/placeholder.jpg';
-            }
-          } else {
-            try {
-              // First try to use the contestant's seasonId if available
-              let seasonId = contestant.seasonId || seasonMap[contestant.id];
-              
-              // If we still don't have a valid seasonId, try looking it up in survivorSeasons
-              if (!seasonId) {
-                for (const season of survivorSeasons) {
-                  if (season.contestants && season.contestants.some(c => c.id === contestant.id)) {
-                    seasonId = season.id;
-                    break;
-                  }
-                }
-              }
-              
-              if (seasonId) {
-                // Remove the 's' prefix from seasonId if it exists
-                const numericSeasonId = seasonId.startsWith('s') ? seasonId.substring(1) : seasonId;
-                const url = await getContestantImageUrl(contestant, numericSeasonId);
-                newImageUrls[contestant.id] = url;
-              } else {
-                console.warn(`Unable to find season for contestant: ${contestant.name}`);
-                newImageUrls[contestant.id] = '/images/placeholder.jpg';
-              }
-            } catch (error) {
-              console.error(`Error loading image for ${contestant.name}:`, error);
-              newImageUrls[contestant.id] = '/images/placeholder.jpg';
-            }
-          }
-        }
-      }
-      
-      setContestantImageUrls(newImageUrls);
-    };
-    
-    loadListCardImages();
-  }, [sortedLists]);
-  
   if (loading) return <div className="other-lists loading">Loading rankings...</div>;
   if (error) return <div className="other-lists error">{error}</div>;
   
@@ -978,12 +961,6 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
             {selectedList.tags && selectedList.tags.includes('survivor-ranking') && (
               <span className="list-type-indicator survivor">Survivor Ranking</span>
             )}
-            
-            {selectedList.tags && selectedList.tags
-              .filter(tag => tag !== 'season-ranking' && tag !== 'survivor-ranking')
-              .map(tag => (
-                <span key={tag} className={`list-tag ${tag === 'spoiler' ? 'spoiler-tag' : ''}`}>{tag}</span>
-              ))}
           </div>
           
           {selectedList.description && (
@@ -1000,7 +977,7 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
                 <div key={index} className="ranking-item">
                   <div className="ranking-number">{index + 1}</div>
                   <img
-                    src={contestantImageUrls[contestant.id] || contestant.imageUrl || "/images/placeholder.jpg"}
+                    src={contestantImageUrls[contestant.id] || contestant.imageUrl || "/placeholder.jpg"}
                     alt={contestant.name}
                     className={`contestant-image ${contestant.isSeason ? 'season-logo' : ''}`}
                     draggable="false"
@@ -1245,11 +1222,6 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
         ) : (
           <>
             <h2>Browse All Rankings</h2>
-            {/* Debug info */}
-            <div className="debug-panel" style={{ background: 'rgba(0,0,0,0.1)', padding: '5px', margin: '0 0 10px 0', borderRadius: '4px', fontSize: '0.8rem' }}>
-              <p style={{ margin: '0' }}>Lists loaded from database: {publicLists.length}</p>
-              <p style={{ margin: '0' }}>Lists after filtering: {filteredLists.length}</p>
-            </div>
             <div className="search-container">
               <input
                 type="text"
@@ -1371,10 +1343,6 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
               
               <h2 className="list-title">{list.name}</h2>
               
-              {list.tags && list.tags.includes('spoiler') && (
-                <div className="spoiler-warning">Contains Spoilers</div>
-              )}
-              
               <p className="list-creator">
                 By <span 
                   className="username"
@@ -1388,6 +1356,10 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
                 </span>
               </p>
               
+              {list.tags && list.tags.includes('spoiler') && (
+                <div className="spoiler-warning">Contains Spoilers</div>
+              )}
+              
               <div className={`ranking-list clickable ${list.tags && list.tags.includes('spoiler') ? 'spoiler-blur' : ''}`}>
                 {list.contestants && list.contestants.length > 0 ? (
                   list.contestants.slice(0, 3).map((contestant, index) => (
@@ -1397,7 +1369,7 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
                     >
                       <div className="ranking-number">{index + 1}</div>
                       <img
-                        src={contestantImageUrls[contestant.id] || contestant.imageUrl || "/images/placeholder.jpg"}
+                        src={contestantImageUrls[contestant.id] || contestant.imageUrl || "/placeholder.jpg"}
                         alt={contestant.name}
                         className={`contestant-image ${contestant.isSeason ? 'season-logo' : ''}`}
                         draggable="false"
@@ -1413,6 +1385,15 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
                   <div className="empty-list-message">
                     This list is empty
                   </div>
+                )}
+              </div>
+              
+              <div className="list-tags">
+                {list.tags && list.tags.includes('season-ranking') && (
+                  <span className="list-type-indicator season">Season Ranking</span>
+                )}
+                {list.tags && list.tags.includes('survivor-ranking') && (
+                  <span className="list-type-indicator survivor">Survivor Ranking</span>
                 )}
               </div>
             </div>

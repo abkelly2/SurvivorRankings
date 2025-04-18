@@ -19,7 +19,8 @@ const UserListCreator = ({
   user,
   editingListId,
   onCancel,
-  seasonListRef
+  seasonListRef,
+  isMobile
 }) => {
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -29,39 +30,15 @@ const UserListCreator = ({
   const [contestantImageUrls, setContestantImageUrls] = useState({});
   const [currentListId, setCurrentListId] = useState(editingListId || null);
   const navigate = useNavigate();
-  const [isMobile, setIsMobile] = useState(false);
   
-  // States for touch dragging
-  const [touchDragging, setTouchDragging] = useState(false);
-  const [touchStartY, setTouchStartY] = useState(0);
-  const [draggedItemIndex, setDraggedItemIndex] = useState(null);
-  const [draggedElement, setDraggedElement] = useState(null);
-  const [initialTouchY, setInitialTouchY] = useState(0);
-  const [currentTouchY, setCurrentTouchY] = useState(0);
-  const [itemHeight, setItemHeight] = useState(0);
-  const longPressTimer = useRef(null);
-  const touchPositionRef = useRef({ x: 0, y: 0 });
-  const touchScrollStartRef = useRef(0);
-
-  // Check if the device is mobile
-  useEffect(() => {
-    const checkIfMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-    
-    // Initial check
-    checkIfMobile();
-    
-    // Add event listener for window resize
-    window.addEventListener('resize', checkIfMobile);
-    
-    // Cleanup
-    return () => {
-      window.removeEventListener('resize', checkIfMobile);
-      // Make sure to remove any mobile class when component unmounts
-      document.body.classList.remove('show-seasons-mobile');
-    };
-  }, []);
+  // --- State/Refs for Mobile Touch Drag Reordering --- 
+  const touchDragTimer = useRef(null);
+  const isTouchDragging = useRef(false);
+  const draggedItemIndex = useRef(null);
+  const draggedItemElement = useRef(null);
+  const originalBodyOverflow = useRef(document.body.style.overflow);
+  const listItemRefs = useRef({});
+  // ----------------------------------------------
 
   // Available tag options
   const availableTags = [
@@ -583,285 +560,242 @@ const UserListCreator = ({
     }
   }, [isMobile]);
 
-  // Add global touch event handlers to handle dragging
+  // <<< Add useEffect to handle touchmove listener manually >>>
   useEffect(() => {
-    // When dragging on mobile, prevent default scrolling behavior
-    const preventScroll = (e) => {
-      if (touchDragging) {
-        e.preventDefault();
-      }
+    const listElement = listRef.current;
+    if (!listElement || !isMobile) return;
+
+    const handleMove = (e) => {
+      // Call the existing handleTouchMove logic
+      handleTouchMove(e); 
     };
 
-    // Clean up any leftover state if touch ends outside the drag area
-    const handleGlobalTouchEnd = () => {
-      if (touchDragging) {
-        finishTouchDrag();
-      }
-      
-      clearTimeout(longPressTimer.current);
-      document.body.style.overflow = '';
-    };
+    // Add listener with passive: false
+    listElement.addEventListener('touchmove', handleMove, { passive: false });
+    console.log('[TouchDrag - Create] Added passive:false touchmove listener to container');
 
-    if (isMobile) {
-      document.addEventListener('touchmove', preventScroll, { passive: false });
-      document.addEventListener('touchend', handleGlobalTouchEnd);
-    }
-
+    // Cleanup function
     return () => {
-      document.removeEventListener('touchmove', preventScroll);
-      document.removeEventListener('touchend', handleGlobalTouchEnd);
-      clearTimeout(longPressTimer.current);
-      document.body.style.overflow = '';
+      listElement.removeEventListener('touchmove', handleMove, { passive: false });
+      console.log('[TouchDrag - Create] Removed touchmove listener from container');
     };
-  }, [isMobile, touchDragging]);
+    // Rerun effect if isMobile changes or listRef becomes available
+  }, [isMobile, listRef]); 
 
-  // Handle the start of a touch drag operation
+  // --- Touch Handlers for Mobile Reordering (Attached to Items) --- 
   const handleTouchStart = (e, index) => {
-    // Get the element being touched right away
-    const element = e.currentTarget;
-    console.log('Touch start on element:', element);
-    
-    // Capture touch coordinates immediately
-    const touchClientX = e.touches[0].clientX;
-    const touchClientY = e.touches[0].clientY;
-    const elementTop = element.getBoundingClientRect().top;
-    
-    // Store the initial touch position
-    touchPositionRef.current = {
-      x: touchClientX,
-      y: touchClientY
-    };
-    
-    // Record the initial scroll position
-    touchScrollStartRef.current = window.scrollY;
-    
-    // Clear any existing timer
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-    }
-    
-    // Add a visual indication that the element is being held
-    element.classList.add('touch-active');
-    
-    // Use a timer to detect long press
-    longPressTimer.current = setTimeout(() => {
-      console.log('Long press timer fired, element:', element);
-      if (userList.length <= 1) return; // No need to drag if just one item
-      
-      // Check if element exists before continuing
-      if (!element) {
-        console.log('Element not found for touch drag');
-        return;
+    if (!isMobile) return; // Only apply on mobile
+
+    // Prevent interfering with other potential touch actions
+    e.stopPropagation(); 
+    clearTimeout(touchDragTimer.current);
+    draggedItemElement.current = e.currentTarget;
+
+    touchDragTimer.current = setTimeout(() => {
+      isTouchDragging.current = true;
+      draggedItemIndex.current = index;
+      if (draggedItemElement.current) {
+          draggedItemElement.current.classList.add('touch-dragging-item');
       }
-      
-      // Remove the initial touch indicator class
-      element.classList.remove('touch-active');
-      
-      // Calculate height of the item for positioning
-      const height = element.offsetHeight || 0;
-      
-      // Start dragging
-      setTouchDragging(true);
-      setDraggedItemIndex(index);
-      setDraggedElement(element);
-      setInitialTouchY(touchClientY);
-      setCurrentTouchY(touchClientY);
-      setItemHeight(height);
-      setTouchStartY(touchClientY - elementTop);
-      
-      // Add visual indication
-      element.classList.add('touch-dragging');
-      
-      // Freeze page scrolling while dragging
+      // Disable body scroll
+      originalBodyOverflow.current = document.body.style.overflow; 
       document.body.style.overflow = 'hidden';
-      
-      console.log('Touch drag started on item:', index, 'height:', height);
-    }, 150); // Reduced from 300ms to 150ms for faster response
+      console.log('[TouchDrag - Create] Disabled body scroll');
+      // e.preventDefault(); // Might not be needed here
+    }, 300); 
   };
 
-  // Handle touch movement during drag
   const handleTouchMove = (e) => {
-    try {
-      // Check if we're in dragging mode
-      if (!touchDragging || draggedItemIndex === null || !draggedElement) {
-        // Not in dragging mode yet
-        return;
-      }
-      
-      console.log('Touch move while dragging, current Y:', e.touches[0].clientY);
-      
-      // Update the current touch position
-      setCurrentTouchY(e.touches[0].clientY);
-      
-      // Ensure the list reference exists
-      if (!listRef.current) {
-        console.warn('List reference not available during touch move');
-        return;
-      }
-      
-      // Calculate the new position
-      const listRect = listRef.current.getBoundingClientRect();
-      const touchY = e.touches[0].clientY - listRect.top;
-      
-      // Use a safe itemHeight value to prevent division by zero
-      const safeItemHeight = itemHeight || 50; // Default to 50px if not set
-      
-      // Calculate which index this position corresponds to
-      const hoverIndex = Math.max(0, Math.min(
-        Math.floor(touchY / safeItemHeight),
-        userList.length - 1
-      ));
-      
-      // Position the dragged element where the touch is
-      const yOffset = e.touches[0].clientY - initialTouchY;
-      console.log('Moving element by offset:', yOffset);
-      
-      // Safely apply transform
-      if (draggedElement) {
-        draggedElement.style.transform = `translateY(${yOffset}px)`;
-      }
-      
-      // Reposition other elements as needed
-      if (listRef.current) {
-        Array.from(listRef.current.children).forEach((child, idx) => {
-          if (idx !== draggedItemIndex && child && child.classList && child.classList.contains('ranking-item')) {
-            // Reset any previous transformations
-            child.style.transform = 'none';
-            child.style.transition = 'transform 0.3s ease';
-            
-            // If we need to make space for the dragged item
-            if (draggedItemIndex < hoverIndex && idx > draggedItemIndex && idx <= hoverIndex) {
-              // Move up to make space below
-              child.style.transform = `translateY(-${safeItemHeight}px)`;
-            } else if (draggedItemIndex > hoverIndex && idx < draggedItemIndex && idx >= hoverIndex) {
-              // Move down to make space above
-              child.style.transform = `translateY(${safeItemHeight}px)`;
-            }
-          }
-        });
-      }
-    } catch (error) {
-      console.error('Error in touch move handler:', error);
-      // Safely cancel drag operation on error
-      cancelTouchDrag();
+    if (!isTouchDragging.current || !isMobile) return;
+    
+    e.preventDefault(); 
+    console.log('[TouchDrag - Create] handleTouchMove called, preventDefault attempted');
+
+    const touch = e.touches[0];
+    const listContainer = listRef.current; 
+    if (!touch || !listContainer) return;
+
+    const touchY = touch.clientY;
+    
+    // --- Visual Feedback Logic --- 
+    const listItems = Array.from(listContainer.querySelectorAll('.ranking-item'));
+    let closestItemIndex = -1;
+    let minDistance = Infinity;
+
+    // Clear previous visual indicators
+    listItems.forEach(item => {
+      item.classList.remove('drag-over-top');
+      item.classList.remove('drag-over-bottom');
+    });
+
+    // Find the visually closest item (similar logic to handleTouchEnd)
+    for (let i = 0; i < listItems.length; i++) {
+        const item = listItems[i];
+        // Skip the item being dragged
+        if (item === draggedItemElement.current) continue;
+        
+        const itemRect = item.getBoundingClientRect();
+        const itemCenterY = itemRect.top + itemRect.height / 2;
+        const distance = Math.abs(touchY - itemCenterY);
+
+        if (distance < minDistance) {
+            minDistance = distance;
+            const itemIndexAttr = item.dataset.index; 
+            closestItemIndex = itemIndexAttr !== undefined ? parseInt(itemIndexAttr, 10) : i;
+        }
     }
+
+    // Apply visual indicator based on position relative to the closest item's center
+    if (closestItemIndex !== -1 && closestItemIndex < listItems.length) {
+        const closestItem = listItems[closestItemIndex]; 
+        if (closestItem) {
+            const closestItemRect = closestItem.getBoundingClientRect();
+            const closestItemCenterY = closestItemRect.top + closestItemRect.height / 2;
+
+            if (touchY < closestItemCenterY) {
+                // Hovering above center: Indicate drop *before* this item
+                closestItem.classList.add('drag-over-top');
+            } else {
+                // Hovering below center: Indicate drop *after* this item
+                closestItem.classList.add('drag-over-bottom');
+            }
+        } 
+    } else {
+        // Potentially hovering below all items? Maybe add indicator to the list container?
+        // Or indicate insertion at the end if dragging past the last item
+        if (listItems.length > 0 && touchY > listItems[listItems.length-1].getBoundingClientRect().bottom) {
+            listItems[listItems.length-1].classList.add('drag-over-bottom');
+        }
+        // Add handling for hovering above all items if needed
+        else if (listItems.length > 0 && touchY < listItems[0].getBoundingClientRect().top) {
+            listItems[0].classList.add('drag-over-top');
+        }
+    }
+    // --- End Visual Feedback Logic ---
+    
+    // Note: The actual reordering logic remains in handleTouchEnd
   };
 
-  // Handle end of touch dragging
   const handleTouchEnd = (e) => {
-    // Clear the long press timer
-    clearTimeout(longPressTimer.current);
-    console.log('Touch end event fired, dragging state:', touchDragging);
-    
-    // Remove touch-active class from all items
-    if (listRef.current) {
-      Array.from(listRef.current.children).forEach(child => {
-        if (child && child.classList) {
-          child.classList.remove('touch-active');
-        }
-      });
+    clearTimeout(touchDragTimer.current); 
+    const wasDragging = isTouchDragging.current;
+
+    // Cleanup styles and state immediately
+    if (draggedItemElement.current) {
+      draggedItemElement.current.classList.remove('touch-dragging-item');
     }
-    
-    // If not in dragging mode, return
-    if (!touchDragging) return;
-    
-    finishTouchDrag();
-  };
-  
-  // Helper function to clean up touch drag state
-  const finishTouchDrag = () => {
-    console.log('Finishing touch drag, index:', draggedItemIndex);
-    if (draggedItemIndex === null || !listRef.current) return;
-    
-    // Calculate where the item should go
-    const listRect = listRef.current.getBoundingClientRect();
-    const touchY = currentTouchY - listRect.top;
-    
-    // Use a safe itemHeight value
-    const safeItemHeight = itemHeight || 50; // Default to 50px if not set
-    
-    // Get the target index
-    let targetIndex = Math.max(0, Math.min(
-      Math.floor(touchY / safeItemHeight),
-      userList.length - 1
-    ));
-    
-    // Update the list with the new order
-    if (targetIndex !== draggedItemIndex) {
-      console.log('Reordering from', draggedItemIndex, 'to', targetIndex);
-      
-      const newList = [...userList];
-      const [movedItem] = newList.splice(draggedItemIndex, 1);
-      newList.splice(targetIndex, 0, movedItem);
-      setUserList(newList);
+    if (document.body.style.overflow === 'hidden') {
+        document.body.style.overflow = originalBodyOverflow.current;
+        console.log('[TouchDrag - Create] Re-enabled body scroll (Item Touchend)');
     }
-    
-    // Clean up dragging state
-    if (draggedElement) {
-      draggedElement.classList.remove('touch-dragging');
-      draggedElement.classList.remove('touch-active');
-      draggedElement.style.transform = 'none';
-    }
-    
-    // Reset styles on all list items
-    if (listRef.current) {
-      Array.from(listRef.current.children).forEach(child => {
-        if (child && child.classList) {
-          child.classList.remove('touch-dragging');
-          child.classList.remove('touch-active');
-          if (child.classList.contains('ranking-item')) {
-            child.style.transform = 'none';
-            child.style.transition = 'none';
-          }
-        }
-      });
-    }
-    
-    // Reset dragging state
-    setTouchDragging(false);
-    setDraggedItemIndex(null);
-    setDraggedElement(null);
-    
-    // Re-enable page scrolling
-    document.body.style.overflow = '';
-    
-    console.log('Touch drag finished');
-  };
-  
-  // Cancel touch drag if needed
-  const cancelTouchDrag = () => {
-    console.log('Cancelling touch drag');
-    clearTimeout(longPressTimer.current);
-    
-    // Remove touch-active class from all items
-    if (listRef.current) {
-      Array.from(listRef.current.children).forEach(child => {
-        if (child && child.classList) {
-          child.classList.remove('touch-active');
-        }
-      });
-    }
-    
-    if (touchDragging && draggedElement) {
-      draggedElement.classList.remove('touch-dragging');
-      draggedElement.classList.remove('touch-active');
-      draggedElement.style.transform = 'none';
-      
-      // Reset styles on all list items
-      if (listRef.current) {
-        Array.from(listRef.current.children).forEach(child => {
-          if (child && child.classList && child.classList.contains('ranking-item')) {
-            child.style.transform = 'none';
-            child.style.transition = 'none';
-          }
+
+    // Clear visual indicators from all items immediately after check
+    const listContainer = listRef.current; // Get container ref
+    if(listContainer) {
+        const allItems = listContainer.querySelectorAll('.ranking-item');
+        allItems.forEach(item => {
+          item.classList.remove('drag-over-top');
+          item.classList.remove('drag-over-bottom');
         });
-      }
+    }
+
+    // Exit if not actually dragging
+    if (!wasDragging || !isMobile) {
+      isTouchDragging.current = false;
+      draggedItemIndex.current = null;
+      draggedItemElement.current = null;
+      return;
     }
     
-    setTouchDragging(false);
-    setDraggedItemIndex(null);
-    setDraggedElement(null);
-    document.body.style.overflow = '';
+    e.preventDefault();
+    e.stopPropagation();
+
+    const touch = e.changedTouches[0]; 
+    let targetIndex = -1; // Default to invalid
+    
+    // --- Target Index Calculation (using visual position) --- 
+    if (touch && listContainer && userList.length > 0) { 
+      const listRect = listContainer.getBoundingClientRect();
+      const touchY = touch.clientY;
+
+      const listItems = Array.from(listContainer.querySelectorAll('.ranking-item'));
+      let closestItemIndex = -1;
+      let minDistance = Infinity;
+
+      for (let i = 0; i < listItems.length; i++) {
+          const item = listItems[i];
+          if (item === draggedItemElement.current) continue;
+          
+          const itemRect = item.getBoundingClientRect();
+          const itemCenterY = itemRect.top + itemRect.height / 2;
+          const distance = Math.abs(touchY - itemCenterY);
+
+          if (distance < minDistance) {
+              minDistance = distance;
+              const itemIndexAttr = item.dataset.index; 
+              closestItemIndex = itemIndexAttr !== undefined ? parseInt(itemIndexAttr, 10) : i;
+          }
+      }
+
+      if (closestItemIndex !== -1 && closestItemIndex < listItems.length) {
+          const closestItem = listItems[closestItemIndex]; 
+          if (closestItem) {
+              const closestItemRect = closestItem.getBoundingClientRect();
+              const closestItemCenterY = closestItemRect.top + closestItemRect.height / 2;
+
+              if (touchY < closestItemCenterY) {
+                  targetIndex = closestItemIndex;
+              } else {
+                  targetIndex = closestItemIndex + 1;
+              }
+          } else { 
+               const relativeY = touchY - listRect.top;
+               const itemHeight = listRect.height / userList.length; 
+               targetIndex = Math.round(relativeY / itemHeight);
+               console.warn("[TouchDrag - Create] Could not find closestItem element at index:", closestItemIndex, "Using fallback index:", targetIndex);
+          }
+      } else {
+          const relativeY = touchY - listRect.top;
+          const itemHeight = listRect.height > 0 ? listRect.height / userList.length : 30;
+          targetIndex = Math.round(relativeY / itemHeight);
+          console.log("[TouchDrag - Create] No specific closest item found, using relative Y. Index:", targetIndex);
+      }
+
+      targetIndex = Math.max(0, Math.min(targetIndex, userList.length));
+      console.log(`[TouchDrag - Create] TouchY: ${touchY}, ClosestIndex: ${closestItemIndex}, Calculated TargetIndex (for splice): ${targetIndex}`);
+
+    } else if (touch && listContainer && userList.length === 0 && draggedItemIndex.current !== null) {
+       targetIndex = 0;
+       console.log("[TouchDrag - Create] Dropped on empty list?");
+    }
+    // --- End Target Index Calculation ---
+
+    const startIndex = draggedItemIndex.current;
+
+    // --- Perform Reordering --- 
+    if (startIndex !== null && targetIndex !== -1) {
+        let insertIndex = targetIndex;
+        if (startIndex < targetIndex) { 
+            insertIndex = targetIndex - 1; 
+        }
+        
+        if (startIndex === insertIndex) {
+             console.log(`[TouchDrag - Create] Drop occurred on the same index (${startIndex}). No reorder.`);
+        } else {
+            console.log(`[TouchDrag - Create] Reordering from ${startIndex} to insert position ${insertIndex} (Original target: ${targetIndex})`);
+            const newList = [...userList];
+            const [movedItem] = newList.splice(startIndex, 1);
+            newList.splice(insertIndex, 0, movedItem);
+            setUserList(newList);
+        }
+    } else {
+      console.log(`[TouchDrag - Create] Drop occurred on invalid target (Index: ${targetIndex}) or start index was null (${startIndex}). No reorder.`);
+    }
+
+    // Reset drag state refs AFTER potential reorder
+    isTouchDragging.current = false;
+    draggedItemIndex.current = null;
+    draggedItemElement.current = null; 
   };
   
   return (
@@ -949,9 +883,8 @@ const UserListCreator = ({
                 onDragStart={!isMobile ? (e) => handleItemDragStart(e, index) : undefined}
                 onDragEnd={!isMobile ? handleItemDragEnd : undefined}
                 onTouchStart={isMobile ? (e) => handleTouchStart(e, index) : undefined}
-                onTouchMove={isMobile ? handleTouchMove : undefined}
                 onTouchEnd={isMobile ? handleTouchEnd : undefined}
-                onTouchCancel={isMobile ? cancelTouchDrag : undefined}
+                data-index={index}
               >
                 <div className="ranking-number">{index + 1}</div>
                 <img

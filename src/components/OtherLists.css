@@ -1905,7 +1905,8 @@
 
 .other-lists .ranking-list-container .list-creator {
   font-size: 0.8rem;
-  margin: 2px 0 8px;
+  margin: 2px 0 4px;
+  text-align: center;
 }
 
 .other-lists .ranking-list-container .ranking-list {
@@ -1934,7 +1935,7 @@
 
 .other-lists .ranking-list-container .contestant-name,
 .other-lists .ranking-list-container .season-name {
-  font-size: 0.7rem;
+  font-size: 1rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1965,7 +1966,7 @@
   }
   
   .other-rankings-grid .ranking-list-container h2.list-title {
-    font-size: 1.3rem;
+    font-size: 1.5rem;
   }
   
   .other-rankings-grid .contestant-image {
@@ -2143,7 +2144,7 @@
 
 .other-rankings-grid .contestant-image {
   width: 100px !important;
-  height: 38px;
+  height: 100px !important;
   border-radius: 4px;
   object-fit: cover;
   margin-right: 8px;
@@ -2156,7 +2157,7 @@
   padding: 3px 2px;
   margin-bottom: 2px;
   gap: 0;
-  font-size: .7rem;
+  font-size: .75rem;
 }
 
 /* Make sure the grid maintains consistent sizing */
@@ -2204,6 +2205,64 @@
   .other-rankings-grid .contestant-name,
   .other-rankings-grid .season-name {
     font-size: 0.9rem;
+  }
+}
+
+.ranking-item .contestant-image {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 5px;
+  margin-right: 10px;
+}
+
+.ranking-item .contestant-image.season-logo {
+  width: 100px;
+  height: 60px;
+  object-fit: contain;
+  border-radius: 5px;
+  margin-right: 10px;
+  background-color: #f0f0f0;
+}
+
+/* Adjust image sizes for mobile */
+@media (max-width: 768px) {
+  .ranking-item .contestant-image,
+  .ranking-item .contestant-image.season-logo {
+    width: 50px;
+    height: 50px;
+  }
+}
+
+@media (max-width: 480px) {
+  .ranking-item .contestant-image,
+  .ranking-item .contestant-image.season-logo {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+.spoiler-warning {
+  color: #ff5555;
+  font-size: 0.8rem;
+  font-weight: 500;
+  background-color: rgba(255, 85, 85, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: inline-block;
+  margin: -2px 0 6px;
+  text-align: center;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Adjust spacing for mobile */
+@media (max-width: 576px) {
+  .spoiler-warning {
+    font-size: 0.75rem;
+    padding: 1px 6px;
+    margin: -1px 0 5px;
   }
 }
  

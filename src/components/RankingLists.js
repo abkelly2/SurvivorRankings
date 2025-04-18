@@ -7,7 +7,7 @@ import {
 } from 'firebase/firestore';
 import { survivorSeasons } from '../data/survivorData';
 import { UserContext } from '../UserContext';
-import './RankingLists.css';
+import './HomePageLists.css';
 import { useNavigate } from 'react-router-dom';
 
 const RankingLists = ({ onViewUserLists }) => {

@@ -1,0 +1,373 @@
+.ranking-lists {
+  margin-bottom: 30px;
+  width: 100%;
+}
+
+/* Section titles for the homepage */
+.ranking-lists .section-title {
+  text-align: center;
+  margin: 30px 0 15px;
+  color: #ffffff;
+  font-size: clamp(18px, 2.5vw, 24px);
+  font-family: 'Survivant', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  position: relative;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.ranking-lists .section-title:after {
+  content: '';
+  display: block;
+  width: 80px;
+  height: 3px;
+  background-color: #f5c518;
+  margin: 10px auto 0;
+}
+
+.lists-container {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: nowrap;
+  width: 100%;
+}
+
+/* Styles for list cards on the main page */
+.list-header {
+  position: relative;
+  text-align: center;
+  width: 100%;
+  margin-bottom: 5px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  background-color: transparent;
+  box-shadow: none;
+  border: none;
+}
+
+/* Remove any potential dark grey backgrounds on list headers */
+.ranking-list-container::before,
+.ranking-list-container::after,
+.list-header::before,
+.list-header::after {
+  display: none;
+  content: none;
+  background: none;
+}
+
+/* Clickable lists styling */
+.ranking-list-container {
+  flex: 1;
+  min-width: 0; 
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 15px;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
+}
+
+.ranking-list-container:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.ranking-list-container h2 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  text-align: center;
+  color: #333;
+  font-size: 22px;
+  font-weight: 600;
+  font-family: 'Survivant', sans-serif;
+  background-color: transparent;
+  padding: 0;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+.ranking-list {
+  min-height: 150px;
+  background-color: white;
+  border-radius: 4px;
+  padding: 8px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 2px dashed #ccc;
+  transition: all 0.2s ease;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.ranking-list:hover {
+  border-color: #4a90e2;
+}
+
+.empty-list-message {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100px;
+  color: #999;
+  font-style: italic;
+  text-align: center;
+  padding: 0 20px;
+}
+
+/* List creator attribution */
+.list-creator {
+  text-align: center;
+  font-size: 0.9rem;
+  color: #666;
+  margin: 0 0 10px;
+  font-style: italic;
+}
+
+/* Style for the username */
+.username {
+  color: #4a90e2;
+  font-weight: 600;
+  cursor: pointer;
+  position: relative;
+  z-index: 5;
+  display: inline-block;
+}
+
+.username:hover {
+  color: #2a6bbd;
+  text-decoration: underline;
+}
+
+.list-creator .username {
+  color: #4a90e2;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.list-creator .username:hover {
+  text-decoration: underline;
+}
+
+/* Title for list cards on homepage */
+.list-title {
+  font-size: 30px;
+  font-weight: 700;
+  text-align: center;
+  margin: 5px 0 10px 0;
+  color: #333;
+  font-family: 'Survivant', sans-serif;
+  background: none;
+  padding: 0;
+  width: 100%;
+}
+
+/* Clear any previous styling for h2 in list containers */
+.ranking-list-container h2 {
+  background: none;
+  box-shadow: none;
+  border: none;
+}
+
+/* Enhanced upvote button styling */
+.top-right-upvote .upvote-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e0e0e0;
+  border-radius: 20px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.top-right-upvote .upvote-button:hover:not(:disabled) {
+  background-color: #ffffff;
+  border-color: #cccccc;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.top-right-upvote .upvote-button:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.top-right-upvote .upvote-button.upvoted {
+  background-color: #e6ffea;
+  border-color: #52c41a;
+  color: #52c41a;
+}
+
+.top-right-upvote .upvote-icon {
+  font-size: 14px;
+  margin-right: 6px;
+  color: #ff9800;
+  transition: transform 0.2s;
+}
+
+.top-right-upvote .upvote-button:hover .upvote-icon {
+  transform: translateY(-2px);
+}
+
+.top-right-upvote .upvote-button.upvoted .upvote-icon {
+  color: #52c41a;
+}
+
+.top-right-upvote .upvote-count {
+  font-weight: 600;
+  color: #333;
+}
+
+.top-right-upvote .upvote-button.upvoted .upvote-count {
+  color: #52c41a;
+}
+
+/* Favorite button styles */
+.top-left-favorite {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  z-index: 10;
+}
+
+.favorite-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: white;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.favorite-button:hover:not(:disabled) {
+  background-color: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
+}
+
+.favorite-button:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.favorite-button.favorited {
+  background-color: #fffbeb;
+  box-shadow: 0 2px 8px rgba(255, 180, 0, 0.3);
+}
+
+.favorite-icon {
+  display: block;
+  font-size: 22px;
+  transition: color 0.2s ease;
+  color: #cccccc;
+  line-height: 1;
+  font-weight: bold;
+}
+
+.favorited .favorite-icon {
+  color: #FFD700;
+  text-shadow: 0 0 2px rgba(0,0,0,0.3);
+}
+
+.favorite-button:hover .favorite-icon {
+  color: #FFD700;
+}
+
+.favorite-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Add centering styles for list card headers */
+.public-list-card .list-header h3 {
+  text-align: center;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.public-list-card .list-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 5px;
+}
+
+.public-list-card .list-meta span {
+  text-align: center;
+  margin: 2px 0;
+}
+
+.centered-title {
+  text-align: center;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-left: -1px;
+}
+
+/* Media queries for responsiveness */
+@media (max-width: 768px) {
+  .ranking-list-container h2 {
+    font-size: 18px;
+  }
+  
+  .list-title {
+    font-size: 24px;
+  }
+  
+  .favorite-button {
+    width: 30px;
+    height: 30px;
+  }
+  
+  .favorite-icon {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .ranking-list-container {
+    padding: 8px;
+  }
+  
+  .ranking-list-container h2 {
+    font-size: 16px;
+  }
+  
+  .list-title {
+    font-size: 20px;
+  }
+  
+  .favorite-button {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .favorite-icon {
+    font-size: 16px;
+  }
+  
+  .top-right-upvote .upvote-button {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+} 

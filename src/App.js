@@ -12,6 +12,7 @@ import {
   logOut
 } from './firebase';
 import { UserProvider } from './UserContext';
+import GlobalRankingsIcon from './images/GlobalRankings.png';
 
 // Import pages
 import HomePage from './pages/HomePage';
@@ -20,6 +21,7 @@ import RankingsPage from './pages/RankingsPage';
 import ListCreatorPage from './pages/ListCreatorPage';
 import LoginPage from './pages/LoginPage';
 import ListDetailPage from './pages/ListDetailPage';
+import GlobalRankings from './components/GlobalRankings';
 
 // Import survivor background image directly
 import survivorBackgroundImg from './images/survivor-background.jpg';
@@ -42,7 +44,14 @@ function App() {
   
   // Determine current page from location
   const currentPage = location.pathname;
-  const createMode = currentPage === '/create';
+  
+  // --- MODIFIED createMode LOGIC --- 
+  // Create mode is active on the /create page OR on a global ranking detail page IF logged in
+  const isOnCreatePage = currentPage === '/create';
+  const isOnGlobalRankingDetailPage = currentPage.startsWith('/global-rankings/') && currentPage.split('/').length > 2;
+  const createMode = isOnCreatePage || (isOnGlobalRankingDetailPage && !!user);
+  // --- END MODIFIED LOGIC ---
+  
   const showUserLists = currentPage === '/mylists';
   const showOtherLists = currentPage.includes('/rankings');
   
@@ -216,6 +225,15 @@ function App() {
     <div className="App">
       <UserProvider user={user}>
         <header className="App-header">
+          <div className="global-rankings-container">
+            <button 
+              onClick={() => navigate('/global-rankings')} 
+              className="global-rankings-button"
+              title="Global Rankings"
+            >
+              <img src={GlobalRankingsIcon} alt="Global Rankings" />
+            </button>
+          </div>
           <h1 onClick={navigateToHome} className="site-title">Survivor Rankings</h1>
           {user && (
             <div className="user-info">
@@ -349,6 +367,10 @@ function App() {
                   )
                 } 
               />
+              
+              <Route path="/global-rankings" element={<GlobalRankings seasonListRef={seasonListRef} />} />
+              
+              <Route path="/global-rankings/:listId" element={<GlobalRankings seasonListRef={seasonListRef} />} />
               
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>

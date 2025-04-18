@@ -28,6 +28,9 @@
   margin-bottom: 20px;
   color: #f5f5f5;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .App-header h1 {
@@ -389,6 +392,7 @@ body.tribal-mode .App {
   flex-direction: column;
   align-items: center;
   margin-top: 10px;
+  width: 100%;
 }
 
 .welcome-message {
@@ -405,6 +409,60 @@ body.tribal-mode .App {
   justify-content: center;
   margin-bottom: 5px;
   flex-wrap: wrap;
+}
+
+.global-rankings-button {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.global-rankings-button img {
+  width: 250px;
+  height: 250px;
+  object-fit: contain;
+}
+
+.global-rankings-button:hover {
+  transform: scale(1.1);
+}
+
+.global-rankings-container {
+  position: absolute;
+  top: -65px;
+  left: 20px;
+  z-index: 10;
+}
+
+@media screen and (max-width: 1200px) {
+  .App-header {
+    flex-direction: column;
+    margin-bottom: -30px;
+  }
+
+  .global-rankings-container {
+    position: static;
+    order: 2;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-top: 5px;
+  }
+
+  .user-info {
+    order: 1;
+    margin-bottom: -50px;
+  }
+
+  .global-rankings-button img {
+    width: 200px;
+    height: 200px;
+  }
 }
 
 .create-list-button, 
@@ -470,4 +528,24 @@ body.tribal-mode .App {
 .site-title:hover {
   color: #ffcc00;
   text-shadow: 0 0 10px rgba(255, 204, 0, 0.5);
+}
+
+/* Styling for mobile tap-to-edit instruction */
+.mobile-edit-instruction {
+  text-align: center;
+  font-style: italic;
+  color: #888;
+  margin-top: 5px; /* Adjust spacing as needed */
+  margin-bottom: 10px;
+  font-size: 0.9em;
+  padding: 5px;
+  background-color: rgba(0, 0, 0, 0.03);
+  border-radius: 4px;
+  cursor: pointer; /* Indicate it's clickable */
+}
+
+/* Optional: Add hover effect */
+.mobile-edit-instruction:hover {
+  color: #555;
+  background-color: rgba(0, 0, 0, 0.06);
 } 

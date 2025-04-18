@@ -1,0 +1,611 @@
+.global-rankings-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.global-rankings-container h1 {
+  color: #ffcc00;
+  margin-bottom: 20px;
+  text-align: center;
+  font-size: 2.5rem;
+  font-family: 'Survivant', sans-serif;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.global-rankings-container .section-title {
+  text-align: center;
+  margin: 30px 0 15px;
+  color: #ffffff;
+  font-size: clamp(18px, 2.5vw, 24px);
+  font-family: 'Survivant', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  position: relative;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.global-rankings-container .section-title:after {
+  content: '';
+  display: block;
+  width: 80px;
+  height: 3px;
+  background-color: #f5c518;
+  margin: 10px auto 0;
+}
+
+.global-lists-container {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: nowrap;
+  width: 100%;
+  margin-bottom: 30px;
+}
+
+/* Vote section styling */
+.vote-section {
+  background-color: rgba(255, 204, 0, 0.1);
+  border-left: 3px solid #ffcc00;
+  padding: 20px;
+  margin-top: 10px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+}
+
+.vote-section h3 {
+  color: #ffcc00;
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 1.5rem;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.vote-section p {
+  color: #ddd;
+  font-style: italic;
+  margin-bottom: 0;
+}
+
+/* Enhanced styles for ranking items */
+.global-rankings-container .ranking-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px; /* Slightly more padding */
+  margin-bottom: 12px; /* Increased spacing */
+  background-color: #ffffff; /* White background for contrast */
+  border: 1px solid #d1d5db; /* Slightly darker border */
+  border-radius: 6px; /* Slightly larger radius */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08); /* Enhanced shadow */
+  transition: box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out; /* Add transitions */
+}
+
+/* Add subtle hover effect */
+/* General hover effect for items on the main listing page */
+.global-rankings-container .ranking-item:not(.empty-slot):not(.placeholder-hidden):hover {
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+/* Disable hover effect for items within the detailed list view */
+.full-list-view .ranking-item:not(.empty-slot):hover {
+  box-shadow: none; /* Reset shadow */
+  transform: none; /* Reset transform */
+  cursor: default; /* Remove pointer cursor if it exists */
+}
+
+/* Ensure the container hover doesn't apply on detail view */
+.full-list-view .ranking-list-container:hover {
+  transform: none;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08); /* Revert to base shadow */
+}
+
+.global-rankings-container .ranking-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background-color: #f5f5f5;
+  color: white;
+  border-radius: 50%;
+  font-weight: bold;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
+.global-rankings-container .contestant-image, 
+.global-rankings-container .season-logo {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 4px;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
+.global-rankings-container .season-logo {
+  object-fit: contain;
+  background-color: #222;
+}
+
+.global-rankings-container .contestant-name,
+.global-rankings-container .season-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  flex-grow: 1;
+}
+
+@media (max-width: 768px) {
+  .global-lists-container {
+    flex-direction: column;
+  }
+  
+  .global-rankings-container .ranking-item {
+    padding: 6px;
+  }
+  
+  .global-rankings-container .contestant-image, 
+  .global-rankings-container .season-logo {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* Additional styles for the empty placeholder slots */
+.ranking-item .contestant-name {
+  color: #333;
+}
+
+.ranking-item[class*="isEmpty"] .contestant-name,
+.ranking-item .contestant-name[class*="isEmpty"] {
+  color: #999;
+  font-style: italic;
+}
+
+/* Style for empty slots */
+.ranking-list .ranking-item:has([class*="isEmpty"]) {
+  border: 2px dashed #ccc;
+  background-color: #f5f5f5;
+}
+
+/* Fallback for browsers that don't support :has */
+.ranking-item.empty-slot {
+  border: 2px dashed #ccc;
+  background-color: #f5f5f5;
+}
+
+/* Styling for the remove button */
+.remove-contestant-button {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background-color: #ff6b6b;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 14px;
+  line-height: 18px;
+  text-align: center;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+}
+
+.remove-contestant-button:hover {
+  opacity: 1;
+  background-color: #f44336;
+}
+
+/* Styling for drag over state - REMOVED */
+/*
+.ranking-list-container.drag-over {
+  background-color: rgba(255, 204, 0, 0.05);
+  box-shadow: 0 0 10px rgba(255, 204, 0, 0.2);
+}
+
+.ranking-list-container.drag-over .ranking-list {
+  border-color: #ffcc00;
+}
+*/
+
+/* Style for item being dragged for reordering (Desktop) */
+.ranking-item.dragging-item {
+  opacity: 0.5;
+  background-color: #e0e0e0;
+  border-color: #aaa;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Style for item being dragged via touch (Mobile) */
+.ranking-item.touch-dragging-item {
+  opacity: 0.6; /* Slightly less transparent */
+  background-color: #d0d0f0; /* Different color cue */
+  /* border: 2px dashed #888; */ /* Optional dashed border */
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25); /* More pronounced shadow */
+  transform: scale(1.02); /* Slightly larger */
+  z-index: 100; /* Ensure it appears above others */
+  position: relative; /* Needed for z-index */
+}
+
+/* Style for drop target slot during touch drag (Mobile) */
+.ranking-item.drag-over {
+  background-color: #e8e8ff; /* Highlight color for drop target */
+  outline: 2px dashed #8888ff;
+  outline-offset: -2px;
+}
+
+/* Submission Section Styling */
+.submit-global-ranking-section {
+  margin-top: 20px;
+  margin-bottom: 20px;
+  text-align: center;
+  padding: 20px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 20px;
+}
+
+/* --- Styling for List Titles (Global/User) --- */
+.ranking-list-container > h3 {
+  color: #000000; /* Default Black */
+  text-align: center; 
+  margin-bottom: 25px; /* More margin */
+  text-shadow: none; /* Ensure no shadow */
+  font-family: 'Survivant', sans-serif; /* Apply Survivant font */
+  font-size: 2.8rem; /* Even larger font size */
+  font-weight: 700; /* Bolder */
+  line-height: 1.1; /* Adjust line height */
+}
+
+/* Specific style for Global Top 10 title */
+.ranking-list-container.global-results > h3 {
+  color: #ffcc00; /* Survivor Gold */
+  /* Add subtle text shadow for depth on dark background */
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* --- >> NEW Button Styles V3 - BOLDER << --- */
+
+/* Base Button Style */
+.submit-global-ranking-button,
+.toggle-view-button {
+  padding: 12px 30px; /* Increased padding */
+  border-radius: 30px; /* Pill shape */
+  font-size: 1rem; /* Larger font */
+  font-weight: 800; /* Extra Bold */
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  border: none;
+  min-width: auto;
+  text-align: center;
+  box-sizing: border-box;
+  line-height: 1.5;
+  /* Bolder Shadow */
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.2), 
+              inset 0 -3px 0 rgba(0,0,0,0.2);
+}
+
+/* Primary Button: Submit (Vibrant Green) */
+.submit-global-ranking-button {
+  background-color: #2ecc71; /* Emerald */
+  color: white;
+}
+
+.submit-global-ranking-button:hover:not(:disabled) {
+  background-color: #27ae60; /* Nephritis */
+  /* Increased hover shadow & lift */
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.25), 
+              inset 0 -3px 0 rgba(0,0,0,0.2);
+  transform: translateY(-3px); /* Increased lift */
+}
+
+.submit-global-ranking-button:active:not(:disabled) {
+  background-color: #1e8449; /* Darker Green */
+  transform: translateY(1px);
+  /* Reduced active shadow */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15), 
+              inset 0 -1px 0 rgba(0,0,0,0.2);
+}
+
+.submit-global-ranking-button:disabled {
+  background-color: #bdc3c7; /* Clouds */
+  color: #7f8c8d; /* Asbestos */
+  cursor: not-allowed;
+  /* Keep base shadow structure but muted */
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.1), 
+              inset 0 -3px 0 rgba(0,0,0,0.1);
+  transform: none;
+}
+
+/* Secondary Button: Toggle View (Dark/Contrast) */
+.toggle-view-button {
+  background-color: #34495e; /* Wet Asphalt */
+  color: #ecf0f1; /* Clouds */
+}
+
+.toggle-view-button:hover {
+  background-color: #2c3e50; /* Midnight Blue */
+  /* Increased hover shadow & lift */
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.25), 
+              inset 0 -3px 0 rgba(0,0,0,0.2);
+  transform: translateY(-3px); /* Increased lift */
+}
+
+.toggle-view-button:active {
+  background-color: #1a2530; /* Darker Blue/Black */
+  transform: translateY(1px);
+  /* Reduced active shadow */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15), 
+              inset 0 -1px 0 rgba(0,0,0,0.2);
+}
+
+/* --- Feedback Styles (Adjust to appear above buttons) --- */
+.submit-feedback {
+  width: 100%;
+  max-width: 400px;
+  margin-bottom: 15px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-weight: 500;
+  order: -1;
+}
+
+.submit-feedback.success {
+  background-color: rgba(76, 175, 80, 0.2);
+  color: #4CAF50;
+  border: 1px solid rgba(76, 175, 80, 0.4);
+}
+
+.submit-feedback.error {
+  background-color: rgba(244, 67, 54, 0.15);
+  color: #f44336;
+  border: 1px solid rgba(244, 67, 54, 0.4);
+}
+
+.login-prompt {
+  color: #ffcc00;
+  font-style: italic;
+  margin-top: 10px;
+  font-size: 0.9rem;
+}
+
+/* Read-Only Global Results List - REMOVE specific styling to match personal list */
+/*
+.ranking-list-container.global-results {
+   border: 1px solid rgba(255, 204, 0, 0.3); 
+   background-color: rgba(0,0,0, 0.1); 
+}
+
+.ranking-list.read-only .ranking-item {
+  cursor: default;
+  background-color: #e9ecef; 
+  border-color: #ced4da;
+}
+
+.ranking-list.read-only .ranking-item:hover {
+   transform: none; 
+   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); 
+   background-color: #e9ecef;
+}
+*/
+
+.global-score {
+  font-size: 0.8em;
+  color: #ffcc00;
+  margin-left: 5px;
+  font-weight: bold;
+}
+
+/* Ensure submit section doesn't show in global view */
+/* (Handled by JSX conditional rendering, but good practice) */
+/* 
+.global-results + .submit-global-ranking-section {
+  display: none; 
+} 
+*/
+/* This rule is also unnecessary as visibility is controlled by React state */
+
+/* Styling for the loading and feedback messages */
+.loading {
+  padding: 20px;
+  text-align: center;
+  color: #ccc;
+  font-style: italic;
+}
+
+.submit-feedback {
+  padding: 10px;
+  margin-bottom: 15px;
+  border-radius: 4px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.submit-feedback.success {
+  background-color: #d4edda; /* Light green */
+  color: #155724; /* Dark green */
+  border: 1px solid #c3e6cb;
+}
+
+.submit-feedback.error {
+  background-color: #f8d7da; /* Light red */
+  color: #721c24; /* Dark red */
+  border: 1px solid #f5c6cb;
+}
+
+.login-prompt {
+  margin-top: 10px;
+  color: #ffc107; /* Warning yellow */
+  font-size: 0.9em;
+  text-align: center;
+}
+
+/* End of file */ 
+
+/* Styling for the main global rankings listing page container - REMOVED */
+/*
+.global-rankings-main-view {
+  max-width: 1200px; 
+  margin: 0 auto; 
+  padding: 20px; 
+}
+
+.global-rankings-main-view h1,
+.global-rankings-main-view .section-title {
+  text-align: center;
+}
+*/
+
+/* Loading message styling */
+/* ... (rest of the file) ... */
+
+/* Hide placeholder image and text in list cards */
+.ranking-list-container .ranking-item .placeholder-hidden {
+  visibility: hidden;
+}
+
+/* Optional: Ensure the empty slot itself still takes up space */
+/* You might adjust the border/background if needed */
+.ranking-list .ranking-item.empty-slot {
+  /* border: 2px dashed #ddd; */ /* Keep border or adjust */
+  /* background-color: #f9f9f9; */ /* Keep background or adjust */
+}
+
+/* Hide placeholder image and text in list cards */
+/* Keep placeholder images hidden */
+.ranking-list-container .ranking-item .contestant-image.placeholder-hidden {
+  visibility: hidden;
+}
+
+/* Keep OTHER empty name placeholders hidden */
+.ranking-list-container .ranking-item .empty-name.placeholder-hidden {
+   visibility: hidden;
+}
+
+/* Style for the 'Submit your votes!' prompt in the first slot */
+.ranking-item.empty-slot .submit-prompt-text {
+  visibility: visible; /* Ensure it's visible */
+  display: block; 
+  width: 100%; 
+  text-align: left; 
+  padding-left: 5px; 
+  font-style: italic;
+  color: black; /* <<< Changed from #666 to black */
+  font-size: 0.85em; 
+  padding-top: 5px; 
+  padding-bottom: 5px;
+  line-height: 1.2;
+}
+
+/* Hide ranking number when user hasn't submitted */
+.ranking-list-container .ranking-item .ranking-number.number-hidden {
+  visibility: hidden;
+}
+
+/* Styling for the description on the main global rankings page */
+.global-rankings-description {
+  max-width: 800px; /* Limit width for readability */
+  margin: 15px auto 30px; /* Center and add space */
+  padding: 15px 20px;
+  text-align: center;
+  color: #ddd; /* Lighter text color */
+  font-size: 1.1rem;
+  line-height: 1.6;
+  background-color: rgba(0, 0, 0, 0.1); /* Subtle background */
+  border-left: 3px solid #ffcc00; /* Accent border */
+  border-radius: 0 8px 8px 0; /* Rounded corners on right */
+}
+
+.global-rankings-description p {
+  margin: 0;
+}
+
+/* NEW Redesigned Header Card Styles */
+.full-list-header.redesigned {
+  background: linear-gradient(135deg, rgba(40, 40, 40, 0.95), rgba(20, 20, 20, 0.98));
+  padding: 25px 35px;
+  margin-bottom: 30px; 
+  border-radius: 12px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 204, 0, 0.1);
+  position: relative;
+  overflow: hidden; 
+  border: 1px solid rgba(255, 204, 0, 0.2); /* Subtle gold border */
+  color: #e0e0e0; /* Default text color */
+}
+
+/* Title Styling */
+.full-list-header.redesigned h2 {
+  font-family: 'Survivant', sans-serif;
+  color: #ffcc00; /* Survivor Gold */
+  font-size: 2.8rem; /* Large title */
+  margin: 0 0 10px 0;
+  line-height: 1.2;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+  font-weight: 700;
+}
+
+/* Inline Description Styling */
+.full-list-header.redesigned .list-description-inline {
+  font-size: 1.1rem;
+  color: #b0b0b0; /* Slightly lighter grey */
+  margin: 0 0 15px 0;
+  line-height: 1.6;
+  max-width: 90%; /* Prevent text from going edge-to-edge */
+}
+
+/* Total Submissions Styling */
+.full-list-header.redesigned .total-submissions {
+  font-size: 0.95rem;
+  color: #a0a0a0;
+  margin: 0;
+  text-align: right; /* Align to the right */
+  position: absolute; /* Position relative to header */
+  bottom: 15px;
+  right: 25px;
+}
+
+.full-list-header.redesigned .total-submissions .submission-count {
+  font-weight: bold;
+  color: #ffcc00; /* Highlight count in gold */
+  margin-left: 5px;
+}
+
+/* Optional: Add a subtle background texture/pattern */
+/* .full-list-header.redesigned::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image: url('path/to/subtle_texture.png');
+  opacity: 0.05;
+  z-index: -1;
+} */
+
+/* Media Query for smaller screens */
+@media (max-width: 768px) {
+  .full-list-header.redesigned {
+    padding: 20px 25px;
+  }
+  .full-list-header.redesigned h2 {
+    font-size: 2.2rem;
+  }
+  .full-list-header.redesigned .list-description-inline {
+    font-size: 1rem;
+    max-width: 100%;
+  }
+  .full-list-header.redesigned .total-submissions {
+     position: static; /* Stack below on mobile */
+     text-align: left;
+     margin-top: 15px;
+  }
+}

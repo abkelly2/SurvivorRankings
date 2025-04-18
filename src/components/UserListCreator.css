@@ -167,6 +167,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   flex-wrap: nowrap;
+  border: 1px solid #ccc;
+  transition: border-color 0.2s ease-in-out, background-color 0.2s ease-in-out;
 }
 
 .user-ranking-list .ranking-item:hover {
@@ -860,7 +862,42 @@
   .drag-handle {
     min-height: 44px; /* Apple's recommended minimum size for touch targets */
   }
-} 
+}
+
+/* Style for item being dragged (touch) */
+.user-ranking-list .ranking-item.touch-dragging-item {
+  opacity: 0.5;
+  background-color: #e0e0e0;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  border-color: #999;
+}
+
+/* Visual indicator for dropping ABOVE the item */
+.user-ranking-list .ranking-item.drag-over-top {
+  border-top: 3px solid #007bff; /* Blue border on top */
+  border-bottom-color: transparent; /* Hide other borders for clarity */
+  border-left-color: transparent;
+  border-right-color: transparent;
+}
+
+/* Visual indicator for dropping BELOW the item */
+.user-ranking-list .ranking-item.drag-over-bottom {
+  border-bottom: 3px solid #007bff; /* Blue border on bottom */
+  border-top-color: transparent; /* Hide other borders for clarity */
+  border-left-color: transparent;
+  border-right-color: transparent;
+}
+
+/* Style for the list when dragging over (desktop) - Keep existing */
+.user-ranking-list.drag-over {
+  border: 2px dashed #007bff;
+  background-color: #f0f8ff; /* Light blue background */
+}
+
+/* Style for item being dragged (desktop) - Keep existing */
+.user-ranking-list .ranking-item.dragging-item {
+  opacity: 0.5;
+}
  
  
  

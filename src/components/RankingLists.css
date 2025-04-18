@@ -6,8 +6,8 @@
 .ranking-lists h2 {
   text-align: center;
   margin-bottom: 15px;
-  color: #333;
-  font-size: clamp(14px, 2vw, 18px);
+  color: #ffcc00;
+  font-size: clamp(14px, 2vw, 30px);
   font-family: 'Survivant', sans-serif;
 }
 

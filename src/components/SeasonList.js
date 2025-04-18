@@ -7,9 +7,6 @@ const SeasonList = forwardRef(({
   maddysList, 
   andrewsList, 
   kendallsList,
-  setMaddysList, 
-  setAndrewsList,
-  setKendallsList,
   user,
   createMode
 }, ref) => {
@@ -27,6 +24,13 @@ const SeasonList = forwardRef(({
   const [dropTarget, setDropTarget] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
   const [showMenuOnMobile, setShowMenuOnMobile] = useState(false);
+  const [listUpdateCallback, setListUpdateCallback] = useState(null);
+  
+  // --- Refs for Handle Drag Resizing ---
+  const isHandleDragging = useRef(false);
+  const handleDragStartY = useRef(0);
+  const menuStartHeight = useRef(0);
+  // -------------------------------------
   
   // Use the user prop to determine logged in state
   const isLoggedIn = !!user;
@@ -77,64 +81,17 @@ const SeasonList = forwardRef(({
   // Expose methods to parent components through ref
   useImperativeHandle(ref, () => ({
     showMenu: () => {
-      console.log('showMenu called, isMobile:', isMobile, 'createMode:', createMode);
-      
       if (isMobile && createMode) {
         setShowMenuOnMobile(true);
-        // Make sure the section is visible when showing menu
-        const seasonsSection = document.querySelector('.seasons-section');
-        console.log('Found seasons section:', seasonsSection);
-        
-        if (seasonsSection) {
-          document.body.setAttribute('data-page', 'create');
-          seasonsSection.classList.add('visible');
-          seasonsSection.style.display = 'block';
-          seasonsSection.classList.remove('collapsed');
-          
-          // Fix the gap issue by setting explicit height/position
-          // Use 85vh instead of window.innerHeight to prevent the menu from going too high
-          seasonsSection.style.height = '85vh';
-          seasonsSection.style.maxHeight = '85vh';
-          seasonsSection.style.bottom = '0';
-          seasonsSection.style.position = 'fixed';
-          seasonsSection.style.overflowY = 'auto';
-          seasonsSection.style.margin = '0';
-          seasonsSection.style.padding = '10px 10px calc(10px + env(safe-area-inset-bottom, 0px)) 10px';
-          
-          // Prevent body scrolling when sheet is open
-          document.body.style.overflow = 'hidden';
-        } else {
-          console.error('Could not find .seasons-section element');
-        }
-      } else {
-        console.log('Not showing menu - conditions not met');
       }
     },
     hideMenu: () => {
       if (isMobile && createMode) {
         setShowMenuOnMobile(false);
-        // Hide the bottom sheet
-        const seasonsSection = document.querySelector('.seasons-section');
-        if (seasonsSection) {
-          seasonsSection.classList.remove('visible');
-          
-          // Re-enable body scrolling
-          document.body.style.overflow = '';
-          
-          // Completely hide after animation completes
-          setTimeout(() => {
-            if (!showMenuOnMobile) {
-              seasonsSection.style.display = 'none';
-              
-              // Reset any inline styles when hiding
-              seasonsSection.style.height = '';
-              seasonsSection.style.maxHeight = '';
-              seasonsSection.style.bottom = '';
-              seasonsSection.style.padding = '';
-            }
-          }, 300); // Match the transition time in CSS (0.3s)
-        }
       }
+    },
+    setListUpdateCallback: (callback) => {
+      setListUpdateCallback(() => callback);
     },
     cleanup: () => {
       // Reset body attributes
@@ -158,6 +115,7 @@ const SeasonList = forwardRef(({
         seasonsSection.style.bottom = '';
         seasonsSection.style.padding = '';
       }
+      setListUpdateCallback(null);
     }
   }));
   
@@ -382,26 +340,42 @@ const SeasonList = forwardRef(({
 
   // Handle start of dragging for contestants
   const handleDragStart = (e, contestant) => {
-    console.log('Starting to drag contestant:', contestant.name);
-    setDraggedContestant(contestant);
-    e.target.classList.add('dragging');
-    // Set data for the drag operation
-    e.dataTransfer.setData('text/plain', JSON.stringify(contestant));
-    e.dataTransfer.effectAllowed = 'move';
+    if (!contestant || !contestant.id) {
+        console.error("Drag start failed: No contestant or ID");
+        e.preventDefault();
+        return;
+    }
+
+    // Restore original image URL logic
+    const imageUrl = contestant.imageUrl || contestantImageUrls[contestant.id] || "/images/placeholder.jpg";
+
+    const data = {
+        id: contestant.id,
+        name: contestant.name || 'Unknown Contestant',
+        imageUrl: imageUrl, 
+        isSeason: false
+    };
+
+    try {
+        const jsonData = JSON.stringify(data);
+        e.dataTransfer.setData('text/plain', jsonData);
+
+        e.dataTransfer.effectAllowed = 'move';
+
+        if (e.currentTarget) {
+            e.currentTarget.classList.add('dragging-item');
+        }
+    } catch (error) {
+        console.error("Error during drag start:", error);
+        e.preventDefault();
+    }
   };
 
   // Handle drag end event
   const handleDragEnd = (e) => {
-    console.log('Drag ended');
-    e.target.classList.remove('dragging');
-    // Reset drag state
-    setDraggedContestant(null);
-    
-    // Remove drag-over class from all drop targets
-    const dropTargets = document.querySelectorAll('.drop-target');
-    dropTargets.forEach(target => {
-      target.classList.remove('drag-over');
-    });
+    if (e.currentTarget) {
+        e.currentTarget.classList.remove('dragging-item');
+    }
   };
 
   // Handle drag over event
@@ -580,33 +554,18 @@ const SeasonList = forwardRef(({
     // Don't clear search term so user can easily return to their search
   };
 
-  // New function to handle clicking on contestants to add them to the list
+  // Function to handle clicking on contestants to add them to the list
   const handleContestantClick = (contestant) => {
-    if (isLoggedIn && createMode) {
-      // Add the contestant to the appropriate list (maddysList when in create mode)
-      if (setMaddysList) {
-        // Check if contestant is already in the list
-        const isAlreadyInList = maddysList.some(item => 
-          !item.isSeason && item.id === contestant.id
-        );
-
-        if (isAlreadyInList) {
-          console.log('Contestant already in list:', contestant.name);
-          return;
-        }
-
-        // Add image URL to the contestant for display in the list
-        const contestantWithImage = {
-          ...contestant,
-          imageUrl: contestantImageUrls[contestant.id] || "/placeholder.jpg"
-        };
-        
-        console.log('Adding contestant to list:', contestantWithImage.name);
-        setMaddysList(prevList => [...prevList, contestantWithImage]);
-        
-        // Hide the menu on mobile after adding a contestant
-        hideMenuOnMobile();
-      }
+    if (listUpdateCallback && typeof listUpdateCallback === 'function') {
+      // Prepare contestant data with image
+      const contestantWithImage = {
+        ...contestant,
+        imageUrl: contestantImageUrls[contestant.id] || "/placeholder.jpg"
+      };
+      listUpdateCallback(contestantWithImage);
+      hideMenuOnMobile();
+    } else {
+      hideMenuOnMobile(); 
     }
   };
   
@@ -623,48 +582,83 @@ const SeasonList = forwardRef(({
 
   // Handle updating parent elements when not rendering
   useEffect(() => {
+    // console.log(`[SeasonList Effect] Running. isMobile=${isMobile}, createMode=${createMode}, showMenuOnMobile=${showMenuOnMobile}`);
     if (isMobile) {
-      const seasonsSection = document.querySelector('.seasons-section');
-      
+      // Always try to find the element fresh
+      const seasonsSection = document.querySelector('.seasons-section'); 
+      // console.log('[SeasonList Effect] Found seasonsSection:', seasonsSection);
+
       if (seasonsSection) {
         if (createMode && showMenuOnMobile) {
-          // Only show if in create mode and explicitly shown
-          document.body.setAttribute('data-page', 'create');
-          console.log('Showing bottom sheet menu');
-          // Show the bottom sheet
-          seasonsSection.classList.add('visible');
-          seasonsSection.style.display = 'block';
-          seasonsSection.style.transform = 'translateY(0)';
+          // --- SHOWING MENU --- 
+          // console.log('[SeasonList Effect] Applying styles to SHOW menu.');
+          document.body.setAttribute('data-page', 'create'); // Keep for potential global styles
+          
+          // Apply styles directly
+          seasonsSection.style.position = 'fixed';
+          seasonsSection.style.top = 'auto';
+          seasonsSection.style.bottom = '0';
+          seasonsSection.style.left = '0';
+          seasonsSection.style.right = '0';
+          seasonsSection.style.height = '85vh'; 
+          seasonsSection.style.maxHeight = '85vh'; 
+          seasonsSection.style.transform = 'translateY(0)'; 
           seasonsSection.style.opacity = '1';
           seasonsSection.style.visibility = 'visible';
+          seasonsSection.style.display = 'block'; 
+          seasonsSection.style.zIndex = '1000';
+          seasonsSection.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out'; 
           
-          // Prevent scrolling
+          seasonsSection.style.padding = '10px 10px calc(10px + env(safe-area-inset-bottom, 0px)) 10px';
+          
+          seasonsSection.classList.add('visible'); 
+          
           document.body.style.overflow = 'hidden';
+          
         } else {
-          // Hide in all other cases
-          console.log('Hiding bottom sheet menu');
-          // Hide the bottom sheet
-          seasonsSection.classList.remove('visible');
-          seasonsSection.style.transform = 'translateY(100%)';
-          // Re-enable scrolling
+          // --- HIDING MENU --- 
+          // console.log('[SeasonList Effect] Applying styles to HIDE menu.');
+          seasonsSection.style.transform = 'translateY(100%)'; // Slide down
+          seasonsSection.style.opacity = '0';
+          seasonsSection.classList.remove('visible'); // Remove class
+
+          // Re-enable body scrolling
           document.body.style.overflow = '';
           
-          // Completely hide after animation completes
+          // Remove attribute if it exists
+          if (document.body.getAttribute('data-page') === 'create') {
+            document.body.removeAttribute('data-page');
+          }
+
+          // Reset styles after transition completes
           setTimeout(() => {
-            if (!showMenuOnMobile) {
-              seasonsSection.style.display = 'none';
+            // Check state again before fully hiding in case it changed back quickly
+            if (!showMenuOnMobile) { 
               seasonsSection.style.visibility = 'hidden';
+              seasonsSection.style.display = 'none'; 
+              // Reset potentially conflicting styles fully
+              seasonsSection.style.position = '';
+              seasonsSection.style.bottom = '';
+              seasonsSection.style.height = '';
+              seasonsSection.style.maxHeight = '';
+              seasonsSection.style.zIndex = '';
+              seasonsSection.style.transition = ''; // Clear transition when hidden
+              seasonsSection.style.padding = '';
+              seasonsSection.style.top = '';
             }
-          }, 300);
+          }, 300); // Match CSS transition time
         }
+      } else {
+          // console.warn('[SeasonList Effect] Could not find .seasons-section element.');
       }
     }
     
+    // Cleanup function remains important
     return () => {
       if (document.body.getAttribute('data-page') === 'create') {
         document.body.removeAttribute('data-page');
       }
-      document.body.style.overflow = '';
+      document.body.style.overflow = ''; // Ensure scroll is restored on unmount
     };
   }, [isMobile, createMode, showMenuOnMobile]);
 
@@ -707,6 +701,55 @@ const SeasonList = forwardRef(({
     };
   }, [isMobile, createMode, showMenuOnMobile]);
 
+  // --- Touch Handlers for Handle Drag Resizing --- 
+  const handleResizeTouchStart = (e) => {
+    // Don't prevent default here, allow potential click on touchend
+    isHandleDragging.current = true;
+    handleDragStartY.current = e.touches[0].clientY;
+    const seasonsSection = document.querySelector('.seasons-section');
+    if (seasonsSection) {
+      menuStartHeight.current = seasonsSection.offsetHeight; // Get current pixel height
+    }
+    console.log('[HandleDrag] Touch Start');
+  };
+
+  const handleResizeTouchMove = (e) => {
+    if (!isHandleDragging.current) return;
+
+    // Prevent scrolling while resizing menu
+    e.preventDefault();
+
+    const currentY = e.touches[0].clientY;
+    const deltaY = currentY - handleDragStartY.current; // How much the finger moved down
+    const newHeight = menuStartHeight.current - deltaY; // Moving finger down decreases height
+
+    const seasonsSection = document.querySelector('.seasons-section');
+    if (seasonsSection) {
+      // Apply constraints (e.g., min 100px, max 95% of viewport height)
+      const minHeight = 100;
+      const maxHeight = window.innerHeight * 0.95;
+      const constrainedHeight = Math.max(minHeight, Math.min(newHeight, maxHeight));
+      
+      seasonsSection.style.height = `${constrainedHeight}px`;
+      seasonsSection.style.maxHeight = `${constrainedHeight}px`; // Keep max height in sync
+      seasonsSection.style.transition = 'none'; // Disable transition during drag for smoothness
+    }
+  };
+
+  const handleResizeTouchEnd = (e) => {
+    if (!isHandleDragging.current) return;
+
+    isHandleDragging.current = false;
+    const seasonsSection = document.querySelector('.seasons-section');
+    if (seasonsSection) {
+        // Re-enable transition after dragging
+        seasonsSection.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out, height 0.3s ease-out'; 
+    }
+    console.log('[HandleDrag] Touch End');
+    // Optional: Snap to nearest height here if desired
+  };
+  // ------------------------------------------
+
   // Don't render the component at all on mobile unless in create mode and explicitly shown
   if (isMobile && (!createMode || !showMenuOnMobile)) {
     return null;
@@ -724,8 +767,17 @@ const SeasonList = forwardRef(({
       {isMobile && createMode && (
         <div 
           className="menu-tab-handle" 
-          onClick={hideMenuOnMobile}
-          aria-label="Close seasons menu"
+          onClick={(e) => { 
+            // Prevent closing if drag just ended
+            if (!isHandleDragging.current) { 
+                hideMenuOnMobile(); 
+            }
+          }}
+          onTouchStart={handleResizeTouchStart}
+          onTouchMove={handleResizeTouchMove}
+          onTouchEnd={handleResizeTouchEnd}
+          onTouchCancel={handleResizeTouchEnd}
+          aria-label="Close or resize seasons menu"
           style={{ touchAction: 'none' }}
         />
       )}
