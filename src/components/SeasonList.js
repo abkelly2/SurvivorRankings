@@ -41,24 +41,46 @@ const SeasonList = forwardRef(({
       const isMobileView = window.innerWidth <= 768;
       setIsMobile(isMobileView);
       
-      // Make sure the parent element has the correct class
+      const seasonsSection = sectionRef.current?.closest('.seasons-section');
+      if (!seasonsSection) return; // Exit if section not found
+
+      // Logic specifically for mobile create mode bottom sheet
       if (createMode && isMobileView) {
-        const seasonsSection = sectionRef.current?.closest('.seasons-section');
-        if (seasonsSection) {
           document.body.setAttribute('data-page', 'create');
-          
-          // Make sure it's fully hidden on mobile in create mode
+          // Manage display based on showMenuOnMobile state
           if (!showMenuOnMobile) {
             seasonsSection.classList.add('collapsed');
-            seasonsSection.style.display = 'none';
+            seasonsSection.style.display = 'none'; 
+            seasonsSection.style.height = ''; // Ensure height is reset when hidden
           } else {
-            seasonsSection.style.display = '';
+            seasonsSection.style.display = ''; // Use default display (likely flex or block)
             seasonsSection.classList.remove('collapsed');
+            // Optionally set initial open height if needed
+            // seasonsSection.style.height = '85vh'; 
           }
-        }
-      } else if (document.body.getAttribute('data-page') === 'create') {
-        // Clean up attribute when not in create mode
-        document.body.removeAttribute('data-page');
+      } else {
+          // --- Desktop or Non-Create Mode Logic --- 
+          // Ensure styles applied for mobile create mode are removed
+          seasonsSection.style.display = ''; // Reset display
+          seasonsSection.style.height = ''; // Reset height
+          seasonsSection.style.maxHeight = ''; // Reset maxHeight
+          seasonsSection.style.bottom = ''; // Reset bottom positioning
+          seasonsSection.style.padding = ''; // Reset padding
+          
+          // Remove mobile-specific body attribute if it exists
+          if (document.body.getAttribute('data-page') === 'create') {
+            document.body.removeAttribute('data-page');
+          }
+          
+          // Restore default collapse state based on localStorage for desktop
+          const savedCollapsedState = localStorage.getItem('seasonsSectionCollapsed');
+          if (savedCollapsedState === 'true') {
+            seasonsSection.classList.add('collapsed');
+            setIsCollapsed(true); // Sync state
+          } else {
+            seasonsSection.classList.remove('collapsed');
+            setIsCollapsed(false); // Sync state
+          }
       }
     };
     
@@ -71,11 +93,19 @@ const SeasonList = forwardRef(({
     // Cleanup event listener
     return () => {
       window.removeEventListener('resize', checkIfMobile);
-      // Also clean up the attribute on unmount
+      // Also clean up the attribute on unmount if component might unmount
+      // while in create mode (though App structure might prevent this)
       if (document.body.getAttribute('data-page') === 'create') {
         document.body.removeAttribute('data-page');
       }
+      // Consider resetting inline styles on unmount too if needed
+      const seasonsSection = sectionRef.current?.closest('.seasons-section');
+      if (seasonsSection) {
+           seasonsSection.style.display = '';
+           seasonsSection.style.height = '';
+      }
     };
+    // Dependencies: createMode, showMenuOnMobile, sectionRef (implicit via closure)
   }, [createMode, showMenuOnMobile]);
   
   // Expose methods to parent components through ref
@@ -179,30 +209,6 @@ const SeasonList = forwardRef(({
       }
     }
   };
-  
-  // Check localStorage for collapsed state on component mount
-  useEffect(() => {
-    // On mobile in create mode, start with the menu collapsed
-    if (window.innerWidth <= 768 && createMode) {
-      setIsCollapsed(true);
-      const seasonsSection = sectionRef.current?.closest('.seasons-section');
-      if (seasonsSection) {
-        seasonsSection.classList.add('collapsed');
-        // Update localStorage
-        localStorage.setItem('seasonsSectionCollapsed', 'true');
-      }
-    } else {
-      // Otherwise check localStorage for the previous state
-      const savedCollapsedState = localStorage.getItem('seasonsSectionCollapsed');
-      if (savedCollapsedState === 'true') {
-        setIsCollapsed(true);
-        const seasonsSection = sectionRef.current?.closest('.seasons-section');
-        if (seasonsSection) {
-          seasonsSection.classList.add('collapsed');
-        }
-      }
-    }
-  }, [createMode]);
   
   // Save scroll position before navigating to season detail view
   useEffect(() => {
@@ -750,11 +756,15 @@ const SeasonList = forwardRef(({
   };
   // ------------------------------------------
 
-  // Don't render the component at all on mobile unless in create mode and explicitly shown
-  if (isMobile && (!createMode || !showMenuOnMobile)) {
+  // Don't render the component at all ONLY when it's the hidden mobile menu
+  // in create mode and not explicitly shown.
+  // Render in all other cases (desktop, mobile non-create, mobile create shown).
+  if (isMobile && createMode && !showMenuOnMobile) {
+    console.log('[SeasonList Render] Returning null (Mobile, Create Mode, Not Shown)');
     return null;
   }
 
+  // console.log('[SeasonList Render] Rendering component');
   return (
     <div ref={sectionRef}>
       {foundIdol && (

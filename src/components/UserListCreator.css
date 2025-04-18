@@ -168,7 +168,10 @@
   text-overflow: ellipsis;
   flex-wrap: nowrap;
   border: 1px solid #ccc;
-  transition: border-color 0.2s ease-in-out, background-color 0.2s ease-in-out;
+  transition: border-color 0.2s ease-in-out, 
+              background-color 0.2s ease-in-out, 
+              transform 0.2s ease-in-out,
+              opacity 0.2s ease-in-out;
 }
 
 .user-ranking-list .ranking-item:hover {
@@ -866,38 +869,159 @@
 
 /* Style for item being dragged (touch) */
 .user-ranking-list .ranking-item.touch-dragging-item {
-  opacity: 0.5;
-  background-color: #e0e0e0;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  border-color: #999;
-}
-
-/* Visual indicator for dropping ABOVE the item */
-.user-ranking-list .ranking-item.drag-over-top {
-  border-top: 3px solid #007bff; /* Blue border on top */
-  border-bottom-color: transparent; /* Hide other borders for clarity */
-  border-left-color: transparent;
-  border-right-color: transparent;
-}
-
-/* Visual indicator for dropping BELOW the item */
-.user-ranking-list .ranking-item.drag-over-bottom {
-  border-bottom: 3px solid #007bff; /* Blue border on bottom */
-  border-top-color: transparent; /* Hide other borders for clarity */
-  border-left-color: transparent;
-  border-right-color: transparent;
+  opacity: 0.7; 
+  background-color: #f0f0f0; 
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25); 
+  border-color: #aaa;
+  z-index: 1000; 
+  /* Disable pointer events so elementFromPoint works correctly underneath */
+  pointer-events: none; 
+  /* Prevent transitions during direct manipulation for smoother following */
+  transition: none; 
 }
 
 /* Style for the list when dragging over (desktop) - Keep existing */
 .user-ranking-list.drag-over {
   border: 2px dashed #007bff;
-  background-color: #f0f8ff; /* Light blue background */
+  background-color: #f0f8ff; 
 }
 
 /* Style for item being dragged (desktop) - Keep existing */
 .user-ranking-list .ranking-item.dragging-item {
   opacity: 0.5;
 }
+
+/* Add haptic feedback visual cue */
+@keyframes touch-feedback {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+
+.ranking-item.touch-dragging::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 204, 0, 0.1);
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+/* Better touch handling for mobile */
+@media (max-width: 768px) {
+  /* Make sure list items are easier to grab */
+  .user-ranking-list .ranking-item {
+    touch-action: none; /* Disable browser handling of all touch gestures */
+    user-select: none; /* Prevent text selection during touch */
+    -webkit-user-select: none;
+    max-width: none;
+    min-width: 0;
+    width: 100%;
+    cursor: pointer;
+  }
+  
+  /* Make the drag handle more visible on mobile */
+  .ranking-item::before {
+    font-size: 16px;
+    opacity: 0.8;
+    left: 8px;
+  }
+  
+  /* Add visual indicator for touch dragging */
+  .user-ranking-list.touch-active {
+    background-color: rgba(40, 40, 40, 0.8);
+    border: 2px dashed #ffcc00;
+  }
+  
+  .ranking-item.touch-active {
+    background-color: rgba(250, 250, 250, 0.95);
+    transform: scale(1.02);
+    border-color: #ddd;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+  
+  .ranking-item.touch-dragging {
+    background-color: rgba(255, 255, 255, 0.95);
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+    border: 2px solid #ffcc00;
+    z-index: 1000;
+  }
+
+  /* Add haptic feedback visual indicator */
+  @keyframes pulse-feedback {
+    0% { box-shadow: 0 0 0 rgba(255, 204, 0, 0.2); }
+    50% { box-shadow: 0 0 8px rgba(255, 204, 0, 0.6); }
+    100% { box-shadow: 0 0 0 rgba(255, 204, 0, 0.2); }
+  }
+  
+  .ranking-item.touch-active {
+    animation: pulse-feedback 0.5s infinite;
+  }
+}
+
+/* Ensure the root container doesn't cause horizontal scrolling */
+.App {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+.main-content {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Adjust the drag handle to be more visible and touchable on mobile */
+@media (max-width: 768px) {
+  /* Adjust the icon button sizes for easier tapping */
+  .drag-handle {
+    cursor: grab;
+    opacity: 0.7;
+    font-size: 16px;
+    padding: 4px;
+    margin-right: 6px;
+    touch-action: none;
+  }
+  
+  /* Ensure content container fits properly */
+  .content-container {
+    width: 100%;
+    max-width: 100%;
+    padding: 10px;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+  
+  /* Adjust the dropdown menu position so it doesn't cause overflow */
+  .search-dropdown-container {
+    position: absolute;
+    z-index: 100;
+    width: calc(100% - 20px); /* Account for container padding */
+    max-height: 300px;
+    overflow-y: auto;
+    left: 10px;
+    right: 10px;
+  }
+  
+  .contestant-item, .contestant-details, .season-details {
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+    white-space: normal;
+  }
+  
+  /* Make touch targets larger */
+  input[type="text"], 
+  button,
+  .ranking-item,
+  .contestant-item,
+  .drag-handle {
+    min-height: 44px; /* Apple's recommended minimum size for touch targets */
+  }
+} 
  
  
  

@@ -13,7 +13,8 @@ const ListCreatorPage = ({
   user, 
   editingListId, 
   onCancel,
-  seasonListRef
+  seasonListRef,
+  onShowMobileMenu
 }) => {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
@@ -64,9 +65,9 @@ const ListCreatorPage = ({
   }, [isMobile, seasonListRef, handleAddContestantToListCreator]);
 
   const handleListAreaClick = () => {
-    if (isMobile && seasonListRef && seasonListRef.current) {
-      console.log('ListCreatorPage: Triggering showMenu');
-      seasonListRef.current.showMenu();
+    if (isMobile && onShowMobileMenu) {
+      console.log('ListCreatorPage: Triggering showMobileMenu via prop');
+      onShowMobileMenu();
     }
   };
 
@@ -85,6 +86,7 @@ const ListCreatorPage = ({
       onCancel={onCancel}
       seasonListRef={seasonListRef}
       isMobile={isMobile}
+      onListAreaClick={handleListAreaClick}
     />
   );
 };
