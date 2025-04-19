@@ -95,11 +95,17 @@
 }
 
 .lists-container {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: nowrap;
+  display: grid;
+  /* Use auto-fit with a minimum card width and allow growth */
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  /* Use clamp for a shrinking gap: min 10px, ideal 1.5vw, max 20px */
+  gap: clamp(10px, 1.5vw, 20px);
   width: 100%;
+  max-width: 1200px; /* Limit overall width */
+  margin: 0 auto; /* Center the container */
+  padding-left: 10px; /* Add some padding */
+  padding-right: 10px;
+  justify-content: center; /* Center items horizontally when fewer columns */
 }
 
 /* Styles for list cards on the main page */
@@ -117,8 +123,11 @@
 
 /* Clickable lists styling */
 .ranking-list-container {
-  flex: 1;
-  min-width: 0; 
+  /* Remove flex properties if they exist, not needed for grid items */
+  /* flex: 1; */ 
+  /* min-width: 0; */ 
+  width: 100%; /* Allow grid to control effective width via minmax */
+  max-width: 400px; /* Optional: Set a max-width if 1fr growth is too much */
   background-color: #f5f5f5;
   border-radius: 8px;
   padding: 10px;
@@ -326,7 +335,11 @@
 }
 
 /* Responsive adjustments */
-@media (max-width: 1100px) {
+/* @media (max-width: 1250px) {
+  .lists-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
   .contestant-image {
     width: 75px;
     height: 75px;
@@ -350,9 +363,15 @@
     font-size: clamp(10px, 1vw, 14px);
     line-height: 1.1;
   }
-}
+} */
 
-@media (max-width: 880px) {
+/* @media (max-width: 850px) {
+  .lists-container {
+    grid-template-columns: 1fr;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  
   .contestant-image {
     width: 65px;
     height: 65px;
@@ -372,21 +391,17 @@
     padding: 6px;
   }
   
-  .lists-container {
-    gap: 6px;
-  }
-  
   .ranking-number {
     width: 20px;
     height: 20px;
     font-size: 12px;
   }
-}
+} */
 
 /* Only use multi-column layout once screen is too small */
-@media (max-width: 700px) {
+/* @media (max-width: 700px) {
   .lists-container {
-    flex-direction: column;
+    grid-template-columns: 1fr;
   }
   
   .ranking-list-container {
@@ -401,24 +416,15 @@
   .ranking-item {
     min-height: 95px;
   }
-}
+} */
 
 @media (min-width: 769px) and (max-width: 1200px) {
   .lists-container {
     justify-content: center;
   }
-  
-  .ranking-list-container {
-    min-width: 300px;
-    max-width: 45%;
-  }
 }
 
 @media (min-width: 1201px) {
-  .ranking-list-container {
-    min-width: 300px;
-    max-width: 32%;
-  }
 }
 
 .ranking-list.clickable:hover {

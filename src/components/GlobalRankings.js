@@ -540,9 +540,9 @@ const GlobalRankings = ({ seasonListRef }) => {
                                 ? contestant.name.replace("Survivor: ", "").replace("Survivor ", "") 
                                 : contestant.name)
                     }
-                    {/* Show average position if calculated */} 
-                    {averagePosition !== null && 
-                      <span className="global-score"> (Avg Pos: {averagePosition})</span>
+                    {/* Show total points if calculated */} 
+                    {contestant.totalScore !== undefined && 
+                      <span className="global-score"> ({contestant.totalScore} pts)</span>
                     }
                   </div>
                 </div>
@@ -907,9 +907,9 @@ const GlobalRankings = ({ seasonListRef }) => {
                                     />
                                     <div className="contestant-name">
                                         {contestant.name}
-                                        {/* Conditionally display average position if calculated */} 
-                                        {averagePositionDetail !== null && 
-                                          <span className="global-score"> (Avg Pos: {averagePositionDetail})</span> 
+                                        {/* Show total points if available */} 
+                                        {contestant.totalScore !== undefined && 
+                                          <span className="global-score"> ({contestant.totalScore} pts)</span> 
                                         }
                                     </div>
                                     {/* Optionally show vote count: <span className="global-votes">{currentListTotalVotes} votes</span> */}
@@ -967,6 +967,10 @@ const GlobalRankings = ({ seasonListRef }) => {
                              (contestant.isSeason
                                ? contestant.name.replace('Survivor: ', '').replace('Survivor ', '')
                                : contestant.name)
+                          }
+                          {/* Show total points if available */} 
+                          {contestant.totalScore !== undefined && 
+                            <span className="global-score"> ({contestant.totalScore} pts)</span> 
                           }
                        </div>
                        {/* Show remove button only if editable and not empty */} 
