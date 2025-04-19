@@ -459,14 +459,6 @@ const UserListCreator = ({
         return;
       }
       
-      // <<< ADD LIST LENGTH CHECK HERE >>>
-      if (userList.length >= 10) {
-        setError('You can only rank up to 10 items.');
-        setTimeout(() => setError(''), 3000);
-        console.error("Error: Cannot add more than 10 items via drop.");
-        return; // Stop if the list is already full
-      }
-      
       // Add item to list at the calculated drop position
       const newList = [...userList];
       newList.splice(dropIndex, 0, droppedItemData);
@@ -603,7 +595,6 @@ const UserListCreator = ({
     const currentTarget = e.currentTarget;
     draggedItemElement.current = currentTarget;
     
-    // <<< Record initial touch position for movement calculation >>>
     const touch = e.touches[0];
     initialTouchX.current = touch.clientX;
     initialTouchY.current = touch.clientY;
@@ -614,12 +605,11 @@ const UserListCreator = ({
       if (currentTarget) {
           draggedItemHeight.current = currentTarget.offsetHeight; 
           currentTarget.classList.add('touch-dragging-item');
-          // Note: Scale transform is now applied dynamically in handleTouchMove
       }
       originalBodyOverflow.current = document.body.style.overflow; 
       document.body.style.overflow = 'hidden';
-      console.log('[TouchDrag - Create] Drag started. Initial Touch Y:', initialTouchY.current);
-    }, 300); 
+      console.log('[TouchDrag - Create] Drag started after delay. Initial Touch Y:', initialTouchY.current);
+    }, 50);
   };
 
   // <<< Update handleTouchMove >>>

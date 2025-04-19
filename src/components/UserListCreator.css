@@ -130,14 +130,13 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
   align-items: flex-start;
 }
 
 .user-ranking-list.drag-over {
-  background-color: rgba(40, 40, 40, 0.8);
-  border: 2px dashed #ffcc00;
-  box-shadow: 0 0 10px rgba(255, 204, 0, 0.3);
+  background-color: rgba(45, 45, 45, 0.7) !important;
+  border: 2px dashed rgba(255, 204, 0, 0.6);
 }
 
 .empty-list-message {

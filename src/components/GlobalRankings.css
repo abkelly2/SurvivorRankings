@@ -78,6 +78,8 @@
   border-radius: 6px; /* Slightly larger radius */
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08); /* Enhanced shadow */
   transition: box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out; /* Add transitions */
+  cursor: grab;
+  user-select: none; /* Prevent text selection during drag */
 }
 
 /* Add subtle hover effect */
@@ -200,18 +202,6 @@
   background-color: #f44336;
 }
 
-/* Styling for drag over state - REMOVED */
-/*
-.ranking-list-container.drag-over {
-  background-color: rgba(255, 204, 0, 0.05);
-  box-shadow: 0 0 10px rgba(255, 204, 0, 0.2);
-}
-
-.ranking-list-container.drag-over .ranking-list {
-  border-color: #ffcc00;
-}
-*/
-
 /* Style for item being dragged for reordering (Desktop) */
 .ranking-item.dragging-item {
   opacity: 0.5;
@@ -221,21 +211,15 @@
 }
 
 /* Style for item being dragged via touch (Mobile) */
-.ranking-item.touch-dragging-item {
-  opacity: 0.6; /* Slightly less transparent */
-  background-color: #d0d0f0; /* Different color cue */
-  /* border: 2px dashed #888; */ /* Optional dashed border */
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25); /* More pronounced shadow */
-  transform: scale(1.02); /* Slightly larger */
-  z-index: 100; /* Ensure it appears above others */
-  position: relative; /* Needed for z-index */
-}
-
-/* Style for drop target slot during touch drag (Mobile) */
-.ranking-item.drag-over {
-  background-color: #e8e8ff; /* Highlight color for drop target */
-  outline: 2px dashed #8888ff;
-  outline-offset: -2px;
+.touch-dragging-item {
+  /* Static transform removed - now applied dynamically via JS */
+  opacity: 0.85; /* Slightly see-through */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); 
+  z-index: 1000; /* Ensure it's above other items */
+  cursor: grabbing;
+  pointer-events: none; /* Allow touch events to pass through to container */
+  transition: none; /* Disable transitions while actively dragging */
+  /* transform-origin should be set if scaling or rotations are used */
 }
 
 /* Submission Section Styling */

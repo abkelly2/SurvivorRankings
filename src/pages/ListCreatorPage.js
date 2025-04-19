@@ -13,8 +13,7 @@ const ListCreatorPage = ({
   user, 
   editingListId, 
   onCancel,
-  seasonListRef,
-  onShowMobileMenu
+  seasonListRef
 }) => {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
@@ -29,24 +28,13 @@ const ListCreatorPage = ({
       item => !item.isEmpty && item.id === contestant.id
     );
     if (isAlreadyInList) {
-      alert(`${contestant.name} is already in this list.`);
+      console.warn(`${contestant.name} is already in this list.`);
       return;
     }
-    if (userList.filter(item => !item.isEmpty).length >= 10) {
-        alert("You can only rank up to 10 contestants.");
-        return;
-    }
     
-    const emptyIndex = userList.findIndex(item => item.isEmpty);
-    let newList;
-    if (emptyIndex !== -1) {
-        newList = [...userList];
-        newList[emptyIndex] = { ...contestant, isEmpty: false };
-    } else {
-        newList = [...userList, { ...contestant, isEmpty: false }]; 
-    }
+    const newList = [...userList, { ...contestant, isEmpty: false }];
     setUserList(newList);
-    console.log(`Added ${contestant.name} via mobile click to ListCreator`);
+    console.log(`Added ${contestant.name} via mobile click to ListCreator (length: ${newList.length})`);
   };
 
   useEffect(() => {
@@ -65,9 +53,9 @@ const ListCreatorPage = ({
   }, [isMobile, seasonListRef, handleAddContestantToListCreator]);
 
   const handleListAreaClick = () => {
-    if (isMobile && onShowMobileMenu) {
-      console.log('ListCreatorPage: Triggering showMobileMenu via prop');
-      onShowMobileMenu();
+    if (isMobile && seasonListRef && seasonListRef.current) {
+      console.log('ListCreatorPage: Triggering showMenu');
+      seasonListRef.current.showMenu();
     }
   };
 
@@ -86,7 +74,6 @@ const ListCreatorPage = ({
       onCancel={onCancel}
       seasonListRef={seasonListRef}
       isMobile={isMobile}
-      onListAreaClick={handleListAreaClick}
     />
   );
 };
