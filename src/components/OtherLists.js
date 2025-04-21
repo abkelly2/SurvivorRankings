@@ -875,6 +875,22 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
     }
   }, [selectedList]);
 
+  // --- Helper function to load an image using Promises ---
+  const loadImage = (src) => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'Anonymous'; // Important for canvas tainting
+      img.onload = () => resolve(img);
+      img.onerror = (err) => {
+        console.error(`[Share Image Load Error] Failed to load image from src: ${src}`, err);
+        reject(err); // Reject the promise with the error
+      };
+      console.log(`[Share Image Load] Setting image src: ${src}`); // Log when setting src
+      img.src = src;
+    });
+  };
+  // --- End Load Image Helper ---
+
   // --- Share Image Functions (Updated) ---
   const handleShareClick = async () => {
     if (!selectedList || !selectedList.contestants) {
@@ -897,40 +913,132 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
       // Draw the background image
       ctx.drawImage(backgroundImage, 0, 0);
 
-      // --- Draw Title --- 
-      const titleBox = { x: 210, y: 200, width: 804 - 180, height: 378 - 180 };
-      const title = selectedList.name || "Untitled List";
-      const initialTitleFontSize = 130; // Increased from 40
-      const minTitleFontSize = 10;
-      let currentTitleFontSize = initialTitleFontSize;
+      // --- Load Wood Texture for Title ---
+      let woodPattern = null;
+      try {
+          const woodTextureImg = await loadImage('/images/wood_texture.png'); // ASSUMED PATH
+          
+          // <<< Create scaled pattern >>>
+          const scaleFactor = 1; // Adjust this value to control zoom level (0.5 = 50% size)
+          const patternCanvas = document.createElement('canvas');
+          const patternCtx = patternCanvas.getContext('2d');
+          
+          patternCanvas.width = woodTextureImg.width * scaleFactor;
+          patternCanvas.height = woodTextureImg.height * scaleFactor;
+          
+          // Draw the scaled image onto the pattern canvas
+          patternCtx.drawImage(woodTextureImg, 0, 0, patternCanvas.width, patternCanvas.height);
+          
+          // Create the pattern from the scaled canvas
+          woodPattern = ctx.createPattern(patternCanvas, 'repeat'); 
+          
+          console.log(`[Share Image] Wood texture loaded and scaled pattern created (scale: ${scaleFactor}).`);
+      } catch (error) {
+          console.error("[Share Image] Failed to load/scale wood texture, falling back to solid color:", error);
+          // Fallback color will be set later if woodPattern is null
+      }
+      // --- End Load Texture ---
 
-      // Draw debug box
+      // --- Helper function for text wrapping ---
+      const wrapText = (context, text, maxWidth, initialFontSize, minFontSize, lineHeight) => {
+          let words = text.split(' ');
+          let lines = [];
+          let currentLine = words[0];
+          let fontSize = initialFontSize;
+
+          // Function to measure and attempt wrapping at a given font size
+          const attemptWrap = (size) => {
+              context.font = `${size}px Survivant`;
+              lines = [];
+              currentLine = words[0];
+              for (let i = 1; i < words.length; i++) {
+                  let word = words[i];
+                  let width = context.measureText(currentLine + " " + word).width;
+                  if (width < maxWidth) {
+                      currentLine += " " + word;
+                  } else {
+                      lines.push(currentLine);
+                      currentLine = word;
+                  }
+              }
+              lines.push(currentLine);
+              return lines;
+          };
+
+          // Initial attempt
+          attemptWrap(fontSize);
+
+          // Reduce font size if any line is too wide or total height exceeds box height
+          let totalHeight = lines.length * lineHeight;
+          let anyLineTooWide = lines.some(line => context.measureText(line).width > maxWidth);
+          
+          while ((anyLineTooWide || totalHeight > titleBox.height) && fontSize > minFontSize) {
+              fontSize--;
+              attemptWrap(fontSize);
+              totalHeight = lines.length * lineHeight;
+              anyLineTooWide = lines.some(line => context.measureText(line).width > maxWidth);
+              // Try fewer lines if possible at this smaller size (helps fit height)
+              if (lines.length > 1 && fontSize >= minFontSize) { 
+                  let singleLineAttempt = attemptWrap(fontSize); // Rerun wrap logic
+                  if(singleLineAttempt.length === 1 && context.measureText(singleLineAttempt[0]).width <= maxWidth){
+                      lines = singleLineAttempt;
+                      totalHeight = lines.length * lineHeight;
+                      anyLineTooWide = false;
+                      console.log(`[Share Image Title Wrap] Switched back to single line at size ${fontSize}px`);
+                  }
+              } 
+          }
+          
+          console.log(`[Share Image Title Wrap] Final lines: ${lines.length}, Font size: ${fontSize}px`);
+          return { lines, fontSize };
+      };
+      // --- End Helper --- 
+
+      // --- Draw Title (Updated for Wrapping) --- 
+      const titleBox = { x: 210, y: 150, width: 624, height: 290 }; // width: 804-180, height: 378-180
+      const title = selectedList.name || "Untitled List";
+      const initialTitleFontSize = 130; // Start large
+      const minTitleFontSize = 20; // Minimum acceptable size
+      const titleLineHeight = 97; // Approximate line height based on font size
+
+      // Debug box
       ctx.strokeStyle = 'red';
       ctx.lineWidth = 1;
       ctx.strokeRect(titleBox.x, titleBox.y, titleBox.width, titleBox.height);
+      
+      // Get wrapped lines and final font size
+      const { lines: titleLines, fontSize: finalTitleFontSize } = wrapText(
+          ctx, 
+          title, 
+          titleBox.width, 
+          initialTitleFontSize, 
+          minTitleFontSize, 
+          titleLineHeight
+      );
 
-      // Set title text properties
-      ctx.fillStyle = 'black'; // Title color
+      // Set final text properties
+      ctx.font = `${finalTitleFontSize}px Survivant`;
+      // <<< Use pattern if loaded, otherwise fallback color >>>
+      ctx.fillStyle = woodPattern || 'rgb(29, 21, 4)'; 
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.font = `${currentTitleFontSize}px Survivant`;
 
-      // Adjust font size if title is too wide
-      let titleWidth = ctx.measureText(title).width;
-      while (titleWidth > titleBox.width && currentTitleFontSize > minTitleFontSize) {
-        currentTitleFontSize--;
-        ctx.font = `${currentTitleFontSize}px Survivant`;
-        ctx.fillStyle = 'rgb(29, 21, 4)'; 
-        titleWidth = ctx.measureText(title).width;
+      // Calculate starting Y position for vertical centering
+      const totalTextHeight = titleLines.length * titleLineHeight;
+      let startY = titleBox.y + (titleBox.height - totalTextHeight) / 2 + titleLineHeight / 2;
+      
+      // Adjust startY slightly if only one line to better center visually
+      if (titleLines.length === 1) {
+          startY += 10; // Small adjustment may be needed depending on font baseline
       }
-      console.log(`[Share Image Title] Final font size for title '${title}': ${currentTitleFontSize}px`);
 
-      // Calculate centered position
+      // Draw each line
       const titleX = titleBox.x + titleBox.width / 2;
-      const titleY = titleBox.y + titleBox.height / 2;
-
-      // Draw the title
-      ctx.fillText(title, titleX, titleY);
+      titleLines.forEach((line, index) => {
+          const lineY = startY + index * titleLineHeight;
+          ctx.fillText(line, titleX, lineY);
+          console.log(`[Share Image Title Draw] Drawing line ${index + 1}: "${line}" at Y=${lineY}`);
+      });
       // --- End Draw Title ---
 
       // --- Reset settings for contestant names ---
@@ -1101,21 +1209,6 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
         } finally {
           setIsGeneratingImage(false);
         }
-      };
-
-      // Helper function to load an image using Promises
-      const loadImage = (src) => {
-        return new Promise((resolve, reject) => {
-          const img = new Image();
-          img.crossOrigin = 'Anonymous'; // Important for canvas tainting
-          img.onload = () => resolve(img);
-          img.onerror = (err) => {
-            console.error(`[Share Image Load Error] Failed to load image from src: ${src}`, err);
-            reject(err); // Reject the promise with the error
-          };
-          console.log(`[Share Image Load] Setting image src: ${src}`); // Log when setting src
-          img.src = src;
-        });
       };
 
       // Log the state of contestantImageUrls when starting
