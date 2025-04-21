@@ -2295,6 +2295,67 @@
     margin: -1px 0 5px;
   }
 }
+
+/* Basic styles for Share Button (Temporary for Debugging) */
+.share-list-button {
+  display: inline-block; /* Ensure it's displayed */
+  padding: 10px 15px;
+  margin-left: 15px; /* Add some space */
+  background-color: red !important; /* Make it obvious */
+  color: white !important;
+  border: 2px solid yellow !important;
+  font-size: 16px !important;
+  font-weight: bold;
+  cursor: pointer;
+  z-index: 100; /* Ensure it's not hidden behind something */
+}
+
+/* Styling for the share modal (add more later) */
+.share-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.share-modal-content {
+  background-color: white;
+  padding: 30px;
+  border-radius: 8px;
+  max-width: 90%;
+  max-height: 90%;
+  overflow: auto;
+  text-align: center;
+}
+
+.share-preview-image {
+  display: block;
+  max-width: 100%;
+  max-height: 60vh; /* Limit preview height */
+  margin: 20px auto;
+  border: 1px solid #ccc;
+}
+
+.share-modal-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+.download-image-button, .close-modal-button {
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+/* Add more specific styles as needed */
  
  
  

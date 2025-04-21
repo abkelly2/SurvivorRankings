@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp, collection, query, where, orderBy, getDocs, addDoc, updateDoc, deleteDoc, Timestamp, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { UserContext } from '../UserContext';
 import './GlobalRankings.css';
 // We need to import the HomePageLists.css to use its styles
 import './HomePageLists.css';
-// Import OtherLists.css for the list detail view styling
+// Import OtherLists.css for the list detail view styling AND comments
 import './OtherLists.css';
+
+// Define commentsRef at the component level
+const commentsRef = collection(db, 'comments');
 
 const GlobalRankings = ({ seasonListRef }) => {
   const { listId } = useParams();
@@ -46,6 +49,14 @@ const GlobalRankings = ({ seasonListRef }) => {
 
   // <<< CALCULATE isEditable at the top level >>>
   const isEditable = user && (!userHasSubmitted || !showingGlobalRanking);
+
+  // --- Comment State --- 
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState('');
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [replyingTo, setReplyingTo] = useState(null); // { id: commentId, userName: commentUserName }
+  const [replyText, setReplyText] = useState('');
+  // ---------------------
 
   // Sample data for the list cards - this would be replaced with real data from your API
   const sampleLists = [
@@ -244,6 +255,14 @@ const GlobalRankings = ({ seasonListRef }) => {
     
     loadGlobalRankings();
   }, [user]); // Only run when user changes
+
+  // --- Effect to Fetch Comments --- 
+  useEffect(() => {
+    if (selectedList && listId) {
+      fetchComments(listId); // Fetch comments when a list is selected
+    }
+  }, [selectedList, listId]); // Rerun when selectedList or listId changes
+  // ----------------------------
 
   // Effect to check mobile on resize
   useEffect(() => {
@@ -823,6 +842,231 @@ const GlobalRankings = ({ seasonListRef }) => {
     }
   };
 
+  // --- Comment Functions --- 
+
+  // Function to fetch comments for a specific GLOBAL list
+  const fetchComments = async (globalListId) => {
+    if (!globalListId) return;
+    console.log(`Fetching comments for global list: ${globalListId}`);
+    setLoadingComments(true);
+    setComments([]); // Clear previous comments
+    try {
+      // Use component-level ref
+      const q = query(
+        commentsRef, // Use component-level ref
+        where('listId', '==', globalListId),
+        orderBy('createdAt', 'desc')
+      );
+      const querySnapshot = await getDocs(q);
+      const fetchedComments = [];
+      querySnapshot.forEach((doc) => {
+        fetchedComments.push({ id: doc.id, ...doc.data() });
+      });
+      setComments(fetchedComments);
+      console.log(`Fetched ${fetchedComments.length} comments.`);
+    } catch (error) {
+      // Handle potential index error (Firestore might require composite index)
+      if (error.code === 'failed-precondition') {
+          console.warn("Firestore index missing for comments query. Fetching without ordering.");
+          try {
+              // Use component-level ref
+              const simpleQuery = query(commentsRef, where('listId', '==', globalListId));
+              const querySnapshot = await getDocs(simpleQuery);
+              let fetchedComments = [];
+              querySnapshot.forEach((doc) => {
+                  fetchedComments.push({ id: doc.id, ...doc.data() });
+              });
+              // Manual sort client-side
+              fetchedComments.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
+              setComments(fetchedComments);
+              console.log(`Fetched ${fetchedComments.length} comments (manual sort).`);
+          } catch (innerError) {
+              console.error("Error fetching comments without order:", innerError);
+              setComments([]); 
+          }
+      } else {
+          console.error("Error fetching comments:", error);
+          setComments([]); 
+      }
+    } finally {
+      setLoadingComments(false);
+    }
+  };
+
+  // Function to add a new comment or reply for a GLOBAL list
+  const addComment = async (parentId = null) => {
+    if (!user) {
+      alert('You must be logged in to comment.');
+      return;
+    }
+    if (!listId) {
+        console.error("Cannot add comment: listId is missing.");
+        return;
+    }
+
+    const text = parentId ? replyText.trim() : newComment.trim();
+    if (!text) {
+      alert('Comment cannot be empty.');
+      return;
+    }
+
+    try {
+      const commentData = {
+        // listUserId: null, // No specific listUserId for global lists
+        listId: listId, // Use the global list ID
+        userId: user.uid,
+        userName: user.displayName || 'Anonymous',
+        text: text,
+        createdAt: serverTimestamp(),
+        upvotes: [],
+        downvotes: [],
+        parentId: parentId || null,
+        isReply: !!parentId
+      };
+
+      // Use the component-level commentsRef
+      const docRef = await addDoc(commentsRef, commentData);
+      console.log("Comment added with ID:", docRef.id);
+
+      // Optimistically update UI or refetch
+      // Refetching might be simpler to ensure correct timestamp order
+      fetchComments(listId);
+
+      if (parentId) {
+        setReplyText('');
+        setReplyingTo(null);
+      } else {
+        setNewComment('');
+      }
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      alert('Failed to add comment. Please try again.');
+    }
+  };
+
+  // Function to handle starting a reply
+  const handleReplyClick = (commentId, userName) => {
+    if (replyingTo?.id === commentId) {
+      setReplyingTo(null); // Toggle off if clicking the same reply button
+    } else {
+      setReplyingTo({ id: commentId, userName: userName });
+      setReplyText(''); // Clear reply text when switching targets
+    }
+  };
+
+  // Function to cancel reply
+  const cancelReply = () => {
+    setReplyingTo(null);
+    setReplyText('');
+  };
+
+  // Function to handle comment votes
+  const handleCommentVote = async (commentId, voteType) => {
+    if (!user) {
+      alert('You must be logged in to vote.');
+      return;
+    }
+
+    const commentRef = doc(db, 'comments', commentId);
+    try {
+      const commentSnapshot = await getDoc(commentRef);
+      if (!commentSnapshot.exists()) return;
+
+      const commentData = commentSnapshot.data();
+      const upvotes = commentData.upvotes || [];
+      const downvotes = commentData.downvotes || [];
+      const userId = user.uid;
+
+      let newUpvotes = [...upvotes];
+      let newDownvotes = [...downvotes];
+
+      if (voteType === 'upvote') {
+        if (newUpvotes.includes(userId)) {
+          newUpvotes = newUpvotes.filter(id => id !== userId); // Remove upvote
+        } else {
+          newUpvotes.push(userId); // Add upvote
+          newDownvotes = newDownvotes.filter(id => id !== userId); // Remove downvote if exists
+        }
+      } else { // downvote
+        if (newDownvotes.includes(userId)) {
+          newDownvotes = newDownvotes.filter(id => id !== userId); // Remove downvote
+        } else {
+          newDownvotes.push(userId); // Add downvote
+          newUpvotes = newUpvotes.filter(id => id !== userId); // Remove upvote if exists
+        }
+      }
+
+      await updateDoc(commentRef, {
+        upvotes: newUpvotes,
+        downvotes: newDownvotes
+      });
+
+      // Update local state optimistically
+      setComments(prevComments => prevComments.map(comment => 
+        comment.id === commentId 
+          ? { ...comment, upvotes: newUpvotes, downvotes: newDownvotes } 
+          : comment
+      ));
+
+    } catch (error) {
+      console.error('Error voting on comment:', error);
+      alert('Failed to process vote.');
+    }
+  };
+
+  // Function to handle comment deletion
+  const handleDeleteComment = async (commentId) => {
+    if (!user) return;
+
+    const commentToDelete = comments.find(c => c.id === commentId);
+    if (!commentToDelete || commentToDelete.userId !== user.uid) {
+        alert("You can only delete your own comments.");
+        return;
+    }
+
+    if (window.confirm('Are you sure you want to delete this comment?')) {
+      try {
+        await deleteDoc(doc(db, 'comments', commentId));
+        // Refetch comments to ensure replies are handled correctly if needed,
+        // or filter locally if replies aren't a concern for deletion propagation
+        fetchComments(listId);
+      } catch (error) {
+        console.error('Error deleting comment:', error);
+        alert('Failed to delete comment.');
+      }
+    }
+  };
+
+  // Function to check if the current user is the author of a comment
+  const isCommentAuthor = (comment) => {
+    return user && comment.userId === user.uid;
+  };
+
+  // Function to format comment timestamps
+  const formatCommentDate = (timestamp) => {
+    if (!timestamp) return 'Just now';
+    const date = timestamp instanceof Timestamp ? timestamp.toDate() : new Date(timestamp);
+    // More robust formatting needed, but this is basic
+    return date.toLocaleString(); 
+  };
+
+  // Function to get vote count
+  const getVoteCount = (comment) => {
+    return (comment.upvotes?.length || 0) - (comment.downvotes?.length || 0);
+  };
+
+  // Function to check if user has upvoted a comment
+  const hasUserUpvotedComment = (comment) => {
+    return user && comment.upvotes?.includes(user.uid);
+  };
+
+  // Function to check if user has downvoted a comment
+  const hasUserDownvotedComment = (comment) => {
+    return user && comment.downvotes?.includes(user.uid);
+  };
+
+  // -----------------------
+
   // Render list detail view
   if (checkingSubmissionStatus) {
     return <div className="loading">Checking submission status...</div>;
@@ -1007,10 +1251,164 @@ const GlobalRankings = ({ seasonListRef }) => {
             }
           </p>
         </div>
+
+        {/* --- ADDED COMMENTS SECTION --- */}
+        <div className="comments-section">
+          <h3 className="comments-title">Discussion</h3>
+          
+          {/* Add Comment Form */}
+          {user ? (
+            <div className="add-comment-form">
+              <textarea
+                placeholder="Add your comment..."
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                rows={3}
+                maxLength={500} 
+              />
+              <div className="comment-actions">
+                 <span className="char-count">{500 - newComment.length}</span>
+                 <button 
+                    className="add-comment-button" 
+                    onClick={() => addComment()} 
+                    disabled={!newComment.trim()}
+                 >
+                    Post Comment
+                 </button>
+              </div>
+            </div>
+          ) : (
+            <div className="login-to-comment">
+              Please <button onClick={() => navigate('/login')} className="inline-login-button">log in</button> to join the discussion.
+            </div>
+          )}
+          
+          {/* Comments List */}
+          {loadingComments ? (
+            <div className="loading-comments">Loading comments...</div>
+          ) : comments.length === 0 ? (
+            <div className="no-comments">No comments yet. Be the first!</div>
+          ) : (
+            <div className="comments-list">
+              {comments
+                .filter(comment => !comment.parentId) // Only top-level comments
+                .map(comment => {
+                  const replies = comments.filter(reply => reply.parentId === comment.id)
+                                      .sort((a, b) => (a.createdAt?.toDate() || 0) - (b.createdAt?.toDate() || 0)); // Sort replies ascending
+                  
+                  return (
+                    <div key={comment.id} className="comment-item">
+                      <div className="comment-header">
+                        <span className="comment-author">
+                           {/* Add link to user profile later if needed */} 
+                           {comment.userName}
+                        </span>
+                        <span className="comment-date">{formatCommentDate(comment.createdAt)}</span>
+                      </div>
+                      <div className="comment-content">{comment.text}</div>
+                      <div className="comment-footer">
+                        <div className="comment-actions-group">
+                           <div className="comment-votes">
+                              <button 
+                                 className={`comment-vote upvote ${hasUserUpvotedComment(comment) ? 'voted' : ''}`}
+                                 onClick={() => handleCommentVote(comment.id, 'upvote')}
+                                 disabled={!user} title={!user ? "Log in to vote" : "Upvote"}
+                              >▲</button>
+                              <span className="vote-count">{getVoteCount(comment)}</span>
+                              <button 
+                                 className={`comment-vote downvote ${hasUserDownvotedComment(comment) ? 'voted' : ''}`}
+                                 onClick={() => handleCommentVote(comment.id, 'downvote')}
+                                 disabled={!user} title={!user ? "Log in to vote" : "Downvote"}
+                              >▼</button>
+                           </div>
+                           {user && (
+                              <button 
+                                 className="reply-button" 
+                                 onClick={() => handleReplyClick(comment.id, comment.userName)}
+                                 title="Reply"
+                              >
+                                 {replyingTo?.id === comment.id ? 'Cancel' : 'Reply'}
+                              </button>
+                           )}
+                        </div>
+                        {isCommentAuthor(comment) && (
+                          <button 
+                             className="delete-comment-button" 
+                             onClick={() => handleDeleteComment(comment.id)}
+                             title="Delete Comment"
+                          ></button> // Icon handled by CSS
+                        )}
+                      </div>
+
+                      {/* Reply Form */} 
+                      {replyingTo?.id === comment.id && user && (
+                        <div className="reply-form">
+                          <textarea
+                            placeholder={`Replying to ${replyingTo.userName}...`}
+                            value={replyText}
+                            onChange={(e) => setReplyText(e.target.value)}
+                            rows={2}
+                            maxLength={500}
+                            autoFocus
+                          />
+                          <div className="reply-actions">
+                            <span className="char-count">{500 - replyText.length}</span>
+                            <button className="cancel-reply-button" onClick={cancelReply}>Cancel</button>
+                            <button 
+                               className="post-reply-button" 
+                               onClick={() => addComment(comment.id)} 
+                               disabled={!replyText.trim()}
+                            >Post Reply</button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Replies */} 
+                      {replies.length > 0 && (
+                        <div className="comment-replies">
+                          {replies.map(reply => (
+                            <div key={reply.id} className="reply-item">
+                              <div className="reply-header">
+                                 <span className="reply-author">{reply.userName}</span>
+                                 <span className="reply-date">{formatCommentDate(reply.createdAt)}</span>
+                              </div>
+                              <div className="reply-content">{reply.text}</div>
+                              <div className="reply-footer">
+                                <div className="reply-votes">
+                                    <button 
+                                       className={`reply-vote upvote ${hasUserUpvotedComment(reply) ? 'voted' : ''}`}
+                                       onClick={() => handleCommentVote(reply.id, 'upvote')}
+                                       disabled={!user} title={!user ? "Log in to vote" : "Upvote"}
+                                    >▲</button>
+                                    <span className="vote-count">{getVoteCount(reply)}</span>
+                                    <button 
+                                       className={`reply-vote downvote ${hasUserDownvotedComment(reply) ? 'voted' : ''}`}
+                                       onClick={() => handleCommentVote(reply.id, 'downvote')}
+                                       disabled={!user} title={!user ? "Log in to vote" : "Downvote"}
+                                    >▼</button>
+                                </div>
+                                {isCommentAuthor(reply) && (
+                                  <button 
+                                      className="delete-reply-button" 
+                                      onClick={() => handleDeleteComment(reply.id)}
+                                      title="Delete Reply"
+                                  ></button> // Icon handled by CSS
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
+          )}
+        </div>
+        {/* --- END COMMENTS SECTION --- */}
       </div>
     );
   }
-
 
   // Render main listings page
   // Add a wrapper div with a new class for centering

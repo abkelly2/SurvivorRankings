@@ -157,7 +157,11 @@
   border: 1px solid #e0e0e0;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   cursor: grab;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease-in-out, 
+              background-color 0.2s ease-in-out, 
+              transform 0.2s ease-in-out,
+              opacity 0.2s ease-in-out,
+              box-shadow 0.2s ease-in-out;
   position: relative;
   padding-left: 30px;
   width: 70%;
@@ -167,10 +171,6 @@
   text-overflow: ellipsis;
   flex-wrap: nowrap;
   border: 1px solid #ccc;
-  transition: border-color 0.2s ease-in-out, 
-              background-color 0.2s ease-in-out, 
-              transform 0.2s ease-in-out,
-              opacity 0.2s ease-in-out;
 }
 
 .user-ranking-list .ranking-item:hover {

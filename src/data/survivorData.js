@@ -194,12 +194,13 @@ export const survivorSeasons = [
       { id: "chad-crittenden", name: "Chad Crittenden" },
       { id: "leann-slaby", name: "Leann Slaby" },
       { id: "dolly-neely", name: "Dolly Neely" },
-      { id: "john-palmer", name: "John Palmer" },
+      { id: "john-palyok", name: "Jon Palyok" },
       { id: "john-kenney", name: "John Kenney" },
       { id: "brady-finta", name: "Brady Finta" },
       { id: "brook-geraghty", name: "Brook Geraghty" },
-      { id: "john-billingsley", name: "John Billingsley" },
-      { id: "travis-sampson", name: "Travis Sampson" }
+      { id: "rory-freeman", name: "Rory Freeman" },
+      { id: "travis-sampson", name: "Travis Sampson" },
+      { id: "lisa-keiffer", name: "Lisa Keiffer" },
     ]
   },
   {

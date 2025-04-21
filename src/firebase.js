@@ -134,6 +134,7 @@ export const getContestantImageUrl = async (contestant, seasonId) => {
       "Terran Foster": "tk",
       "Jerome Cooney": "rome",
       "G.C. Brown": "danny",
+      "Jon Palyok": "johnp",
 
 
 

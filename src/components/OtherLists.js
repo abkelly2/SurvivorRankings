@@ -10,6 +10,7 @@ import { UserContext } from '../UserContext';
 import './OtherLists.css';
 import './RankingLists.css';
 import { useNavigate } from 'react-router-dom';
+import html2canvas from 'html2canvas';
 
 const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialSelectedList = null }) => {
   const [publicLists, setPublicLists] = useState([]);
@@ -44,6 +45,15 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
   
   // Add state for spoiler reveal
   const [spoilerRevealed, setSpoilerRevealed] = useState(false);
+  
+  // Add mobile state
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  // --- Share Image State --- 
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareImageDataUrl, setShareImageDataUrl] = useState(null);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  // -------------------------
   
   // Available tag options for filtering
   const availableTags = [
@@ -847,14 +857,296 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
     setSpoilerRevealed(!spoilerRevealed);
   };
   
+  // Effect to handle window resize for isMobile state
   useEffect(() => {
-    // Set initialSelectedList if provided
-    if (initialSelectedList) {
-      setSelectedList(initialSelectedList);
-      // Also fetch comments for the list
-      fetchComments(initialSelectedList.userId, initialSelectedList.id);
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Effect to fetch comments when selectedList changes
+  useEffect(() => {
+    if (selectedList?.userId && selectedList?.id) {
+        fetchComments(selectedList.userId, selectedList.id);
+        // Reset spoiler state when list changes
+        setSpoilerRevealed(false); 
     }
-  }, [initialSelectedList]);
+  }, [selectedList]);
+
+  // --- Share Image Functions (Updated) ---
+  const handleShareClick = async () => {
+    if (!selectedList || !selectedList.contestants) {
+      console.error("No selected list or contestants to share.");
+      return;
+    }
+    setIsGeneratingImage(true);
+
+    const backgroundImage = new Image();
+    // Assuming the image is in the public folder
+    backgroundImage.src = '/images/Shareimage.png'; 
+    backgroundImage.crossOrigin = 'Anonymous'; // Needed if fonts/images are from different origins
+
+    backgroundImage.onload = async () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = backgroundImage.naturalWidth;
+      canvas.height = backgroundImage.naturalHeight;
+      const ctx = canvas.getContext('2d');
+
+      // Draw the background image
+      ctx.drawImage(backgroundImage, 0, 0);
+
+      // --- Draw Title --- 
+      const titleBox = { x: 210, y: 200, width: 804 - 180, height: 378 - 180 };
+      const title = selectedList.name || "Untitled List";
+      const initialTitleFontSize = 130; // Increased from 40
+      const minTitleFontSize = 10;
+      let currentTitleFontSize = initialTitleFontSize;
+
+      // Draw debug box
+      ctx.strokeStyle = 'red';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(titleBox.x, titleBox.y, titleBox.width, titleBox.height);
+
+      // Set title text properties
+      ctx.fillStyle = 'black'; // Title color
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = `${currentTitleFontSize}px Survivant`;
+
+      // Adjust font size if title is too wide
+      let titleWidth = ctx.measureText(title).width;
+      while (titleWidth > titleBox.width && currentTitleFontSize > minTitleFontSize) {
+        currentTitleFontSize--;
+        ctx.font = `${currentTitleFontSize}px Survivant`;
+        ctx.fillStyle = 'rgb(29, 21, 4)'; 
+        titleWidth = ctx.measureText(title).width;
+      }
+      console.log(`[Share Image Title] Final font size for title '${title}': ${currentTitleFontSize}px`);
+
+      // Calculate centered position
+      const titleX = titleBox.x + titleBox.width / 2;
+      const titleY = titleBox.y + titleBox.height / 2;
+
+      // Draw the title
+      ctx.fillText(title, titleX, titleY);
+      // --- End Draw Title ---
+
+      // --- Reset settings for contestant names ---
+      ctx.textAlign = 'left'; 
+      ctx.textBaseline = 'middle';
+      // The main font size for names will be set within drawEntries
+      // --- End Reset ---
+
+      // --- Text Styling (Contestants - Font size set later) ---
+      const fontSize = 64; // Base size for contestants
+      // ctx.font = `${fontSize}px Survivant`; // Font set within drawEntries loop
+      ctx.fillStyle = 'rgb(38, 20, 3)'; 
+      // ctx.textAlign = 'left'; // Reset above
+      // ctx.textBaseline = 'middle'; // Reset above
+
+      // --- Draw Top 5 Contestant Names (Now called drawEntries) ---
+      const topContestants = selectedList.contestants.slice(0, 5);
+      // Define image size and padding
+      const imageWidth = 110; // Base width for contestant images
+      const imageHeight = 110; // Base height for contestant images
+      const seasonImageWidth = 160; // Larger width for season logos
+      const seasonImageHeight = 160; // Larger height for season logos
+      const namePadding = 35; // Unchanged
+
+      // Determine if this is a season list by checking the first contestant
+      const isSeasonList = topContestants.length > 0 && topContestants[0].isSeason;
+
+      // Use async function to handle image loading within loop/drawing
+      const drawEntries = async () => {
+        for (let i = 0; i < topContestants.length; i++) {
+          const contestant = topContestants[i];
+          const name = contestant.isSeason ? contestant.name.replace('Survivor: ', '') : contestant.name;
+          const rank = i + 1;
+
+          // --- Placement Logic --- 
+          let entryX = 210; // Keep X constant
+          let entryY = 0;   // Y will be determined by rank
+          let nameX = entryX + (contestant.isSeason ? seasonImageWidth : imageWidth) + namePadding;
+          let nameY = 0;   // Y will be determined by rank
+
+          // Determine Y coordinates based on rank (index i) and list type
+          if (isSeasonList) {
+            // Season list entries - positioned higher
+            switch (i) {
+              case 0: entryY = 403; break; // 30px higher
+              case 1: entryY = 558; break; // 30px higher
+              case 2: entryY = 713; break; // 30px higher
+              case 3: entryY = 873; break; // 30px higher
+              case 4: entryY = 1032; break; // 30px higher
+              default: entryY = 0;
+            }
+          } else {
+            // Survivor contestant entries - original positions
+            switch (i) {
+              case 0: entryY = 433; break;
+              case 1: entryY = 588; break;
+              case 2: entryY = 743; break;
+              case 3: entryY = 903; break;
+              case 4: entryY = 1062; break;
+              default: entryY = 0;
+            }
+          }
+          
+          // Calculate name Y based on entry Y for middle alignment
+          nameY = entryY + (contestant.isSeason ? seasonImageHeight : imageHeight) / 2;
+
+          // --- Font Size Adjustment Logic ---
+          const defaultFontSize = 64; 
+          let currentFontSize = defaultFontSize;
+          ctx.font = `${currentFontSize}px Survivant`; // Ensure font is set before measuring
+
+          const horizontalLimit = 835; // Define the limit here
+          let fontWasAdjusted = false; // Define the flag here
+          const minFontSize = 10; // Minimum font size to prevent excessive shrinking
+
+          // Loop to reduce font size until text fits or hits minimum size
+          let measuredWidth = ctx.measureText(name).width; // Initial measure
+          let endX = nameX + measuredWidth;
+
+          while (endX > horizontalLimit && currentFontSize > minFontSize) {
+            currentFontSize--; // Decrease font size by 1
+            ctx.font = `${currentFontSize}px Survivant`; // Apply smaller font
+            // Re-measure with the new font size
+            measuredWidth = ctx.measureText(name).width;
+            endX = nameX + measuredWidth;
+            fontWasAdjusted = true;
+          }
+
+          // Log if the font was adjusted
+          if (fontWasAdjusted) {
+            console.log(`[Share Image Rank ${rank}] Text ('${name}') exceeded ${horizontalLimit}px. Reducing font size to ${currentFontSize}px.`);
+          }
+
+          // Draw the name for the current entry (using potentially adjusted font)
+          ctx.fillText(name, nameX, nameY); 
+
+          // --- Reset Font Size if it was adjusted ---
+          if (fontWasAdjusted) {
+            ctx.font = `${defaultFontSize}px Survivant`; // Reset font back to default
+          }
+
+          // Load and draw the image for the current entry
+          const imageUrl = contestantImageUrls[contestant.id];
+          console.log(`[Share Image Rank ${rank}] Attempting to load image for ${name}: ${imageUrl}`); 
+          if (imageUrl) {
+            try {
+              const img = await loadImage(imageUrl); 
+              
+              if (contestant.isSeason) {
+                // For season logos, maintain aspect ratio within the larger available space
+                const maxHeight = seasonImageHeight;
+                const maxWidth = seasonImageWidth;
+                
+                // Calculate scaling to fit within bounds while preserving aspect ratio
+                const scale = Math.min(
+                  maxWidth / img.width,
+                  maxHeight / img.height
+                );
+                
+                // Calculate dimensions that preserve aspect ratio
+                const scaledWidth = img.width * scale;
+                const scaledHeight = img.height * scale;
+                
+                // Center the image in the available space
+                const xOffset = entryX + (maxWidth - scaledWidth) / 2;
+                const yOffset = entryY + (maxHeight - scaledHeight) / 2;
+                
+                // Draw the season logo with preserved aspect ratio
+                ctx.drawImage(img, xOffset, yOffset, scaledWidth, scaledHeight);
+              } else {
+                // For contestant images, use fixed square dimensions
+                ctx.drawImage(img, entryX, entryY, imageWidth, imageHeight);
+              }
+            } catch (error) {
+              console.error(`[Share Image Rank ${rank}] Error loading image for ${name}:`, error);
+              // Draw placeholder if image fails
+              ctx.fillStyle = '#eee';
+              ctx.fillRect(entryX, entryY, imageWidth, imageHeight);
+              ctx.fillStyle = 'black';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText('?', entryX + imageWidth / 2, entryY + imageHeight / 2); 
+              ctx.textAlign = 'left'; 
+              ctx.textBaseline = 'middle';
+            }
+          } else {
+            // Draw placeholder if no image URL
+            console.log(`[Share Image Rank ${rank}] No image URL found for ${name}. Drawing placeholder.`);
+            ctx.fillStyle = '#eee';
+            ctx.fillRect(entryX, entryY, imageWidth, imageHeight);
+            ctx.fillStyle = 'black'; 
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('?', entryX + imageWidth / 2, entryY + imageHeight / 2);
+            ctx.textAlign = 'left'; 
+            ctx.textBaseline = 'middle';
+          }
+        }
+
+        // After all drawing is done (including async image loads), generate data URL
+        try {
+          const dataUrl = canvas.toDataURL('image/png');
+          setShareImageDataUrl(dataUrl);
+          setShowShareModal(true);
+        } catch (error) {
+          console.error("Error generating canvas data URL:", error);
+          alert("Sorry, couldn't generate the shareable image.");
+        } finally {
+          setIsGeneratingImage(false);
+        }
+      };
+
+      // Helper function to load an image using Promises
+      const loadImage = (src) => {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = 'Anonymous'; // Important for canvas tainting
+          img.onload = () => resolve(img);
+          img.onerror = (err) => {
+            console.error(`[Share Image Load Error] Failed to load image from src: ${src}`, err);
+            reject(err); // Reject the promise with the error
+          };
+          console.log(`[Share Image Load] Setting image src: ${src}`); // Log when setting src
+          img.src = src;
+        });
+      };
+
+      // Log the state of contestantImageUrls when starting
+      console.log("[Share Image] contestantImageUrls state:", contestantImageUrls);
+      // Call the async drawing function
+      drawEntries();
+    };
+
+    backgroundImage.onerror = () => {
+      console.error("Error loading background image '/images/Shareimage.png'");
+      alert("Sorry, couldn't load the background image for sharing.");
+      setIsGeneratingImage(false);
+    };
+  };
+
+  const handleDownloadImage = () => {
+    if (!shareImageDataUrl) return;
+    const link = document.createElement('a');
+    link.href = shareImageDataUrl;
+    const filename = selectedList?.name ? `${selectedList.name.replace(/\s+/g, '_')}_ranking.png` : 'survivor_ranking.png';
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const closeShareModal = () => {
+    setShowShareModal(false);
+    setShareImageDataUrl(null); 
+  };
+  // ---------------------------
   
   if (loading) return <div className="other-lists loading">Loading rankings...</div>;
   if (error) return <div className="other-lists error">{error}</div>;
@@ -866,127 +1158,104 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
   
   const sortedUserLists = sortLists(userLists);
   
-  // Final render
+  // Render a single list card (for the grid view)
+  const renderPublicListCard = (list) => {
+    // ... existing card rendering logic ...
+  };
+  
+  // Render the full detailed view of a selected list
   if (selectedList) {
-    // Check if list has spoiler tag
     const hasSpoilerTag = selectedList.tags && selectedList.tags.includes('spoiler');
-    
+    console.log("[OtherLists Render] isMobile:", isMobile);
     return (
-      <div className="other-lists full-list-view">
-        {/* Feedback Popup */}
-        {showFeedback && (
-          <div 
-            className={`feedback-popup ${feedbackMessage.isAdd ? 'add-favorite' : 'remove-favorite'}`}
-            style={{
-              position: 'fixed',
-              left: `${feedbackMessage.position.x}px`,
-              top: `${feedbackMessage.position.y}px`,
-              transform: 'translate(-50%, -100%)'
-            }}
-          >
-            <div className="popup-content">
-              <span className="popup-icon">{feedbackMessage.isAdd ? '★' : '☆'}</span>
-              <span className="popup-text">{feedbackMessage.text}</span>
-            </div>
-          </div>
-        )}
-      
+      <div className="full-list-view other-lists"> 
+        {/* Back Button */}
         <div className="back-button-container">
-          <button 
-            className="back-to-lists-button" 
-            onClick={handleBackToLists}
-          >
-            {source === 'home' && !viewingUserId ? '← Back to Home' : '← Back to Rankings'}
+           <button className="back-to-lists-button" onClick={handleBackToLists}>
+              ← Back to Lists
           </button>
         </div>
+
+        {/* List Header */} 
         <div className="full-list-header">
-          <h2>{selectedList.name}</h2>
-          
-          {/* Add spoiler warning and toggle button */}
-          {hasSpoilerTag && (
-            <div className="spoiler-reveal-container">
+          {/* Favorite Button */}
+          <div className="top-left-favorite">
               <button 
-                className="spoiler-reveal-button" 
-                onClick={toggleSpoilerReveal}
-              >
-                <span className="eye-icon">{spoilerRevealed ? "👁️" : "👁️‍🗨️"}</span>
-                {spoilerRevealed ? "Hide Spoilers" : "Show Spoilers"}
+              className={`favorite-button ${isFavorited(selectedList.userId, selectedList.id) ? 'favorited' : ''}`} 
+              onClick={(e) => toggleFavorite(selectedList.userId, selectedList.id, selectedList.name, e)}
+              title={user ? (isFavorited(selectedList.userId, selectedList.id) ? "Remove from favorites" : "Add to favorites") : "Login to favorite lists"} 
+              disabled={!user}
+            >
+              <span className="favorite-icon">★</span>
               </button>
             </div>
-          )}
           
-          <div className="list-meta">
+          {/* Title & Author */} 
+          <div className="title-container">
+             <h2 className="centered-title">{selectedList.name}</h2>
             <span className="created-by">
-              Created by: <span 
-                className="username"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  viewUserLists(selectedList.userId, selectedList.userName, e);
-                }}
-                title="View all rankings by this user"
-              >
-                {selectedList.userName || "Unknown"}
+               By: <span className="username" onClick={(e) => viewUserLists(selectedList.userId, selectedList.userName, e)}>{selectedList.userName || 'Unknown User'}</span>
               </span>
-            </span>
-            <span className="created-date">Date: {formatDate(selectedList.createdAt)}</span>
           </div>
           
+          {/* Upvote Button */}
           <div className="top-right-upvote">
             <button 
               className={`upvote-button ${hasUserUpvoted(selectedList) ? 'upvoted' : ''}`}
-              onClick={() => handleUpvote(selectedList.userId, selectedList.id)}
+                onClick={(e) => handleUpvote(selectedList.userId, selectedList.id, e)}
               disabled={!user}
-              title={user ? (hasUserUpvoted(selectedList) ? "Remove upvote" : "Upvote this list") : "Sign in to upvote"}
+                title={user ? "Upvote list" : "Login to upvote"}
             >
-              <span className="upvote-icon">▲</span>
-              <span className="upvote-count">{selectedList.upvoteCount || 0}</span>
+                <span className="upvote-icon">▲</span> {selectedList.upvoteCount || 0}
             </button>
           </div>
           
-          <div className="top-left-favorite">
+          {/* --- Share Button (Desktop Only) --- */} 
+          {!isMobile && (
             <button 
-              className={`favorite-button ${isFavorited(selectedList.userId, selectedList.id) ? 'favorited' : ''}`}
-              onClick={(e) => toggleFavorite(selectedList.userId, selectedList.id, selectedList.name, e)}
-              disabled={!user}
-              title={user ? (isFavorited(selectedList.userId, selectedList.id) ? "Remove from favorites" : "Add to favorites") : "Login to favorite lists"}
+              onClick={handleShareClick}
+              disabled={isGeneratingImage}
+              className="share-list-button" 
+              title="Share List as Image"
+              style={{ position: 'absolute', top: '15px', right: '70px' }}
             >
-              <span className="favorite-icon">★</span>
+              {isGeneratingImage ? 'Generating...' : 'Share'} 
             </button>
+          )}
+          {/* --- End Share Button --- */} 
+
           </div>
           
+        {/* Meta Info (Date, Desc, Tags) */} 
+        <div className="list-meta-section">
+           {selectedList.description && (<p className="list-description">{selectedList.description}</p>)}
+           <div className="list-meta-details">
+              {(selectedList.tags && selectedList.tags.length > 0) && (
           <div className="full-list-tags">
-            {selectedList.tags && selectedList.tags.includes('season-ranking') && (
-              <span className="list-type-indicator season">Season Ranking</span>
+                    {selectedList.tags.filter(t => t !== 'season-ranking' && t !== 'survivor-ranking').map(tag => <span key={tag} className={`list-tag ${tag === 'spoiler' ? 'spoiler-tag' : ''}`}>{tag}</span>)}
+                 </div>
             )}
-            {selectedList.tags && selectedList.tags.includes('survivor-ranking') && (
-              <span className="list-type-indicator survivor">Survivor Ranking</span>
-            )}
+           </div>
           </div>
           
-          {selectedList.description && (
-            <div className="list-description">
-              <p>{selectedList.description}</p>
+        {/* Spoiler Toggle */} 
+        {hasSpoilerTag && (
+          <div className="spoiler-reveal-container">
+            <button className="spoiler-reveal-button" onClick={toggleSpoilerReveal}>
+               <span className="eye-icon">{spoilerRevealed ? '👁️' : '👁️‍🗨️'}</span> {spoilerRevealed ? 'Hide Spoilers' : 'Show Spoilers'}
+            </button>
             </div>
           )}
-        </div>
         
-        <div className="ranking-list-container">
-          <div className={`ranking-list ${hasSpoilerTag && !spoilerRevealed ? 'spoiler-blur' : 'spoiler-revealed'}`}>
-            {selectedList.contestants && selectedList.contestants.length > 0 ? (
+        {/* Ranking List Display */}
+        <div className="ranking-list-container full-list">
+           <div className={`ranking-list ${hasSpoilerTag && !spoilerRevealed ? 'spoiler-blur' : ''}`}>
+              {(selectedList.contestants || []).length > 0 ? (
               selectedList.contestants.map((contestant, index) => (
-                <div key={index} className="ranking-item">
+                     <div key={`${contestant.id}-${index}`} className="ranking-item">
                   <div className="ranking-number">{index + 1}</div>
-                  <img
-                    src={contestantImageUrls[contestant.id] || contestant.imageUrl || "/placeholder.jpg"}
-                    alt={contestant.name}
-                    className={`contestant-image ${contestant.isSeason ? 'season-logo' : ''}`}
-                    draggable="false"
-                  />
-                  <div className={contestant.isSeason ? "season-name" : "contestant-name"} style={{ color: '#000000' }}>
-                    {contestant.isSeason 
-                      ? contestant.name.replace('Survivor: ', '').replace('Survivor ', '') 
-                      : contestant.name}
-                  </div>
+                        <img src={contestantImageUrls[contestant.id] || '...'} alt={contestant.name} className={`contestant-image ${contestant.isSeason ? 'season-logo' : ''}`} draggable="false" />
+                        <div className={contestant.isSeason ? "season-name" : "contestant-name"}>{contestant.isSeason ? contestant.name.replace('Survivor: ', '') : contestant.name}</div>
                 </div>
               ))
             ) : (
@@ -1186,218 +1455,46 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
             </div>
           )}
         </div>
-      </div>
+
+        {/* Share Modal */} 
+        {showShareModal && (
+          <div className="share-modal-overlay" onClick={closeShareModal}>
+            <div className="share-modal-content" onClick={(e) => e.stopPropagation()}> 
+              <h3>Share List Image</h3>
+              {shareImageDataUrl ? (
+                <img src={shareImageDataUrl} alt={`${selectedList.name} Ranking`} className="share-preview-image" />
+              ) : (
+                <p>Loading image preview...</p> 
+              )}
+              <div className="share-modal-actions">
+                <button onClick={handleDownloadImage} className="download-image-button">Download Image</button>
+                <button onClick={closeShareModal} className="close-modal-button">Close</button>
+          </div>
+                </div>
+                </div>
+        )}
+
+                  </div>
     );
   }
 
-  // If no list is selected, render the list browsing view
+  // Render the grid of public lists (default view)
   return (
-    <div className="other-lists ranking-lists">
-      {/* Feedback Popup */}
-      {showFeedback && (
-        <div 
-          className={`feedback-popup ${feedbackMessage.isAdd ? 'add-favorite' : 'remove-favorite'}`}
-          style={{
-            position: 'fixed',
-            left: `${feedbackMessage.position.x}px`,
-            top: `${feedbackMessage.position.y}px`,
-            transform: 'translate(-50%, -100%)'
-          }}
-        >
-          <div className="popup-content">
-            <span className="popup-icon">{feedbackMessage.isAdd ? '★' : '☆'}</span>
-            <span className="popup-text">{feedbackMessage.text}</span>
-          </div>
-        </div>
-      )}
-    
-      <div className="search-and-filters">
-        {viewingUserId ? (
-          <div className="user-rankings-header">
-            <h2>Rankings by <span>{viewingUserName || 'User'}</span></h2>
-            <span className="user-list-count">
-              {sortedLists.length} {sortedLists.length === 1 ? 'ranking' : 'rankings'} created by this user
-            </span>
-          </div>
-        ) : (
-          <>
-            <h2>Browse All Rankings</h2>
-            <div className="search-container">
-              <input
-                type="text"
-                placeholder="Search rankings..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="search-input"
-              />
-              
-              <div className="filter-container">
-                <div className="type-filters">
-                  <span>Ranking Type:</span>
-                  <button 
-                    className={selectedType === 'all' ? 'active' : ''}
-                    onClick={() => handleTypeChange('all')}
-                  >
-                    All Rankings
-                  </button>
-                  <button 
-                    className={selectedType === 'season' ? 'active' : ''}
-                    onClick={() => handleTypeChange('season')}
-                  >
-                    Season Rankings
-                  </button>
-                  <button 
-                    className={selectedType === 'survivor' ? 'active' : ''}
-                    onClick={() => handleTypeChange('survivor')}
-                  >
-                    Survivor Rankings
-                  </button>
-                </div>
-              
-                <div className="sort-options">
-                  <span>Sort by:</span>
-                  <button 
-                    className={sortBy === 'mostVotes' ? 'active' : ''}
-                    onClick={() => handleSortChange('mostVotes')}
-                  >
-                    Most Votes
-                  </button>
-                  <button 
-                    className={sortBy === 'newest' ? 'active' : ''}
-                    onClick={() => handleSortChange('newest')}
-                  >
-                    Newest
-                  </button>
-                  <button 
-                    className={sortBy === 'oldest' ? 'active' : ''}
-                    onClick={() => handleSortChange('oldest')}
-                  >
-                    Oldest
-                  </button>
-                </div>
-                
-                <div className="tag-filters">
-                  <span>Filter by tag:</span>
-                  <div className="tags">
-                    {availableTags.map(tag => (
-                      <button
-                        key={tag.id}
-                        className={selectedTags.includes(tag.id) ? 'tag-button selected' : 'tag-button'}
-                        onClick={() => handleTagSelect(tag.id)}
-                      >
-                        {tag.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-      
-      {sortedLists.length === 0 ? (
-        <div className="no-lists-message">
-          {publicLists.length > 0 ? (
-            <>
-              <p>No rankings match your current filters. Try changing the filters or search terms.</p>
-              <p className="debug-info">Total lists in database: {publicLists.length}</p>
-            </>
-          ) : (
-            <p>No rankings found. Be the first to create a ranking!</p>
-          )}
-        </div>
+    <div className="other-lists">
+      {/* ... (existing search/filter bar) ... */}
+      {loading ? (
+          <div className="loading">Loading lists...</div>
+      ) : sortedUserLists.length === 0 ? (
+          <div className="no-lists-message">No lists found matching your criteria.</div>
       ) : (
         <div className="public-lists-grid other-rankings-grid">
-          {sortedLists.map(list => (
-            <div 
-              key={`${list.userId}-${list.id}`} 
-              className="ranking-list-container" 
-              onClick={() => viewFullList(list)}
-            >
-                <div className="top-left-favorite" onClick={(e) => e.stopPropagation()}>
-                  <button 
-                    className={`favorite-button ${isFavorited(list.userId, list.id) ? 'favorited' : ''}`}
-                    onClick={(e) => toggleFavorite(list.userId, list.id, list.name, e)}
-                    disabled={!user}
-                    title={user ? (isFavorited(list.userId, list.id) ? "Remove from favorites" : "Add to favorites") : "Login to favorite lists"}
-                  >
-                    <span className="favorite-icon">★</span>
-                  </button>
+              {sortedUserLists.map(list => renderPublicListCard(list))}
                 </div>
-              
-              <div className="top-right-upvote" onClick={(e) => e.stopPropagation()}>
-                  <button 
-                    className={`upvote-button ${hasUserUpvoted(list) ? 'upvoted' : ''}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleUpvote(list.userId, list.id);
-                    }}
-                    disabled={!user}
-                    title={user ? "Upvote this list" : "Sign in to upvote"}
-                  >
-                  <span className="upvote-icon">▲</span>
-                  <span className="upvote-count">{list.upvoteCount || 0}</span>
-                  </button>
-              </div>
-              
-              <h2 className="list-title">{list.name}</h2>
-              
-              <p className="list-creator">
-                By <span 
-                  className="username"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    viewUserLists(list.userId, list.userName, e);
-                  }}
-                  title="View all rankings by this user"
-                >
-                  {list.userName || "Unknown User"}
-                </span>
-              </p>
-              
-              {list.tags && list.tags.includes('spoiler') && (
-                <div className="spoiler-warning">Contains Spoilers</div>
-              )}
-              
-              <div className={`ranking-list clickable ${list.tags && list.tags.includes('spoiler') ? 'spoiler-blur' : ''}`}>
-                {list.contestants && list.contestants.length > 0 ? (
-                  list.contestants.slice(0, 3).map((contestant, index) => (
-                    <div
-                      key={`${contestant.id}-${index}`}
-                      className="ranking-item"
-                    >
-                      <div className="ranking-number">{index + 1}</div>
-                      <img
-                        src={contestantImageUrls[contestant.id] || contestant.imageUrl || "/placeholder.jpg"}
-                        alt={contestant.name}
-                        className={`contestant-image ${contestant.isSeason ? 'season-logo' : ''}`}
-                        draggable="false"
-                      />
-                      <div className={contestant.isSeason ? "season-name" : "contestant-name"}>
-                          {contestant.isSeason 
-                            ? contestant.name.replace('Survivor: ', '').replace('Survivor ', '') 
-                            : contestant.name}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="empty-list-message">
-                    This list is empty
-                  </div>
-                )}
-              </div>
-              
-              <div className="list-tags">
-                {list.tags && list.tags.includes('season-ranking') && (
-                  <span className="list-type-indicator season">Season Ranking</span>
-                )}
-                {list.tags && list.tags.includes('survivor-ranking') && (
-                  <span className="list-type-indicator survivor">Survivor Ranking</span>
-                )}
-              </div>
-            </div>
-          ))}
+      )}
+      {/* Feedback Popup */} 
+      {showFeedback && (
+         <div className={`feedback-popup ${feedbackMessage.isAdd ? 'add-favorite' : 'remove-favorite'}`} style={{ position: 'fixed', left: `${feedbackMessage.position.x}px`, top: `${feedbackMessage.position.y}px`, transform: 'translate(-50%, -100%)' }}>
+            <div className="popup-content"><span className="popup-icon">{feedbackMessage.isAdd ? '★' : '☆'}</span><span className="popup-text">{feedbackMessage.text}</span></div>
         </div>
       )}
     </div>

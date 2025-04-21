@@ -44,6 +44,11 @@ const UserListCreator = ({
   const initialTouchY = useRef(0);
   // ----------------------------------------------
 
+  // --- State for Desktop Drag Visual Feedback ---
+  const draggedItemDesktopRef = useRef(null); // Store the element being dragged on desktop
+  const draggedItemFromIndexRef = useRef(null); // Store the starting index for desktop drag
+  // -------------------------------------------
+
   // Available tag options
   const availableTags = [
     { id: 'favorites', label: 'Favorites' },
@@ -315,157 +320,304 @@ const UserListCreator = ({
   
   // Drag and drop handlers
   const handleDragOver = (e) => {
+    if (isMobile) return;
     e.preventDefault();
     e.stopPropagation();
+
+    const fromIndex = draggedItemFromIndexRef.current;
+    const listContainer = listRef.current;
+    const draggedElement = draggedItemDesktopRef.current;
+
+    if (fromIndex === null || !listContainer || !draggedElement) {
+        return; // Not a valid reorder drag
+    }
+
     setDragOver(true);
-    console.log('Drag over user list');
+
+    // --- Revised Target Index Calculation --- 
+    const mouseY = e.clientY;
+    const allListItems = Array.from(listContainer.querySelectorAll('.ranking-item'));
+    
+    let currentTargetIndex = userList.length; // Default to the end
+
+    for (let i = 0; i < allListItems.length; i++) {
+        const item = allListItems[i];
+        // Skip the element being dragged itself when determining the target based on others
+        if (item === draggedElement) continue; 
+
+        const itemRect = item.getBoundingClientRect();
+        
+        // Find the first item whose top is below the cursor
+        if (mouseY < itemRect.top + itemRect.height / 2) { // Use midpoint as threshold
+            // The cursor is above the midpoint of this item.
+            // The target index should be this item's index.
+            currentTargetIndex = parseInt(item.dataset.index, 10);
+            
+            // If the target we just found is *after* the original item,
+            // but the original item itself is *before* this target, 
+            // the actual drop index needs adjustment because the original item isn't there.
+            // Let's adjust the *visual target* for transform application.
+            // The final drop calculation in handleDrop should handle the actual list index.
+            // No, let's keep it simple: target is this item's index.
+            break; // Found the first item below the cursor, stop searching
+        }
+        // If the loop completes without finding an item below the cursor,
+        // currentTargetIndex remains userList.length (meaning drop at the end).
+    }
+    
+    // --- Debug Log --- 
+    // console.log(`[DragOver] MouseY: ${mouseY.toFixed(0)}, Target Index: ${currentTargetIndex}`);
+    
+    // --- Apply Transforms (Corrected logic) ---
+    const draggedHeight = draggedElement.offsetHeight > 0 ? draggedElement.offsetHeight : 50;
+    
+    // console.log(`Applying transforms: from=${fromIndex}, target=${currentTargetIndex}, height=${draggedHeight}`); // Debug log
+
+    allListItems.forEach((item) => {
+      if (item === draggedElement) return; // Skip the item being dragged
+      
+      const itemIndex = parseInt(item.dataset.index, 10);
+      let transformY = 0;
+
+      if (fromIndex < currentTargetIndex) { // Moving Down
+         // Item is between old and new position.
+         // Item needs to move UP if: itemIndex > fromIndex AND itemIndex < currentTargetIndex
+         if (itemIndex > fromIndex && itemIndex < currentTargetIndex) {
+            transformY = -draggedHeight;
+            // console.log(`  Item ${itemIndex}: Transform UP (${transformY}px)`); // Debug log
+         }
+      } else if (fromIndex > currentTargetIndex) { // Moving Up
+         // Item is between new and old position.
+         // Item needs to move DOWN if: itemIndex >= currentTargetIndex AND itemIndex < fromIndex
+         if (itemIndex >= currentTargetIndex && itemIndex < fromIndex) {
+            transformY = draggedHeight;
+            // console.log(`  Item ${itemIndex}: Transform DOWN (${transformY}px)`); // Debug log
+         }
+      }
+      // If fromIndex === currentTargetIndex, transformY remains 0, no shift needed.
+      
+      // Apply the calculated transform (or reset to none)
+      item.style.transform = `translateY(${transformY}px)`;
+    });
   };
   
   const handleDragLeave = () => {
+    if (isMobile) return;
     setDragOver(false);
-    console.log('Drag left user list');
+    // Clear transforms only if we are truly leaving the list container 
+    // (handleDragOver will reset transforms for other items if needed)
+    // We might need a more robust way to detect leaving vs moving between items
+    // For now, rely on dragend/drop for definitive cleanup
+    // clearItemTransforms(); // Maybe remove this to prevent flicker
+     console.log('[DragLeave] Fired');
+    // Resetting fromIndex here might be premature if leaving temporarily
+    // draggedItemFromIndexRef.current = null; 
   };
+
+  // Function to clear transforms from list items
+  const clearItemTransforms = () => {
+     console.log('Clearing item transforms');
+     const listContainer = listRef.current;
+     if (listContainer) {
+        const allItems = listContainer.querySelectorAll('.ranking-item');
+        allItems.forEach(item => {
+          if (item.style.transform) { // Only log if transform was set
+             // console.log(`  Clearing transform from item ${item.dataset.index}`);
+             item.style.transform = ''; 
+          }
+        });
+     }
+  }
   
   // Make list items draggable for reordering
   const handleItemDragStart = (e, index) => {
-    console.log('Starting to drag item at index:', index);
-    e.dataTransfer.setData('application/reorder', index.toString());
+    if (isMobile) return;
+    console.log('Starting desktop drag for item at index:', index);
+    e.dataTransfer.setData('application/reorder', index.toString()); // Keep for drop check
+    e.dataTransfer.effectAllowed = "move";
     e.target.classList.add('dragging-item');
+    draggedItemDesktopRef.current = e.target; 
+    draggedItemFromIndexRef.current = index; // Store the starting index in the ref
   };
   
   const handleItemDragEnd = (e) => {
+    if (isMobile) return;
+    console.log('Desktop drag ended');
+    if(e.target && e.target.classList) {
     e.target.classList.remove('dragging-item');
+    }
+    clearItemTransforms(); // Ensure transforms are cleared
+    draggedItemDesktopRef.current = null;
+    draggedItemFromIndexRef.current = null; // Reset start index ref
+    setDragOver(false); 
   };
   
   const handleDrop = (e) => {
+    console.log('Drop event started');
     e.preventDefault();
     e.stopPropagation();
+    clearItemTransforms(); // Clear visual transforms first
     setDragOver(false);
     
-    console.log('Drop event on user list');
-    
+    const fromIndex = draggedItemFromIndexRef.current; // Get start index from ref
+    const reorderCheck = e.dataTransfer.getData('application/reorder'); // Confirm it was a reorder
+
+    // Reset refs immediately after getting necessary data
+    draggedItemDesktopRef.current = null;
+    draggedItemFromIndexRef.current = null;
+
     try {
-      // Check if this is a reordering operation
-      const reorderIndex = e.dataTransfer.getData('application/reorder');
-      
-      if (reorderIndex && reorderIndex !== '') {
-        // This is a reordering operation
-        const fromIndex = parseInt(reorderIndex, 10);
+      // --- Handle Reorder Drop --- 
+      if (fromIndex !== null && reorderCheck === fromIndex.toString()) {
+        console.log(`Handling reorder drop. Started from index: ${fromIndex}`);
         
-        // Calculate target index (approximate position by mouse position)
-        let targetIndex;
-        
-        if (listRef.current) {
-          const listRect = listRef.current.getBoundingClientRect();
-          const mouseY = e.clientY - listRect.top;
-          const itemHeight = listRect.height / (userList.length || 1);
-          targetIndex = Math.floor(mouseY / itemHeight);
+        // Recalculate target index based on final drop position (like handleTouchEnd)
+        let targetIndex = -1;
+        const listContainer = listRef.current;
+        if (listContainer) {
+          const listRect = listContainer.getBoundingClientRect();
+          const mouseY = e.clientY;
+          const allListItems = Array.from(listContainer.querySelectorAll('.ranking-item'));
+
+          let closestItemIndex = -1;
+          let minDistance = Infinity;
+
+          // Calculate closest based on final mouse position
+          for (let i = 0; i < allListItems.length; i++) {
+             const item = allListItems[i];
+             // No need to exclude the dropped item here as we check its final position
+             const itemRect = item.getBoundingClientRect();
+             const itemCenterY = itemRect.top + itemRect.height / 2;
+             const distance = Math.abs(mouseY - itemCenterY);
+             if (distance < minDistance) {
+               minDistance = distance;
+               closestItemIndex = parseInt(item.dataset.index, 10);
+             }
+          }
+
+          if (closestItemIndex !== -1) {
+              const closestItem = allListItems.find(item => parseInt(item.dataset.index, 10) === closestItemIndex);
+              if (closestItem) {
+                  const closestItemRect = closestItem.getBoundingClientRect();
+                  const closestItemCenterY = closestItemRect.top + closestItemRect.height / 2;
+                  targetIndex = (mouseY < closestItemCenterY) ? closestItemIndex : closestItemIndex + 1;
+                  // Adjust target index based on original position *before* splice
+                  if (targetIndex > fromIndex) {
+                      // If dropping after the original position, the effective target index
+                      // in the list *before* removing the item might need adjustment.
+                      // However, since we splice *then* insert, using the raw calculated
+                      // targetIndex relative to the original list might be correct.
+                      // Let's try without adjustment first.
+                  } else if (targetIndex > fromIndex) {
+                      // Correction: If target > from, the insertion point should be targetIndex-1 
+                      // AFTER the splice. Let's recalculate insertIndex later.
+                  }
+              } else { targetIndex = userList.length; } // Fallback if item not found
+          } else { targetIndex = userList.length; } // Fallback if no closest found
           
-          // Ensure index is within bounds
-          targetIndex = Math.max(0, Math.min(targetIndex, userList.length - 1));
-          
-          console.log('Reordering from', fromIndex, 'to', targetIndex);
-          
-          // Reorder the list
+          // Clamp index
+          targetIndex = Math.max(0, Math.min(targetIndex, userList.length));
+          console.log(`Recalculated Drop Target Index: ${targetIndex}`);
+
+        } else {
+            console.error("Drop failed: listContainer ref is null");
+            return; // Cannot proceed without list container
+        }
+
+        // Determine the actual insertion index *after* the splice
+        let insertIndex = targetIndex;
+        if (fromIndex < targetIndex) {
+            insertIndex = targetIndex - 1;
+        }
+        insertIndex = Math.max(0, Math.min(insertIndex, userList.length -1)); // Clamp insert index
+
+        console.log(`Final Reorder: from ${fromIndex} to insert at ${insertIndex} (target: ${targetIndex})`);
+
+        if (fromIndex === insertIndex) {
+           console.log("Dropped at the same effective index, no reorder needed.");
+           return;
+        }
+
+        // Perform the list update
           const newList = [...userList];
           const [movedItem] = newList.splice(fromIndex, 1);
-          newList.splice(targetIndex, 0, movedItem);
+        newList.splice(insertIndex, 0, movedItem);
           setUserList(newList);
-        }
-        return;
+        console.log('Reorder successful');
+        return; // Handled reorder, exit
       }
       
-      // Try to get data in different formats
+      // --- Handle Drop from Season List (Existing Logic - slightly modified) --- 
+      console.log('Handling drop from external source (Season List)');
       let droppedItemData;
       const jsonData = e.dataTransfer.getData('application/json');
       const textData = e.dataTransfer.getData('text/plain');
       const dataSource = e.dataTransfer.getData('source');
       
       if (jsonData) {
-        droppedItemData = JSON.parse(jsonData);
+        try { droppedItemData = JSON.parse(jsonData); } catch (err) { console.error('Failed to parse JSON data:', err); }
       } else if (textData) {
-        try {
-          droppedItemData = JSON.parse(textData);
-        } catch (err) {
-          console.error('Failed to parse text data:', err);
-        }
+        try { droppedItemData = JSON.parse(textData); } catch (err) { console.error('Failed to parse text data:', err); }
       }
       
       if (!droppedItemData) {
-        console.error('No valid data found in the drop');
+        console.error('Drop failed: No valid data found');
         return;
       }
       
-      // Determine if the dropped item is a season or contestant
-      const isSeason = droppedItemData.isSeason || dataSource === 'season-grid';
-      
-      console.log('Dropped item data:', droppedItemData);
-      console.log('Is a season:', isSeason);
-      
-      // Check existing list type (season or contestant)
-      const hasSeasons = userList.some(item => item.isSeason);
-      const hasContestants = userList.some(item => !item.isSeason);
-      
-      // Calculate drop index based on mouse position
-      let dropIndex = userList.length; // Default to end of list
-      
-      if (listRef.current && userList.length > 0) {
-        const listRect = listRef.current.getBoundingClientRect();
-        const listItems = Array.from(listRef.current.querySelectorAll('.ranking-item'));
+      // Calculate dropIndex for external item (simplified)
+      let dropIndex = userList.length; 
+      const listContainer = listRef.current;
+      if (listContainer) {
+          const listRect = listContainer.getBoundingClientRect();
         const mouseY = e.clientY;
-        
-        // Find the nearest item based on mouse position
-        for (let i = 0; i < listItems.length; i++) {
-          const item = listItems[i];
+          const allListItems = Array.from(listContainer.querySelectorAll('.ranking-item'));
+          for (let i = 0; i < allListItems.length; i++) {
+              const item = allListItems[i];
           const rect = item.getBoundingClientRect();
           const itemCenter = rect.top + rect.height / 2;
-          
           if (mouseY < itemCenter) {
             dropIndex = i;
             break;
           }
         }
       }
-      
-      // If the list is empty, any type is allowed
-      if (userList.length === 0) {
-        // Add the item to the empty list at position 0
-        setUserList([droppedItemData]);
-        console.log('Added item to empty list:', droppedItemData);
-        return;
-      }
-      
-      // If the list already has seasons, only allow seasons
+      dropIndex = Math.max(0, Math.min(dropIndex, userList.length));
+      console.log(`Calculated drop index for external item: ${dropIndex}`);
+
+      // Existing type checks and add logic...
+      const isSeason = droppedItemData.isSeason || dataSource === 'season-grid';
+      const hasSeasons = userList.some(item => item.isSeason);
+      const hasContestants = userList.some(item => !item.isSeason);
+
+      if (userList.length > 0) {
       if (hasSeasons && !isSeason) {
-        setError('This ranking contains seasons. You cannot mix seasons and contestants in the same list.');
-        setTimeout(() => setError(''), 3000);
-        return;
+              setError('Cannot mix seasons and contestants.'); setTimeout(() => setError(''), 3000); return;
       }
-      
-      // If the list already has contestants, only allow contestants
       if (hasContestants && isSeason) {
-        setError('This ranking contains contestants. You cannot mix contestants and seasons in the same list.');
-        setTimeout(() => setError(''), 3000);
-        return;
+              setError('Cannot mix contestants and seasons.'); setTimeout(() => setError(''), 3000); return;
+          }
       }
-      
-      // Check if item is already in the list
-      const isAlreadyInList = userList.some(
-        item => item.id === droppedItemData.id
-      );
-      
+      const isAlreadyInList = userList.some(item => item.id === droppedItemData.id);
       if (isAlreadyInList) {
-        console.log('Item already in list, not adding duplicate');
-        return;
+          console.log('Item already in list'); return;
       }
       
-      // Add item to list at the calculated drop position
       const newList = [...userList];
       newList.splice(dropIndex, 0, droppedItemData);
       setUserList(newList);
-      console.log('Added item to list at position', dropIndex, '. New list:', newList);
+      console.log('Added external item successfully');
+
     } catch (error) {
       console.error('Error handling drop:', error);
+    } finally {
+        // Ensure cleanup happens regardless of success/error
+        console.log('Executing drop finally block');
+        clearItemTransforms(); 
+        setDragOver(false);
+        // Reset refs if not already reset
+        if (draggedItemDesktopRef.current) draggedItemDesktopRef.current = null;
+        if (draggedItemFromIndexRef.current !== null) draggedItemFromIndexRef.current = null;
     }
   };
   
@@ -847,6 +999,29 @@ const UserListCreator = ({
     initialTouchY.current = 0;
   };
   
+  // <<< Add useEffect for Desktop DragOver Listener >>>
+  useEffect(() => {
+    const listElement = listRef.current;
+    if (isMobile || !listElement) return; // Only for desktop and if element exists
+
+    const handleDirectDragOver = (e) => {
+        // Call the existing handler logic
+        handleDragOver(e); 
+    };
+
+    console.log('[Desktop Drag] Adding dragover listener to list container');
+    listElement.addEventListener('dragover', handleDirectDragOver);
+
+    // Cleanup function
+    return () => {
+      console.log('[Desktop Drag] Removing dragover listener from list container');
+      if (listElement) { // Check again in case element is gone before cleanup
+        listElement.removeEventListener('dragover', handleDirectDragOver);
+      }
+    };
+    // Rerun effect if isMobile changes or listRef becomes available
+  }, [isMobile, listRef.current]); // Dependency on listRef.current ensures it re-runs if ref changes
+  
   return (
     <div className="user-list-creator">
       <h2 className="section-title">
@@ -911,7 +1086,6 @@ const UserListCreator = ({
           ref={listRef}
           className={`user-ranking-list ${dragOver ? 'drag-over' : ''}`}
           style={{ minHeight: userList.length ? 'auto' : '200px' }}
-          onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={handleRankingListClick}
@@ -994,6 +1168,7 @@ const UserListCreator = ({
 };
 
 export default UserListCreator; 
+ 
  
  
  
