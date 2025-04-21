@@ -9,6 +9,7 @@ import { survivorSeasons } from '../data/survivorData';
 import { UserContext } from '../UserContext';
 import './OtherLists.css';
 import './RankingLists.css';
+import './OtherRankings.css';
 import { useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 
@@ -1336,7 +1337,7 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
           )}
         
         {/* Ranking List Display */}
-        <div className="ranking-list-container full-list">
+        <div className="other-ranking-list-container full-list">
            <div className={`ranking-list ${hasSpoilerTag && !spoilerRevealed ? 'spoiler-blur' : ''}`}>
               {(selectedList.contestants || []).length > 0 ? (
               selectedList.contestants.map((contestant, index) => (
@@ -1666,14 +1667,14 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
       ) : sortedLists.length === 0 ? (
           <div className="no-lists-message">No lists found matching your criteria.</div>
       ) : (
-        <div className="public-lists-grid other-rankings-grid">
+        <div className="other-rankings-container">
               {sortedLists.map(list => (
                 <div 
                   key={`${list.userId}-${list.id}`} 
-                  className="ranking-list-container" 
+                  className="other-ranking-list-container" 
                   onClick={() => viewFullList(list)}
                 >
-                    <div className="top-left-favorite" onClick={(e) => e.stopPropagation()}> {/* Prevent card click */} 
+                    <div className="top-left-favorite" onClick={(e) => e.stopPropagation()}>
                       <button 
                         className={`favorite-button ${isFavorited(list.userId, list.id) ? 'favorited' : ''}`}
                         onClick={(e) => toggleFavorite(list.userId, list.id, list.name, e)}
@@ -1684,12 +1685,12 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
                       </button>
                     </div>
                   
-                  <div className="top-right-upvote" onClick={(e) => e.stopPropagation()}> {/* Prevent card click */} 
+                  <div className="top-right-upvote" onClick={(e) => e.stopPropagation()}>
                       <button 
                         className={`upvote-button ${hasUserUpvoted(list) ? 'upvoted' : ''}`}
                         onClick={(e) => {
-                          e.stopPropagation(); // Prevent card click
-                          handleUpvote(list.userId, list.id, e); // Pass event
+                          e.stopPropagation();
+                          handleUpvote(list.userId, list.id, e);
                         }}
                         disabled={!user}
                         title={user ? (hasUserUpvoted(list) ? "Remove upvote" : "Upvote this list") : "Sign in to upvote"}
@@ -1705,7 +1706,7 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
                     By <span 
                       className="username"
                       onClick={(e) => {
-                        e.stopPropagation(); // Prevent card click
+                        e.stopPropagation();
                         viewUserLists(list.userId, list.userName, e);
                       }}
                       title="View all rankings by this user"
@@ -1743,21 +1744,6 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
                       <div className="empty-list-message">
                         This list is empty
                       </div>
-                    )}
-                  </div>
-                  
-                  <div className="list-tags">
-                    {/* Render predefined tags first */} 
-                    {availableTags
-                      .filter(tag => list.tags?.includes(tag.id))
-                      .filter(tag => tag.id !== 'spoiler') // Don't show spoiler tag here
-                      .map(tag => <span key={tag.id} className={`list-tag ${tag.id}`}>{tag.label}</span>)}
-                    {/* Render type indicators */}
-                    {list.tags && list.tags.includes('season-ranking') && (
-                      <span className="list-type-indicator season">Season Ranking</span>
-                    )}
-                    {list.tags && list.tags.includes('survivor-ranking') && (
-                      <span className="list-type-indicator survivor">Survivor Ranking</span>
                     )}
                   </div>
                 </div>

@@ -127,7 +127,7 @@
   /* flex: 1; */ 
   /* min-width: 0; */ 
   width: 100%; /* Allow grid to control effective width via minmax */
-  max-width: 400px; /* Optional: Set a max-width if 1fr growth is too much */
+  /* Remove max-width to let grid control the width */
   background-color: #f5f5f5;
   border-radius: 8px;
   padding: 10px;

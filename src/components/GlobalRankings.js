@@ -8,9 +8,22 @@ import './GlobalRankings.css';
 import './HomePageLists.css';
 // Import OtherLists.css for the list detail view styling AND comments
 import './OtherLists.css';
+// <<< Import the new effect component >>>
+import RainingTrophiesEffect from './RainingTrophiesEffect';
 
 // Define commentsRef at the component level
 const commentsRef = collection(db, 'comments');
+
+// <<< Configuration for Raining Trophies >>>
+/*
+const NUM_TROPHIES = 25; // How many trophies to render
+const MIN_SPEED = 0.5;    // Min falling speed (pixels per frame)
+const MAX_SPEED = 1.5;    // Max falling speed
+const MIN_SIZE = 18;     // Min font size (px)
+const MAX_SIZE = 35;     // Max font size (px)
+const MIN_ROTATION = -30; // Min rotation (degrees)
+const MAX_ROTATION = 30;  // Max rotation (degrees)
+*/
 
 const GlobalRankings = ({ seasonListRef }) => {
   const { listId } = useParams();
@@ -41,11 +54,22 @@ const GlobalRankings = ({ seasonListRef }) => {
   const draggedItemIndex = useRef(null);
   const draggedItemElement = useRef(null);
   const originalBodyOverflow = useRef(document.body.style.overflow);
-  // <<< Add refs for item height and initial touch >>>
   const draggedItemHeight = useRef(0); 
   const initialTouchX = useRef(0);
   const initialTouchY = useRef(0);
   // ----------------------------------------------
+
+  // <<< Refs for Desktop Drag Reordering >>>
+  const draggedItemDesktopIndexRef = useRef(null);
+  const draggedItemDesktopHeightRef = useRef(0);
+  const desktopDropTargetIndexRef = useRef(null);
+  // -------------------------------------
+
+  // <<< State for Raining Trophies (separate component now) >>>
+  // const [rainingTrophies, setRainingTrophies] = useState([]);
+  // const containerRef = useRef(null); // Ref for the container element for bounds
+  // const animationFrameId = useRef(null); // Ref to store animation frame ID
+  // -------------------------------------
 
   // <<< CALCULATE isEditable at the top level >>>
   const isEditable = user && (!userHasSubmitted || !showingGlobalRanking);
@@ -57,7 +81,7 @@ const GlobalRankings = ({ seasonListRef }) => {
   const [replyingTo, setReplyingTo] = useState(null); // { id: commentId, userName: commentUserName }
   const [replyText, setReplyText] = useState('');
   // ---------------------
-
+  
   // Sample data for the list cards - this would be replaced with real data from your API
   const sampleLists = [
     {
@@ -271,6 +295,70 @@ const GlobalRankings = ({ seasonListRef }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // <<< Effect to Initialize and Animate Raining Trophies >>>
+  /*
+  useEffect(() => {
+    const containerElement = containerRef.current;
+    if (!containerElement) return; // Need container bounds
+
+    const containerWidth = containerElement.offsetWidth;
+    const containerHeight = containerElement.offsetHeight;
+
+    // Initialize trophies only once
+    if (rainingTrophies.length === 0) {
+      const initialTrophies = [];
+      for (let i = 0; i < NUM_TROPHIES; i++) {
+        initialTrophies.push({
+          id: i,
+          x: Math.random() * containerWidth,
+          y: Math.random() * containerHeight, // Start at random Y positions
+          speed: MIN_SPEED + Math.random() * (MAX_SPEED - MIN_SPEED),
+          size: MIN_SIZE + Math.random() * (MAX_SIZE - MIN_SIZE),
+          rotation: MIN_ROTATION + Math.random() * (MAX_ROTATION - MIN_ROTATION),
+        });
+      }
+      setRainingTrophies(initialTrophies);
+      console.log("[Trophy Rain] Initialized trophies:", initialTrophies.length);
+    }
+
+    // Animation loop
+    const animate = () => {
+      setRainingTrophies(prevTrophies => 
+        prevTrophies.map(trophy => {
+          let newY = trophy.y + trophy.speed;
+          let newX = trophy.x;
+          // Reset if trophy falls below the container
+          if (newY > containerHeight) {
+            newY = -MAX_SIZE; // Reset above the top
+            newX = Math.random() * containerWidth; // Randomize X position on reset
+          }
+          return { ...trophy, y: newY, x: newX };
+        })
+      );
+      animationFrameId.current = requestAnimationFrame(animate);
+    };
+
+    // Start animation only if there are trophies
+    if (rainingTrophies.length > 0) {
+        animationFrameId.current = requestAnimationFrame(animate);
+        console.log("[Trophy Rain] Animation started.");
+    }
+
+    // Cleanup function to cancel animation frame
+    return () => {
+      if (animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
+        console.log("[Trophy Rain] Animation stopped.");
+      }
+    };
+  // Depend on containerElement dimensions (might need resize observer for accuracy) 
+  // For simplicity, we depend on isMobile or other state that might trigger re-render
+  // A more robust solution would use ResizeObserver to get exact bounds if they change.
+  // Re-run if listId changes (indicating page change) or if trophies initialize.
+  }, [containerRef.current, listId, rainingTrophies.length]); // Added rainingTrophies.length
+  */
+  // ---------------------------------------------------------
+
   // <<< Add useEffect for TouchMove Listener on Container >>>
   useEffect(() => {
     const listElement = listRef.current; // Assuming listRef points to the list container
@@ -293,79 +381,324 @@ const GlobalRankings = ({ seasonListRef }) => {
   // --- Drag and Drop Handlers ---
 
   const handleDragOver = (e) => {
-    if (!isEditable) return;
+    if (!isEditable || isMobile) return; // <<< Added isMobile check >>>
+    
+    const isReorder = e.dataTransfer.types.includes('application/reorder-global');
+    const isContestant = e.dataTransfer.types.includes('text/plain');
+
+    if (isReorder || isContestant) {
     e.preventDefault();
-    setDragOver(true);
+      e.dataTransfer.dropEffect = "move";
+      setDragOver(true); // Keep general dragOver state if needed for overall container styling
+    } else {
+    setDragOver(false);
+      return; // Don't proceed if not a valid drop type
+    }
+
+    // --- Logic for visual gap during reorder (mimics handleTouchMove) --- 
+    if (isReorder && listRef.current && draggedItemDesktopIndexRef.current !== null) {
+        const listContainer = listRef.current;
+        const draggedIndex = draggedItemDesktopIndexRef.current;
+        const draggedHeight = draggedItemDesktopHeightRef.current;
+        if (draggedHeight <= 0) return; // Don't do anything if height is unknown
+
+          const mouseY = e.clientY;
+        const listRect = listContainer.getBoundingClientRect();
+        const mouseYRelativeToContainer = mouseY - listRect.top;
+          
+        const listItems = Array.from(listContainer.querySelectorAll('.ranking-item'));
+        let currentTargetIndex = -1;
+        let minDistance = Infinity;
+        
+        // Find the item the mouse is closest to (using center logic like mobile)
+          for (let i = 0; i < listItems.length; i++) {
+            const item = listItems[i];
+            // Skip the item being dragged itself
+            if (parseInt(item.dataset.index, 10) === draggedIndex) continue; 
+            
+            const itemRect = item.getBoundingClientRect();
+            const itemCenterY = itemRect.top + itemRect.height / 2;
+            const distance = Math.abs(mouseY - itemCenterY);
+
+            if (distance < minDistance) {
+                minDistance = distance;
+                currentTargetIndex = i; // Index in the current DOM query
+            }
+        }
+
+        let potentialDropIndex = -1;
+        // Determine insertion point based on closest item
+        if (currentTargetIndex !== -1) {
+            const closestItem = listItems[currentTargetIndex];
+            const closestItemRect = closestItem.getBoundingClientRect();
+            const closestItemCenterY = closestItemRect.top + closestItemRect.height / 2;
+            const closestItemIndex = parseInt(closestItem.dataset.index, 10);
+            potentialDropIndex = (mouseY < closestItemCenterY) ? closestItemIndex : closestItemIndex + 1;
+        } else if (listItems.length > 0) {
+             // Fallback if no closest item found (e.g., dragging below list)
+             const lastItem = listItems[listItems.length - 1];
+             const lastItemRect = lastItem.getBoundingClientRect();
+             potentialDropIndex = (mouseY > lastItemRect.bottom) ? listItems.length : 0;
+        } else {
+             potentialDropIndex = 0; // Dropping into an empty list
+        }
+        
+        potentialDropIndex = Math.max(0, Math.min(potentialDropIndex, currentRanking?.contestants?.length ?? 0));
+        
+        // Update the target index ref if it changed
+        if (potentialDropIndex !== desktopDropTargetIndexRef.current) {
+             desktopDropTargetIndexRef.current = potentialDropIndex;
+             console.log(`[Desktop Drag Over] Potential Drop Index: ${potentialDropIndex}`);
+        }
+        
+        // Apply transforms to create gap
+        listItems.forEach((item) => {
+            const itemIndex = parseInt(item.dataset.index, 10);
+            
+            // <<< Handle the item being dragged >>>
+            if (itemIndex === draggedIndex) {
+                 item.style.transform = ''; // Ensure dragged item is not shifted
+                 // Make sure the dragging class is applied for opacity/styling
+                 if (!item.classList.contains('dragging-item')) {
+                     item.classList.add('dragging-item');
+                 }
+                 return; // Don't apply shift transform to the item being dragged
+            }            
+            
+            // <<< Apply shift to other items >>>
+            let transformY = 0;
+            if (potentialDropIndex > draggedIndex) { // Moving down
+                if (itemIndex > draggedIndex && itemIndex < potentialDropIndex) {
+                    transformY = -draggedHeight;
+                }
+            } else if (potentialDropIndex < draggedIndex) { // Moving up
+                if (itemIndex >= potentialDropIndex && itemIndex < draggedIndex) {
+                    transformY = draggedHeight;
+                }
+            }
+            item.style.transform = `translateY(${transformY}px)`;
+            // Ensure non-dragged items don't have the dragging style
+            if (item.classList.contains('dragging-item')) {
+                 item.classList.remove('dragging-item');
+            }
+        });
+    }
   };
   
   const handleDragLeave = (e) => {
-    if (!isEditable) return;
-    setDragOver(false);
+    if (!isEditable || isMobile) return; // <<< Added isMobile check >>>
+
+    // Check if leaving the list container itself, not just moving between items
+    const listElement = listRef.current;
+    if (listElement && !listElement.contains(e.relatedTarget)) {
+        console.log("[Desktop Drag Leave] Left list container.");
+        setDragOver(false);
+        // Clear transforms when leaving the container
+        const allItems = listElement.querySelectorAll('.ranking-item'); 
+        allItems.forEach(item => item.style.transform = '');
+        desktopDropTargetIndexRef.current = null; // Reset target index
+    }
   };
-  
+
   // Handle drag start for reordering within the list
   const handleItemDragStart = (e, index) => {
-    if (!isEditable) return;
+    if (!isEditable || isMobile) return; 
+    
     e.dataTransfer.setData('application/reorder-global', index.toString());
-    e.currentTarget.classList.add('dragging-item');
+    e.dataTransfer.effectAllowed = 'move';
+    
+    draggedItemDesktopIndexRef.current = index;
+    draggedItemDesktopHeightRef.current = e.currentTarget.offsetHeight;
+    desktopDropTargetIndexRef.current = index; 
+    
+    const draggedElement = e.currentTarget;
+    
+    // Add dragging-item class for general styling (opacity)
+    // Use setTimeout 0 to allow the browser to process the drag start event first
+    setTimeout(() => {
+        if (draggedElement) { 
+             draggedElement.classList.add('dragging-item');
+        }
+    }, 0);
+
+    // <<< Add drag-source--hidden class slightly later to hide original >>>
+    setTimeout(() => {
+        if (draggedElement) {
+            draggedElement.classList.add('drag-source--hidden');
+        }
+    }, 10); // Small delay (10ms) should be enough
+
+    console.log(`[Desktop Drag Start] Index: ${index}, Height: ${draggedItemDesktopHeightRef.current}`);
   };
 
   // Handle drag end for reordering
   const handleItemDragEnd = (e) => {
-    if (!isEditable) return;
-    if (e.currentTarget) { // Check if currentTarget exists
-        e.currentTarget.classList.remove('dragging-item');
+    if (!isEditable || isMobile) return; 
+    
+    console.log("[Desktop Drag End]");
+    
+    const listElement = listRef.current;
+    let draggedElement = null;
+    if (listElement && draggedItemDesktopIndexRef.current !== null) {
+        // Find the element that *was* being dragged based on the stored index
+        draggedElement = listElement.querySelector(`[data-index="${draggedItemDesktopIndexRef.current}"]`);
     }
+
+    // Clear transforms on all items
+    if(listElement) {
+        const allItems = listElement.querySelectorAll('.ranking-item'); 
+        allItems.forEach(item => {
+            item.style.transform = '';
+            // <<< Also remove helper classes just in case >>>
+            item.classList.remove('dragging-item');
+            item.classList.remove('drag-source--hidden');
+        });
+    }
+
+    // <<< Remove classes from the specific dragged element if found >>>
+    if (draggedElement) {
+        draggedElement.classList.remove('dragging-item');
+        draggedElement.classList.remove('drag-source--hidden');
+    } else if (e.currentTarget) {
+         // Fallback to currentTarget if querySelector failed (less reliable)
+         e.currentTarget.classList.remove('dragging-item');
+         e.currentTarget.classList.remove('drag-source--hidden');
+    }
+    
+    // Reset refs
+    draggedItemDesktopIndexRef.current = null;
+    draggedItemDesktopHeightRef.current = 0;
+    desktopDropTargetIndexRef.current = null;
   };
 
   const handleDrop = (e) => {
-    if (!isEditable) return;
+    if (!isEditable || isMobile) return; // <<< Added isMobile check >>>
     e.preventDefault();
     setDragOver(false);
-    const fromIndexStr = e.dataTransfer.getData('application/reorder-global');
-    const fromIndex = parseInt(fromIndexStr, 10);
 
-    if (!isNaN(fromIndex) && currentRanking && currentRanking.contestants) {
-        let targetIndex;
+    // Check for reorder first
+    const reorderIndexStr = e.dataTransfer.getData('application/reorder-global');
+    if (reorderIndexStr && draggedItemDesktopIndexRef.current !== null) { // <<< Added check for desktop drag ref >>>
+        const fromIndex = parseInt(reorderIndexStr, 10);
+        const targetIndex = desktopDropTargetIndexRef.current; // <<< Use the target index from dragOver >>>
+
+        // Clear transforms immediately before state update
         const listElement = listRef.current;
-        if (listElement) {
-            const listRect = listElement.getBoundingClientRect();
-            const mouseY = e.clientY - listRect.top;
-            const items = listElement.querySelectorAll('.ranking-item');
-            let accumulatedHeight = 0;
-            targetIndex = items.length; // Default to end
-            for(let i = 0; i < items.length; i++) {
-                const itemHeight = items[i].offsetHeight;
-                 // Use middle of the item as the threshold
-                if (mouseY < accumulatedHeight + itemHeight / 2) { 
-                    targetIndex = i;
-                    break;
-                }
-                accumulatedHeight += itemHeight;
-            }
-            targetIndex = Math.max(0, Math.min(targetIndex, currentRanking.contestants.length));
-        } else {
-           // Fallback if ref not available
-           targetIndex = currentRanking.contestants.length;
+        if(listElement) {
+            const allItems = listElement.querySelectorAll('.ranking-item'); 
+            allItems.forEach(item => item.style.transform = '');
         }
-        
-        console.log(`[Desktop Drop] Reordering from ${fromIndex} to target ${targetIndex}`);
 
+        // Reset desktop drag refs before state update
+        const startIndex = draggedItemDesktopIndexRef.current; // Store before resetting
+        draggedItemDesktopIndexRef.current = null;
+        draggedItemDesktopHeightRef.current = 0;
+        desktopDropTargetIndexRef.current = null;
+
+        // Validate indices
+        if (isNaN(fromIndex) || targetIndex === null || !currentRanking || !currentRanking.contestants) {
+             console.error("[Desktop Drop Reorder] Invalid state for reorder.", { fromIndex, targetIndex });
+        return;
+      }
+      
+        // Calculate final insertion index
         let insertIndex = targetIndex;
-        if (fromIndex < targetIndex) {
-            insertIndex = targetIndex - 1;
+        if (fromIndex < targetIndex) { 
+            insertIndex = targetIndex - 1; 
         }
+        // Clamp insert index to valid range
+        insertIndex = Math.max(0, Math.min(insertIndex, currentRanking.contestants.length -1)); 
         
-        if (fromIndex === insertIndex) {
-            console.log("[Desktop Drop] Same index, no reorder.");
-            return;
-        }
+        console.log(`[Desktop Drop Reorder] From: ${fromIndex}, Target: ${targetIndex}, Insert: ${insertIndex}`);
 
+        // No reorder if indices are effectively the same
+        if (fromIndex === insertIndex) {
+            console.log("[Desktop Drop Reorder] Same index, no reorder needed.");
+        return;
+      }
+      
+        // Perform state update
         const newList = [...currentRanking.contestants];
         const [movedItem] = newList.splice(fromIndex, 1);
         newList.splice(insertIndex, 0, movedItem);
         setCurrentRanking({ ...currentRanking, contestants: newList });
+        console.log("[Desktop Drop Reorder] Reorder successful");
+        return; // Exit after handling reorder
     }
+
+    // Handle drop from SeasonList (text/plain)
+    const contestantDataStr = e.dataTransfer.getData('text/plain');
+    if (contestantDataStr) {
+        let droppedContestant;
+        try {
+            droppedContestant = JSON.parse(contestantDataStr);
+            // Basic validation
+            if (!droppedContestant || typeof droppedContestant.id === 'undefined' || typeof droppedContestant.name === 'undefined') {
+                throw new Error("Invalid contestant data format.");
+            }
+        } catch (error) {
+            console.error("Failed to parse dropped contestant data:", error);
+            return; // Exit if data is invalid
+        }
+
+        // Ensure we don't mix types (assuming global lists are contestant-only)
+        if (droppedContestant.isSeason) {
+            console.warn("Attempted to drop a season onto a contestant list.");
+            // Optionally show an error message to the user
+        return;
+      }
+
+        // Calculate target index based on drop position
+        let targetIndex = -1; // Initialize to -1 (no target found yet)
+        const listElement = listRef.current;
+        if (listElement) {
+        const mouseY = e.clientY;
+            const items = listElement.querySelectorAll('.ranking-item'); // Use the correct selector
+            
+            // <<< Change logic to find direct hit >>>
+            for(let i = 0; i < items.length; i++) {
+                const itemRect = items[i].getBoundingClientRect();
+                // Check if the drop Y coordinate is within the item's vertical bounds
+                if (mouseY >= itemRect.top && mouseY <= itemRect.bottom) { 
+                    targetIndex = i; // Found a direct hit
+                    break; // Stop searching
+                }
+            }
+            // <<< End change >>>
+
+        } else {
+            console.warn("List ref not found, cannot calculate drop index accurately.");
+            // If ref is missing, we can't reliably determine the target, so do nothing
+            return; 
+        }
+
+        // <<< Add check: If no direct hit, do nothing >>>
+        if (targetIndex === -1) {
+            console.log("[Desktop Drop] Drop did not occur directly on a list item. No action taken.");
+            return; 
+        }
+
+        console.log(`[Desktop Drop] Dropped contestant ${droppedContestant.name} onto index ${targetIndex}`);
+
+        // Check if contestant is already in the list (at a DIFFERENT index)
+        const existingIndex = currentRanking.contestants.findIndex(c => !c.isEmpty && c.id === droppedContestant.id);
+        if (existingIndex !== -1 && existingIndex !== targetIndex) { // Allow dropping onto its own current slot (effectively no change)
+            alert(`${droppedContestant.name} is already ranked at position ${existingIndex + 1}.`);
+            return;
+        }
+
+        // Update the list
+          const newList = [...currentRanking.contestants];
+        // Replace the item at the target index
+        newList[targetIndex] = { 
+            ...droppedContestant, 
+            isEmpty: false // Ensure it's marked as not empty
+        };
+        setCurrentRanking({ ...currentRanking, contestants: newList });
+        return; // Exit after handling contestant drop
+    }
+
+    console.warn("[Desktop Drop] Drop occurred but no recognized data type found.");
   };
 
   // Function to remove a contestant from a slot
@@ -475,27 +808,23 @@ const GlobalRankings = ({ seasonListRef }) => {
   const renderRankingListCard = (list) => {
     if (!list || !list.contestants) return null;
     
-    // Check if user has submitted and global data exists for this list
     const globalDataForList = globalRankings[list.id];
     const hasUserSubmitted = user && globalDataForList !== undefined;
-    
-    // Get the list's total votes from the global data
     const listTotalVotes = globalDataForList?.totalVotes || 0;
-    
-    // Get the appropriate contestants to display (either placeholders or global top 10)
-    let displayContestants = list.contestants; // Default to placeholders
+    let displayContestants = list.contestants; 
     if (hasUserSubmitted && globalDataForList?.top10 && globalDataForList.top10.length > 0) {
       displayContestants = globalDataForList.top10;
     }
-    
-    // Check if this list is currently loading global rankings
     const isLoading = loadingGlobalRankings[list.id] === true;
     
     return (
       <div 
         className="ranking-list-container" 
         onClick={() => viewFullList(list)}
+        style={{ position: 'relative' }} 
       >
+        <RainingTrophiesEffect />
+
         <h2 className="list-title">{list.name}</h2>
         
         <p className="list-creator">
@@ -520,51 +849,45 @@ const GlobalRankings = ({ seasonListRef }) => {
             </div>
           ) : (
             displayContestants.map((contestant, index) => {
-              // Calculate average points using the list's total votes
               const averagePoints = (hasUserSubmitted && typeof contestant.totalScore === 'number' && listTotalVotes > 0)
-                ? contestant.totalScore / listTotalVotes // <<< USE listTotalVotes
+                ? contestant.totalScore / listTotalVotes 
                 : null;
-
-              // Convert average points to average position (11 - avgPoints)
               const averagePosition = (averagePoints !== null)
                 ? (11 - averagePoints).toFixed(1)
                 : null;
-
               const isFirstEmptySlot = !hasUserSubmitted && index === 0 && contestant.isEmpty;
 
               return (
-                <div
-                  key={`${contestant.id}-${index}`}
-                  className={`ranking-item ${contestant.isEmpty ? 'empty-slot' : ''}`}
-                >
+              <div
+                key={`${contestant.id}-${index}`}
+                className={`ranking-item ${contestant.isEmpty ? 'empty-slot' : ''}`}
+              >
                   <div className={`ranking-number ${!hasUserSubmitted ? 'number-hidden' : ''}`}>
                     {index + 1}
                   </div>
-                  <img
-                    src={contestant.imageUrl || "/images/placeholder.jpg"}
-                    alt={contestant.name}
+                <img
+                  src={contestant.imageUrl || "/images/placeholder.jpg"}
+                  alt={contestant.name}
                     className={`contestant-image ${contestant.isSeason ? 'season-logo' : ''} ${contestant.isEmpty ? 'placeholder-hidden' : ''}`}
-                    draggable="false"
-                  />
+                  draggable="false"
+                />
                   <div 
                     className={`${contestant.isSeason ? "season-name" : "contestant-name"} ${contestant.isEmpty ? 'empty-name' : ''} ${contestant.isEmpty && !isFirstEmptySlot ? 'placeholder-hidden' : ''}`} 
                     style={{ color: contestant.isEmpty ? '#999' : '#000000' }}
                   >
                     {isFirstEmptySlot
-                        ? <span className="submit-prompt-text">Submit your votes!</span> // Special visible text
+                        ? <span className="submit-prompt-text">Submit your votes!</span> 
                         : contestant.isEmpty
-                            ? contestant.name // Default hidden "Vote for #X" text
-                            : // Real contestant name formatting
-                              (contestant.isSeason 
+                            ? contestant.name
+                            : (contestant.isSeason 
                                 ? contestant.name.replace("Survivor: ", "").replace("Survivor ", "") 
-                                : contestant.name)
-                    }
-                    {/* Show total points if calculated */} 
+                      : contestant.name)
+                  }
                     {contestant.totalScore !== undefined && 
                       <span className="global-score"> ({contestant.totalScore} pts)</span>
-                    }
-                  </div>
+                  }
                 </div>
+              </div>
               );
             })
           )}
@@ -1081,7 +1404,7 @@ const GlobalRankings = ({ seasonListRef }) => {
           <h2>{selectedList.name}</h2>
           
           {/* Description (Now directly follows title) */}
-          {selectedList.description && (
+        {selectedList.description && (
             <p className="list-description-inline">{selectedList.description}</p>
           )}
           
@@ -1091,33 +1414,33 @@ const GlobalRankings = ({ seasonListRef }) => {
           </p>
         </div>
 
-        {/* Submit Section (Shows buttons conditionally) */}
-        {(userHasSubmitted === true || isEditable) && (
-          <div className="submit-global-ranking-section">
-            {/* Toggle Button - Only show if user HAS submitted */}
-            {userHasSubmitted === true && (
-              <button onClick={toggleView} className="toggle-view-button">
-                {showingGlobalRanking ? 'View/Edit My Submission' : 'View Global Ranking'}
-              </button>
-            )}
+         {/* Submit Section (Shows buttons conditionally) */}
+         {(userHasSubmitted === true || isEditable) && (
+           <div className="submit-global-ranking-section">
+             {/* Toggle Button - Only show if user HAS submitted */}
+             {userHasSubmitted === true && (
+               <button onClick={toggleView} className="toggle-view-button">
+                 {showingGlobalRanking ? 'View/Edit My Submission' : 'View Global Ranking'}
+               </button>
+             )}
 
-            {/* Submit Button & Feedback (Only shows when editable) */}
-            {isEditable && (
-              <>
-                {submitSuccess && <div className="submit-feedback success">Ranking Submitted!</div>}
-                {submitError && <div className="submit-feedback error">{submitError}</div>}
-                <button
-                  onClick={handleSubmitRanking}
-                  disabled={isSubmitting || !user} // Ensure user check here too
-                  className="submit-global-ranking-button"
-                >
-                  {isSubmitting ? 'Submitting...' : 'Submit My Ranking'}
-                </button>
-                {!user && <p className="login-prompt">Please log in to submit your ranking.</p>}
-              </>
-            )}
-          </div>
-        )}
+             {/* Submit Button & Feedback (Only shows when editable) */}
+             {isEditable && (
+               <>
+                 {submitSuccess && <div className="submit-feedback success">Ranking Submitted!</div>}
+                 {submitError && <div className="submit-feedback error">{submitError}</div>}
+                 <button
+                   onClick={handleSubmitRanking}
+                   disabled={isSubmitting || !user} // Ensure user check here too
+                   className="submit-global-ranking-button"
+                 >
+                   {isSubmitting ? 'Submitting...' : 'Submit My Ranking'}
+                 </button>
+                 {!user && <p className="login-prompt">Please log in to submit your ranking.</p>}
+               </>
+             )}
+           </div>
+         )}
 
         {/* Ranking List Area */}
         {showingGlobalRanking ? (
@@ -1141,23 +1464,23 @@ const GlobalRankings = ({ seasonListRef }) => {
                                 : null;
 
                               return (
-                                <div key={`${contestant.id}-${index}`} className="ranking-item">
-                                    <div className="ranking-number">{index + 1}</div>
-                                    <img
-                                        src={contestant.imageUrl || "/images/placeholder.jpg"}
-                                        alt={contestant.name}
+                              <div key={`${contestant.id}-${index}`} className="ranking-item">
+                                  <div className="ranking-number">{index + 1}</div>
+                                  <img
+                                      src={contestant.imageUrl || "/images/placeholder.jpg"}
+                                      alt={contestant.name}
                                         className={`contestant-image`} 
-                                        draggable="false"
-                                    />
-                                    <div className="contestant-name">
-                                        {contestant.name}
+                                      draggable="false"
+                                  />
+                                  <div className="contestant-name">
+                                      {contestant.name}
                                         {/* Show total points if available */} 
                                         {contestant.totalScore !== undefined && 
                                           <span className="global-score"> ({contestant.totalScore} pts)</span> 
-                                        }
-                                    </div>
+                                      }
+                                  </div>
                                     {/* Optionally show vote count: <span className="global-votes">{currentListTotalVotes} votes</span> */}
-                                </div>
+                              </div>
                               );
                           })
                       ) : (
@@ -1411,9 +1734,8 @@ const GlobalRankings = ({ seasonListRef }) => {
   }
 
   // Render main listings page
-  // Add a wrapper div with a new class for centering
   return (
-    <div className="global-rankings-main-view">
+    <div className="global-rankings-main-view global-rankings-page-wrapper">
       <h1>Global Rankings</h1>
       
       <div className="global-rankings-description">

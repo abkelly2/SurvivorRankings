@@ -36,9 +36,8 @@
 
 .global-lists-container {
   display: flex;
-  justify-content: space-between;
-  gap: 20px;
-  flex-wrap: nowrap;
+  gap: 30px;
+  flex-wrap: wrap;
   width: 100%;
   margin-bottom: 30px;
 }
@@ -205,9 +204,17 @@
 /* Style for item being dragged for reordering (Desktop) */
 .ranking-item.dragging-item {
   opacity: 0.5;
-  background-color: #e0e0e0;
+  /* background-color: #e0e0e0; */ /* Keep background subtle */
   border-color: #aaa;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  cursor: grabbing;
+}
+
+/* Style to completely hide the original source element AFTER ghost image is created */
+.ranking-item.drag-source--hidden {
+    opacity: 0 !important;
+    visibility: hidden !important; /* Use visibility for better layout stability potentially */
+    /* display: none !important; */ /* Avoid display:none as it might affect layout */
 }
 
 /* Style for item being dragged via touch (Mobile) */
@@ -592,4 +599,168 @@
      text-align: left;
      margin-top: 15px;
   }
+}
+
+/* <<< ADD styles for the individual list card container - PREFIXED >>> */
+.global-rankings-page-wrapper .ranking-list-container {
+  background-color: rgba(20, 20, 20, 0.9); 
+  
+  /* <<< Remove background image and animation properties >>> */
+  /* background-image: 
+    url("data:image/svg+xml,..."),
+    url("data:image/svg+xml,..."),
+    linear-gradient(...); */
+  /* background-size: 100px 100px, 90px 90px, auto; */ 
+  /* background-repeat: repeat, repeat, no-repeat; */
+  /* animation: 
+    trophyRain1 12s linear infinite, 
+    trophyRain2 18s linear infinite; */
+
+  border: 2px solid #ffd700; 
+  border-radius: 12px; 
+  padding: 25px; 
+  flex: 1 1 360px; 
+  min-width: 320px; 
+  max-width: calc(50% - 20px); 
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3), 
+              inset 0 0 10px rgba(255, 215, 0, 0.2); 
+  transition: transform 0.25s ease-in-out, box-shadow 0.25s ease-in-out;
+  cursor: pointer; 
+  display: flex; 
+  flex-direction: column; 
+  position: relative; /* Keep this */
+  overflow: hidden; /* Keep this */
+}
+
+/* <<< Remove Keyframes for the old background Animation >>> */
+/*
+@keyframes trophyRain1 {
+  0% {
+    background-position: 0 0, 0 0, 0 0; 
+  }
+  100% {
+    background-position: 0 100px, 0 0, 0 0; 
+  }
+}
+@keyframes trophyRain2 {
+  0% {
+    background-position: 0 0, 0 0, 0 0; 
+  }
+  100% {
+    background-position: 0 0, 0 90px, 0 0; 
+  }
+}
+*/
+
+/* <<< PREFIXED Hover Style >>> */
+.global-rankings-page-wrapper .ranking-list-container:hover {
+  transform: translateY(-6px) scale(1.01); /* Slightly more lift and scale */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 
+              0 0 15px rgba(255, 215, 0, 0.6); /* Brighter gold glow on hover */
+}
+
+/* <<< PREFIXED Title Style >>> */
+.global-rankings-page-wrapper .ranking-list-container .list-title {
+  font-family: 'Survivant', sans-serif;
+  color: #ffd700; /* Gold title */
+  font-size: 1.9rem; /* Increase title size slightly */
+  margin: 0 0 8px 0;
+  text-align: center;
+  text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.5); /* Slightly stronger shadow */
+  line-height: 1.2;
+  position: relative; /* For trophy positioning */
+  padding-left: 30px; /* Make space for trophy */
+  display: inline-block; /* Allow pseudo element positioning */
+  margin-left: auto; /* Center the title block */
+  margin-right: auto; /* Center the title block */
+}
+
+/* <<< PREFIXED Trophy Emoji >>> */
+.global-rankings-page-wrapper .ranking-list-container .list-title::before {
+  content: '🏆';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.6rem; /* Adjust emoji size */
+  line-height: 1;
+  text-shadow: none; /* Remove shadow from emoji if needed */
+  filter: drop-shadow(0 0 3px rgba(255, 215, 0, 0.7)); 
+}
+
+/* <<< PREFIXED Creator Style >>> */
+.global-rankings-page-wrapper .ranking-list-container .list-creator {
+  font-size: 0.95rem; /* Slightly larger creator text */
+  color: #ddd; /* Lighter grey */
+  text-align: center;
+  margin-bottom: 18px; /* More space below creator */
+}
+
+/* <<< PREFIXED Username Style >>> */
+.global-rankings-page-wrapper .ranking-list-container .list-creator .username {
+  color: #ffd700; /* Gold username */
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* <<< PREFIXED Username Hover Style >>> */
+.global-rankings-page-wrapper .ranking-list-container .list-creator .username:hover {
+  text-decoration: underline;
+  text-shadow: 0 0 5px rgba(255, 215, 0, 0.5); /* Gold glow on username hover */
+}
+
+/* <<< PREFIXED Inner List Style >>> */
+.global-rankings-page-wrapper .ranking-list-container .ranking-list {
+  flex-grow: 1; 
+  margin-top: 15px; /* Increase space above list items */
+}
+
+/* Optional overlay example */
+/*
+.ranking-list-container .ranking-list::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 30px;
+  background: linear-gradient(to top, rgba(20, 20, 20, 0.8), transparent);
+  pointer-events: none;
+}
+*/
+
+/* <<< PREFIXED List Item Style within GOAT card >>> */
+.global-rankings-page-wrapper .ranking-list-container .ranking-item {
+  background-color: rgba(255, 255, 255, 0.08); /* Slightly lighter item background */
+  border-color: rgba(255, 215, 0, 0.3); /* Fainter gold border */
+  margin-bottom: 8px;
+  /* Reset hover effects from general styles if needed */
+  /* transition: none; */ 
+  /* box-shadow: none; */
+}
+/* Ensure general hover doesn't apply */
+.global-rankings-page-wrapper .ranking-list-container .ranking-item:hover {
+    transform: none;
+    box-shadow: none; /* Or maybe a very subtle inner shadow? */
+}
+
+/* <<< PREFIXED Ranking Number Style within GOAT card >>> */
+.global-rankings-page-wrapper .ranking-list-container .ranking-item .ranking-number {
+  background-color: rgba(255, 215, 0, 0.2); /* Gold tint for number background */
+  color: #ffd700; /* Gold number */
+  border: 1px solid rgba(255, 215, 0, 0.5);
+}
+
+/* <<< PREFIXED Contestant Name Style within GOAT card >>> */
+.global-rankings-page-wrapper .ranking-list-container .ranking-item .contestant-name {
+  color: #eee; /* Lighter name color */
+}
+
+/* <<< PREFIXED Placeholder Style within GOAT card >>> */
+.global-rankings-page-wrapper .ranking-list-container .ranking-item.empty-slot,
+.global-rankings-page-wrapper .ranking-list-container .ranking-item .placeholder-hidden {
+  opacity: 0.5; /* Make placeholders fainter */
+}
+.global-rankings-page-wrapper .ranking-list-container .ranking-item.empty-slot .submit-prompt-text {
+  color: #bbb; /* Adjust prompt color */
 }
