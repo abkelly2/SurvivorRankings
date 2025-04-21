@@ -1158,11 +1158,6 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
   
   const sortedUserLists = sortLists(userLists);
   
-  // Render a single list card (for the grid view)
-  const renderPublicListCard = (list) => {
-    // ... existing card rendering logic ...
-  };
-  
   // Render the full detailed view of a selected list
   if (selectedList) {
     const hasSpoilerTag = selectedList.tags && selectedList.tags.includes('spoiler');
@@ -1481,15 +1476,200 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
   // Render the grid of public lists (default view)
   return (
     <div className="other-lists">
-      {/* ... (existing search/filter bar) ... */}
+      <div className="search-and-filters">
+        {viewingUserId ? (
+          <div className="user-rankings-header">
+            <h2>Rankings by <span>{viewingUserName || 'User'}</span></h2>
+            <span className="user-list-count">
+              {sortedLists.length} {sortedLists.length === 1 ? 'ranking' : 'rankings'} created by this user
+            </span>
+          </div>
+        ) : (
+          <>
+            <h2>Browse All Rankings</h2>
+            <div className="search-container">
+              <input
+                type="text"
+                placeholder="Search rankings..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="search-input"
+              />
+              
+              <div className="filter-container">
+                <div className="type-filters">
+                  <span>Ranking Type:</span>
+                  <button 
+                    className={selectedType === 'all' ? 'active' : ''}
+                    onClick={() => handleTypeChange('all')}
+                  >
+                    All Rankings
+                  </button>
+                  <button 
+                    className={selectedType === 'season' ? 'active' : ''}
+                    onClick={() => handleTypeChange('season')}
+                  >
+                    Season Rankings
+                  </button>
+                  <button 
+                    className={selectedType === 'survivor' ? 'active' : ''}
+                    onClick={() => handleTypeChange('survivor')}
+                  >
+                    Survivor Rankings
+                  </button>
+                </div>
+              
+                <div className="sort-options">
+                  <span>Sort by:</span>
+                  <button 
+                    className={sortBy === 'mostVotes' ? 'active' : ''}
+                    onClick={() => handleSortChange('mostVotes')}
+                  >
+                    Most Votes
+                  </button>
+                  <button 
+                    className={sortBy === 'newest' ? 'active' : ''}
+                    onClick={() => handleSortChange('newest')}
+                  >
+                    Newest
+                  </button>
+                  <button 
+                    className={sortBy === 'oldest' ? 'active' : ''}
+                    onClick={() => handleSortChange('oldest')}
+                  >
+                    Oldest
+                  </button>
+                </div>
+                
+                <div className="tag-filters">
+                  <span>Filter by tag:</span>
+                  <div className="tags">
+                    {/* Combine availableTags with allTags from lists, ensuring uniqueness */}
+                    {[...new Set([...availableTags.map(t => t.id), ...allTags])]
+                     .map(tagId => {
+                        const tagInfo = availableTags.find(t => t.id === tagId);
+                        const label = tagInfo ? tagInfo.label : tagId; // Fallback to ID if not in predefined
+                        return (
+                          <button
+                            key={tagId}
+                            className={selectedTags.includes(tagId) ? 'tag-button selected' : 'tag-button'}
+                            onClick={() => handleTagSelect(tagId)}
+                          >
+                            {label}
+                          </button>
+                        );
+                     })
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
       {loading ? (
           <div className="loading">Loading lists...</div>
-      ) : sortedUserLists.length === 0 ? (
+      ) : sortedLists.length === 0 ? (
           <div className="no-lists-message">No lists found matching your criteria.</div>
       ) : (
         <div className="public-lists-grid other-rankings-grid">
-              {sortedUserLists.map(list => renderPublicListCard(list))}
+              {sortedLists.map(list => (
+                <div 
+                  key={`${list.userId}-${list.id}`} 
+                  className="ranking-list-container" 
+                  onClick={() => viewFullList(list)}
+                >
+                    <div className="top-left-favorite" onClick={(e) => e.stopPropagation()}> {/* Prevent card click */} 
+                      <button 
+                        className={`favorite-button ${isFavorited(list.userId, list.id) ? 'favorited' : ''}`}
+                        onClick={(e) => toggleFavorite(list.userId, list.id, list.name, e)}
+                        disabled={!user}
+                        title={user ? (isFavorited(list.userId, list.id) ? "Remove from favorites" : "Add to favorites") : "Login to favorite lists"}
+                      >
+                        <span className="favorite-icon">★</span>
+                      </button>
+                    </div>
+                  
+                  <div className="top-right-upvote" onClick={(e) => e.stopPropagation()}> {/* Prevent card click */} 
+                      <button 
+                        className={`upvote-button ${hasUserUpvoted(list) ? 'upvoted' : ''}`}
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent card click
+                          handleUpvote(list.userId, list.id, e); // Pass event
+                        }}
+                        disabled={!user}
+                        title={user ? (hasUserUpvoted(list) ? "Remove upvote" : "Upvote this list") : "Sign in to upvote"}
+                      >
+                      <span className="upvote-icon">▲</span>
+                      <span className="upvote-count">{list.upvoteCount || 0}</span>
+                      </button>
+                  </div>
+                  
+                  <h2 className="list-title">{list.name}</h2>
+                  
+                  <p className="list-creator">
+                    By <span 
+                      className="username"
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent card click
+                        viewUserLists(list.userId, list.userName, e);
+                      }}
+                      title="View all rankings by this user"
+                    >
+                      {list.userName || "Unknown User"}
+                    </span>
+                  </p>
+                  
+                  {list.tags && list.tags.includes('spoiler') && (
+                    <div className="spoiler-warning">Contains Spoilers</div>
+                  )}
+                  
+                  <div className={`ranking-list clickable ${list.tags && list.tags.includes('spoiler') ? 'spoiler-blur' : ''}`}>
+                    {list.contestants && list.contestants.length > 0 ? (
+                      list.contestants.slice(0, 3).map((contestant, index) => (
+                        <div
+                          key={`${contestant.id}-${index}`}
+                          className="ranking-item"
+                        >
+                          <div className="ranking-number">{index + 1}</div>
+                          <img
+                            src={contestantImageUrls[contestant.id] || contestant.imageUrl || "/placeholder.jpg"}
+                            alt={contestant.name}
+                            className={`contestant-image ${contestant.isSeason ? 'season-logo' : ''}`}
+                            draggable="false"
+                          />
+                          <div className={contestant.isSeason ? "season-name" : "contestant-name"} style={{ color: '#000000' }}>
+                              {contestant.isSeason 
+                                ? contestant.name.replace('Survivor: ', '').replace('Survivor ', '') 
+                                : contestant.name}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="empty-list-message">
+                        This list is empty
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="list-tags">
+                    {/* Render predefined tags first */} 
+                    {availableTags
+                      .filter(tag => list.tags?.includes(tag.id))
+                      .filter(tag => tag.id !== 'spoiler') // Don't show spoiler tag here
+                      .map(tag => <span key={tag.id} className={`list-tag ${tag.id}`}>{tag.label}</span>)}
+                    {/* Render type indicators */}
+                    {list.tags && list.tags.includes('season-ranking') && (
+                      <span className="list-type-indicator season">Season Ranking</span>
+                    )}
+                    {list.tags && list.tags.includes('survivor-ranking') && (
+                      <span className="list-type-indicator survivor">Survivor Ranking</span>
+                    )}
+                  </div>
                 </div>
+              ))}
+        </div>
       )}
       {/* Feedback Popup */} 
       {showFeedback && (
