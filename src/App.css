@@ -92,6 +92,7 @@ main {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
+  padding-top: 60px;
 }
 
 .rankings-section::before {
@@ -456,12 +457,12 @@ body.tribal-mode .App {
 
   .user-info {
     order: 1;
-    margin-bottom: -50px;
   }
 
   .global-rankings-button img {
     width: 200px;
     height: 200px;
+    margin-top: 30px;
   }
 }
 
@@ -548,4 +549,60 @@ body.tribal-mode .App {
 .mobile-edit-instruction:hover {
   color: #555;
   background-color: rgba(0, 0, 0, 0.06);
-} 
+}
+
+/* Login button styling */
+.login-button {
+  /* Base styles from .create-list-button */
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  padding: 8px 15px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.3);
+  
+  /* Specific green background */
+  background: linear-gradient(to bottom, #5cb85c, #4CAF50); /* Green gradient */
+}
+
+.login-button:hover {
+  /* Base hover from .create-list-button */
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+  
+  /* Specific green hover */
+  background: linear-gradient(to bottom, #6fcc6f, #5cb85c);
+}
+
+.login-button:active {
+  /* Base active from .create-list-button */
+  transform: translateY(1px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* <<< ADD Footer Styles >>> */
+.App-footer {
+  padding: 15px 0;
+  margin-top: 30px; /* Add space above footer */
+  text-align: center;
+  font-size: 0.8rem; /* Small font size */
+  color: #aaa; /* Light grey color */
+  border-top: 1px solid rgba(255, 255, 255, 0.1); /* Subtle top border */
+}
+
+.App-footer a {
+  color: #ccc; /* Slightly brighter link color */
+  text-decoration: none;
+  margin: 0 10px; /* Space around the separator */
+  transition: color 0.2s ease;
+}
+
+.App-footer a:hover {
+  color: #ffcc00; /* Highlight color on hover */
+  text-decoration: underline;
+}
+/* <<< End Footer Styles >>> */ 

@@ -627,7 +627,6 @@
   display: flex; 
   flex-direction: column; 
   position: relative; /* Keep this */
-  overflow: hidden; /* Keep this */
 }
 
 /* <<< Remove Keyframes for the old background Animation >>> */
@@ -750,5 +749,17 @@
 }
 .global-rankings-page-wrapper .ranking-list-container .ranking-item.empty-slot .submit-prompt-text {
   color: #bbb; /* Adjust prompt color */
+}
+
+/* Reset height constraints specifically for mobile breakpoint */
+@media (max-width: 768px) {
+  .ranking-list-container {
+    height: unset !important;
+    min-height: unset !important;
+  }
+  .ranking-list {
+    height: unset !important;
+    min-height: unset !important;
+  }
 }
 

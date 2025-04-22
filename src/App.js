@@ -87,10 +87,6 @@ function App() {
         console.log('User is signed in:', user.displayName);
       } else {
         console.log('User is signed out');
-        // Redirect to login if not authenticated
-        if (location.pathname !== '/login') {
-          navigate('/login');
-        }
       }
     });
 
@@ -235,48 +231,47 @@ function App() {
             </button>
           </div>
           <h1 onClick={navigateToHome} className="site-title">Survivor Rankings</h1>
-          {user && (
-            <div className="user-info">
+          
+          {/* Always render the button container, adjust content based on user */} 
+          <div className="user-info">
+            {/* Show welcome message only if logged in */}
+            {user && (
               <span className="welcome-message">Welcome, {user.displayName}</span>
-              <div className="user-actions">
-                {!createMode && !showUserLists && !showOtherLists ? (
-                  <>
-                    <button onClick={navigateToMyLists} className="create-list-button">
-                      My Lists
-                    </button>
-                    <button onClick={navigateToOtherLists} className="other-lists-button">
-                      Other Rankings
-                    </button>
-                  </>
-                ) : createMode ? (
-                  <button onClick={navigateToMyLists} className="create-list-button cancel">
-                    Cancel
-                  </button>
-                ) : showUserLists ? (
-                  <>
-                    <button onClick={startNewList} className="create-list-button">
-                      Create New List
-                    </button>
-                    <button onClick={navigateToHome} className="create-list-button cancel">
-                      Cancel
-                    </button>
-                  </>
-                ) : showOtherLists ? (
-                  <button onClick={navigateToHome} className="create-list-button cancel">
-                    Back
-                  </button>
-                ) : null}
-                <button onClick={handleLogout} className="logout-button">
-                  Sign Out
+            )}
+            
+            <div className="user-actions">
+                {/* My Lists Button */} 
+                <button 
+                  onClick={() => user ? navigateToMyLists() : navigate('/login')}
+                  className="create-list-button"
+                >
+                  My Lists
                 </button>
-              </div>
-              {lastUpdated && !createMode && !showUserLists && !showOtherLists && (
-                <p className="last-updated">
-                  Last updated: {new Date(lastUpdated).toLocaleString()}
-                </p>
-              )}
+                
+                {/* Other Rankings Button */} 
+                <button onClick={navigateToOtherLists} className="other-lists-button">
+                  Other Rankings
+                </button>
+                
+                {/* Conditional Login/Logout Button */} 
+                {user ? (
+                   <button onClick={handleLogout} className="logout-button">
+                    Sign Out
+                  </button>
+                 ) : (
+                   <button onClick={() => navigate('/login')} className="login-button"> {/* Use a different class if needed */} 
+                    Login
+                  </button>
+                )}
             </div>
-          )}
+            
+            {/* Show last updated only if logged in (optional, could be moved) */} 
+            {user && lastUpdated && !createMode && !showUserLists && !showOtherLists && (
+              <p className="last-updated">
+                Last updated: {new Date(lastUpdated).toLocaleString()}
+              </p>
+            )}
+          </div>
         </header>
         <main>
           <div className="rankings-section">
@@ -286,9 +281,7 @@ function App() {
               <Route 
                 path="/" 
                 element={
-                  !user ? (
-                    <Navigate to="/login" />
-                  ) : isLoading ? (
+                  isLoading ? (
                     <div className="loading">Loading rankings...</div>
                   ) : (
                     <HomePage onViewUserLists={handleViewUserLists} />
@@ -317,33 +310,21 @@ function App() {
               <Route 
                 path="/rankings" 
                 element={
-                  !user ? (
-                    <Navigate to="/login" />
-                  ) : (
-                    <RankingsPage />
-                  )
+                  <RankingsPage />
                 } 
               />
               
               <Route 
                 path="/rankings/user/:userId" 
                 element={
-                  !user ? (
-                    <Navigate to="/login" />
-                  ) : (
-                    <RankingsPage />
-                  )
+                  <RankingsPage />
                 } 
               />
               
               <Route 
                 path="/list/:userId/:listId" 
                 element={
-                  !user ? (
-                    <Navigate to="/login" />
-                  ) : (
-                    <ListDetailPage />
-                  )
+                  <ListDetailPage />
                 } 
               />
               
@@ -392,6 +373,10 @@ function App() {
             />
           </section>
         </main>
+        <footer className="App-footer">
+          <a href="https://www.linkedin.com/in/andrew-kelly-compsci/" target="_blank" rel="noopener noreferrer">LinkedIn</a> | 
+          <a href="#resume" target="_blank" rel="noopener noreferrer">Website Resume</a>
+        </footer>
       </UserProvider>
     </div>
   );

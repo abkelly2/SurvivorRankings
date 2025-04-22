@@ -393,6 +393,26 @@
     /* Keep object-fit: contain for logos if needed */
     object-fit: contain; 
   }
+
+  .full-list-view {
+    padding: 10px;
+    margin: -1px 0 50px; /* Reduce side padding */
+  }
+
+  /* <<< ADD rules to match comments section width >>> */
+  .full-list-view .ranking-list-container {
+    margin-left: -40px !important;  /* Match comment section */
+    margin-right: -20px !important; /* Match comment section */
+    max-width: none !important;      /* Remove max-width limit */
+    width: auto !important;         /* Let margins define width */
+  }
+
+  /* Ensure items inside still look ok */
+  .full-list-view .ranking-item {
+    width: calc(100% - 20px); /* Adjust item width to account for container changes */
+    margin-left: 10px; /* Add some margin for items */
+    margin-right: 10px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -424,30 +444,52 @@
 
 .back-button-container {
   width: 100%;
-  margin-bottom: 15px;
+  margin-bottom: 25px;
   display: block;
   position: relative;
 }
 
 .back-to-lists-button {
-  background-color: rgba(0, 0, 0, 0.3);
-  border: 1px solid #444;
-  border-radius: 4px;
-  color: #fff;
-  padding: 8px 15px;
+  /* Base styles (similar to close button) */
+  padding: 8px 18px; /* Adjusted padding */
+  border-radius: 6px; 
+  font-size: 0.9rem;   
+  font-weight: 600;  
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.3s;
-  display: inline-flex;
+  transition: all 0.15s ease-in-out;
+  border: none; /* Remove default border */
+  min-width: auto; /* Allow natural width */
+  text-align: center;
+  box-sizing: border-box;
+  line-height: 1.4;
+  display: inline-flex; /* Keep flex for icon alignment */
   align-items: center;
-  position: relative;
+  position: relative; /* Keep position if needed */
   left: 0;
   z-index: 5;
   margin: 0;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1), 
+              inset 0 -1px 0 rgba(0,0,0,0.1);
+
+  /* Specific colors */
+  background-color: #555; /* Dark Grey */
+  color: #ecf0f1; /* Clouds */
 }
 
 .back-to-lists-button:hover {
-  background-color: rgba(255, 204, 0, 0.2);
-  border-color: #ffcc00;
+  background-color: #444; /* Darker Grey */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15), 
+              inset 0 -1px 0 rgba(0,0,0,0.1);
+  transform: translateY(-1px); 
+}
+
+.back-to-lists-button:active {
+  background-color: #333; /* Even Darker Grey */
+  transform: translateY(0px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1), 
+              inset 0 -1px 0 rgba(0,0,0,0.1);
 }
 
 .full-list-header {
@@ -619,6 +661,8 @@
   .full-list-view .ranking-item {
     min-height: 85px;
     padding: 6px;
+    /* Adjust grid columns for smaller screens */
+    grid-template-columns: 40px auto 1fr; 
   }
   
   .full-list-view .ranking-number {
@@ -633,6 +677,16 @@
   .full-list-view .contestant-name {
     font-size: clamp(10px, 1vw, 14px);
     line-height: 1.1;
+    margin-left: 15px !important; /* Add margin for contestant name */
+    justify-self: start; /* Align left */
+  }
+
+  /* <<< ADD rule for season name on mobile >>> */
+  .full-list-view .season-name {
+    font-size: clamp(10px, 1.5vw, 14px) !important; /* Adjust font size */
+    margin-left: 15px !important; /* Remove negative margin, add positive */
+    justify-self: start !important; /* Align to start of grid area */
+    text-align: left !important; /* Align text left */
   }
 }
 
@@ -646,6 +700,7 @@
   .full-list-view .ranking-item {
     min-height: 75px;
     padding: 4px;
+    grid-template-columns: 35px auto 1fr; /* Adjust grid */
   }
   
   .full-list-view .ranking-number {
@@ -653,16 +708,76 @@
     height: 20px;
     font-size: 12px;
   }
+
+  /* <<< ADD rule for contestant name >>> */
+  .full-list-view .contestant-name,
+  .full-list-view .season-name { /* Apply to both */
+    font-size: clamp(20px, 1vw, 12px) !important;
+    margin-left: 10px !important;
+    justify-self: start !important;
+  }
 }
+
+
 
 @media (max-width: 700px) {
   .full-list-view .contestant-image {
-    width: 85px;
-    height: 85px;
+    width: 100px !important; /* Make smaller, not larger */
+    height: 100px !important;
   }
   
   .full-list-view .ranking-item {
-    min-height: 95px;
+    min-height: 65px; /* Adjust min-height */
+    grid-template-columns: 30px auto 1fr; /* Adjust grid */
+  }
+
+  /* <<< ADD rule for contestant name >>> */
+  .full-list-view .contestant-name,
+  .full-list-view .season-name { /* Apply to both */
+    font-size: clamp(24px, 0.9vw, 11px) !important;
+    margin-left: 80px !important;
+    justify-self: start !important;
+  }
+}
+
+
+@media (max-width: 600px) {
+  .full-list-view .contestant-image {
+    width: 100px !important; /* Make smaller, not larger */
+    height: 100px !important;
+  }
+  
+  .full-list-view .ranking-item {
+    min-height: 65px; /* Adjust min-height */
+    grid-template-columns: 30px auto 1fr; /* Adjust grid */
+  }
+
+  /* <<< ADD rule for contestant name >>> */
+  .full-list-view .contestant-name,
+  .full-list-view .season-name { /* Apply to both */
+    font-size: clamp(20px, 0.9vw, 11px) !important;
+    margin-left: 40px !important;
+    justify-self: start !important;
+  }
+}
+
+@media (max-width: 500px) {
+  .full-list-view .contestant-image {
+    width: 100px !important; /* Make smaller, not larger */
+    height: 100px !important;
+  }
+  
+  .full-list-view .ranking-item {
+    min-height: 65px; /* Adjust min-height */
+    grid-template-columns: 30px auto 1fr; /* Adjust grid */
+  }
+
+  /* <<< ADD rule for contestant name >>> */
+  .full-list-view .contestant-name,
+  .full-list-view .season-name { /* Apply to both */
+    font-size: clamp(15px, 0.9vw, 11px) !important;
+    margin-left: 10px !important;
+    justify-self: start !important;
   }
 }
 
@@ -2130,12 +2245,62 @@
 }
 
 .download-image-button, .close-modal-button {
-  padding: 10px 20px;
-  border-radius: 5px;
+  padding: 10px 25px; /* Adjusted padding */
+  border-radius: 6px;  /* Slightly less round */
+  font-size: 0.9rem;   /* Adjusted font size */
+  font-weight: 600;  /* Bold */
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
   cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  border: none;
+  min-width: 120px; /* Ensure minimum width */
+  text-align: center;
+  box-sizing: border-box;
+  line-height: 1.4;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15), 
+              inset 0 -2px 0 rgba(0,0,0,0.1);
 }
 
-/* Add more specific styles as needed */
+/* Primary Button: Download (Green) */
+.download-image-button {
+  background-color: #2ecc71; /* Emerald */
+  color: white;
+}
+
+.download-image-button:hover {
+  background-color: #27ae60; /* Nephritis */
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.2), 
+              inset 0 -2px 0 rgba(0,0,0,0.1);
+  transform: translateY(-2px); 
+}
+
+.download-image-button:active {
+  background-color: #1e8449; /* Darker Green */
+  transform: translateY(1px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 
+              inset 0 -1px 0 rgba(0,0,0,0.1);
+}
+
+/* Secondary Button: Close (Dark/Contrast) */
+.close-modal-button {
+  background-color: #555; /* Dark Grey */
+  color: #ecf0f1; /* Clouds */
+}
+
+.close-modal-button:hover {
+  background-color: #444; /* Darker Grey */
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.2), 
+              inset 0 -2px 0 rgba(0,0,0,0.1);
+  transform: translateY(-2px); 
+}
+
+.close-modal-button:active {
+  background-color: #333; /* Even Darker Grey */
+  transform: translateY(1px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 
+              inset 0 -1px 0 rgba(0,0,0,0.1);
+}
 
 /* Pagination Controls Styling */
 .pagination-controls {
@@ -2230,6 +2395,18 @@
   align-items: center;
   margin-top: 20px; /* Space above the button */
   margin-bottom: 20px; /* Space below the button */
+}
+
+/* Reset height constraints specifically for mobile breakpoint */
+@media (max-width: 768px) {
+  .ranking-list-container {
+    height: unset !important;
+    min-height: unset !important;
+  }
+  .ranking-list {
+    height: unset !important;
+    min-height: unset !important;
+  }
 }
  
  

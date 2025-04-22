@@ -95,7 +95,8 @@
 }
 
 .ranking-list {
-  min-height: 150px;
+  min-height: initial;
+  height: auto;
   background-color: white;
   border-radius: 4px;
   padding: 8px;
@@ -336,6 +337,20 @@
     font-size: 24px;
   }
   
+  /* Ensure container height adjusts, maintain min */
+  .ranking-list-container {
+    height: auto !important;
+    min-height: 200px !important; /* Fallback min height */
+  }
+
+  /* Ensure list items don't collapse */
+  .ranking-list-container .ranking-item {
+      min-height: 45px !important; /* Set minimum height for items */
+      /* Adjust padding if needed */
+      padding-top: 4px !important;
+      padding-bottom: 4px !important;
+  }
+
   .favorite-button {
     width: 30px;
     height: 30px;
@@ -349,6 +364,8 @@
 @media (max-width: 480px) {
   .ranking-list-container {
     padding: 8px;
+    height: auto !important; /* Allow height to adjust */
+    min-height: 180px !important; /* Maintain a minimum height */
   }
   
   .ranking-list-container h2 {

@@ -1029,9 +1029,8 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
       const titleLineHeight = 97; // Approximate line height based on font size
 
       // Debug box
-      ctx.strokeStyle = 'red';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(titleBox.x, titleBox.y, titleBox.width, titleBox.height);
+      // ctx.strokeStyle = 'red'; // <<< REMOVE THIS DEBUG LINE
+      // ctx.strokeRect(titleBox.x, titleBox.y, titleBox.width, titleBox.height); // Debug rect
       
       // Get wrapped lines and final font size
       const { lines: titleLines, fontSize: finalTitleFontSize } = wrapText(
@@ -1285,11 +1284,13 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
     return (
       <div className="full-list-view other-lists"> 
         {/* Back Button */}
+        {/* <<< COMMENT OUT Back Button Container >>>
         <div className="back-button-container">
           <button className="back-to-lists-button" onClick={handleBackToLists}>
             ← Back to Lists
           </button>
         </div>
+        */}
         {/* List Header */} 
         <div className="full-list-header">
           {/* Favorite Button */}
