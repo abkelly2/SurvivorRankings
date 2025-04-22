@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import UserListCreator from '../components/UserListCreator';
 
 const ListCreatorPage = ({ 
@@ -11,11 +12,29 @@ const ListCreatorPage = ({
   listTags, 
   setListTags, 
   user, 
-  editingListId, 
+  editingListId,
   onCancel,
   seasonListRef
 }) => {
+  const location = useLocation();
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  
+  const [initialUserId, setInitialUserId] = useState(null);
+  const [initialListId, setInitialListId] = useState(editingListId);
+
+  useEffect(() => {
+    const stateUserId = location.state?.userId;
+    const stateListId = location.state?.listId;
+    
+    if (stateUserId && stateListId) {
+      console.log('[ListCreatorPage] Received state:', { stateUserId, stateListId });
+      setInitialUserId(stateUserId);
+      setInitialListId(stateListId);
+    } else {
+      setInitialUserId(null); 
+      setInitialListId(editingListId);
+    }
+  }, [location.state, editingListId]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
@@ -70,7 +89,8 @@ const ListCreatorPage = ({
       listTags={listTags}
       setListTags={setListTags}
       user={user}
-      editingListId={editingListId}
+      editingListId={initialListId}
+      userId={initialUserId}
       onCancel={onCancel}
       seasonListRef={seasonListRef}
       isMobile={isMobile}

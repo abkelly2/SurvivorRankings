@@ -303,9 +303,12 @@ function App() {
                     <Navigate to="/login" />
                   ) : (
                     <MyListsPage 
-                      user={user}
-                      onSelectList={editExistingList}
-                      onCreateNew={startNewList}
+                      user={user} 
+                      onSelectList={(list) => {
+                        console.log('[App.js onSelectList] Navigating with:', { userId: list.userId, listId: list.id });
+                        navigate(`/list/${list.userId}/${list.id}`);
+                      }} 
+                      onCreateNew={startNewList} 
                     />
                   )
                 } 

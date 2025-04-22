@@ -827,6 +827,7 @@ const GlobalRankings = ({ seasonListRef }) => {
 
         <h2 className="list-title">{list.name}</h2>
         
+        {/*
         <p className="list-creator">
           By <span 
             className="username"
@@ -839,6 +840,7 @@ const GlobalRankings = ({ seasonListRef }) => {
             {list.userName || "Unknown User"}
           </span>
         </p>
+        */}
         
         <div className="ranking-list clickable">
           {isLoading ? (

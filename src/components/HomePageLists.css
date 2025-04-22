@@ -372,4 +372,10 @@
     padding: 4px 8px;
     font-size: 12px;
   }
+}
+
+/* Explicitly hide ::before on list titles within global ranking cards */
+.ranking-list-container .list-title::before {
+  content: none !important;
+  display: none !important;
 } 

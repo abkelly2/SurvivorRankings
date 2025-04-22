@@ -37,7 +37,14 @@ const UserListManager = ({ user, onSelectList, onCreateNew }) => {
           // Sort lists by last updated date, newest first
           const lists = userDoc.data().lists;
           lists.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-          setUserLists(lists);
+          
+          // Add userId to each list object
+          const listsWithUserId = lists.map(list => ({
+            ...list,
+            userId: user.uid
+          }));
+          
+          setUserLists(listsWithUserId);
         } else {
           setUserLists([]);
         }

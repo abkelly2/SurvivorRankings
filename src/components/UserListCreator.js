@@ -173,6 +173,54 @@ const UserListCreator = ({
     loadImages();
   }, [userList]);
   
+  // <<< ADDED: Effect to load existing list data when editingListId is provided >>>
+  useEffect(() => {
+    const loadListForEditing = async () => {
+      // Only run if we have a user and an editingListId
+      if (user && editingListId) {
+        console.log(`[UserListCreator] Attempting to load list ${editingListId} for user ${user.uid}`);
+        try {
+          const userDocRef = doc(db, "userLists", user.uid);
+          const userDoc = await getDoc(userDocRef);
+          
+          if (userDoc.exists() && userDoc.data().lists) {
+            const lists = userDoc.data().lists;
+            const listToEdit = lists.find(list => list.id === editingListId);
+            
+            if (listToEdit) {
+              console.log('[UserListCreator] Found list to edit:', listToEdit.name);
+              // Set the state with the loaded list data
+              setListName(listToEdit.name || '');
+              setListDescription(listToEdit.description || '');
+              setListTags(listToEdit.tags || []);
+              setUserList(listToEdit.contestants || []);
+              setCurrentListId(editingListId); // Ensure internal ID state is set
+            } else {
+              console.error(`[UserListCreator] List with ID ${editingListId} not found for user ${user.uid}`);
+              setError('Failed to load the list for editing. It may have been deleted.');
+              // Optionally clear the form or navigate back
+              // onCancel(); 
+            }
+          } else {
+            console.error(`[UserListCreator] User document not found or has no lists: ${user.uid}`);
+            setError('Failed to load user data for editing.');
+          }
+        } catch (error) {
+          console.error('[UserListCreator] Error loading list for editing:', error);
+          setError('An error occurred while loading the list.');
+        }
+      } else if (!editingListId) {
+          // If editingListId becomes null/undefined (e.g., creating new after editing), clear the form
+          // This might be handled by parent component state management already, but good to be safe.
+          // Consider if clearListData() should be called here or rely on parent logic.
+          // clearListData(); 
+      }
+    };
+    
+    loadListForEditing();
+    // Dependencies: user and editingListId
+  }, [user, editingListId, setListName, setListDescription, setListTags, setUserList]);
+  
   const handleTagToggle = (tagId) => {
     if (listTags.includes(tagId)) {
       setListTags(listTags.filter(tag => tag !== tagId));

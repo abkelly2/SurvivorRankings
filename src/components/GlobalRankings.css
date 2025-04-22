@@ -666,25 +666,14 @@
   text-align: center;
   text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.5); /* Slightly stronger shadow */
   line-height: 1.2;
-  position: relative; /* For trophy positioning */
-  padding-left: 30px; /* Make space for trophy */
+  position: relative; /* For trophy positioning */ /* Make space for trophy */
   display: inline-block; /* Allow pseudo element positioning */
   margin-left: auto; /* Center the title block */
   margin-right: auto; /* Center the title block */
 }
 
 /* <<< PREFIXED Trophy Emoji >>> */
-.global-rankings-page-wrapper .ranking-list-container .list-title::before {
-  content: '🏆';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 1.6rem; /* Adjust emoji size */
-  line-height: 1;
-  text-shadow: none; /* Remove shadow from emoji if needed */
-  filter: drop-shadow(0 0 3px rgba(255, 215, 0, 0.7)); 
-}
+
 
 /* <<< PREFIXED Creator Style >>> */
 .global-rankings-page-wrapper .ranking-list-container .list-creator {
@@ -729,7 +718,7 @@
 
 /* <<< PREFIXED List Item Style within GOAT card >>> */
 .global-rankings-page-wrapper .ranking-list-container .ranking-item {
-  background-color: rgba(255, 255, 255, 0.08); /* Slightly lighter item background */
+  background-color: rgb(255, 255, 255); /* Slightly lighter item background */
   border-color: rgba(255, 215, 0, 0.3); /* Fainter gold border */
   margin-bottom: 8px;
   /* Reset hover effects from general styles if needed */

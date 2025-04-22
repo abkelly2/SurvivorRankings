@@ -1336,21 +1336,51 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
               {isGeneratingImage ? 'Generating...' : 'Share'} 
             </button>
           )}
-          {/* --- End Share Button --- */} 
+          {/* --- End Share Button --- */}
+
+          {/* --- Edit My List Button (MOVED) --- */}
+          {/* {user && selectedList && user.uid === selectedList.userId && (
+             <button 
+              onClick={() => navigate('/create', { state: { userId: selectedList.userId, listId: selectedList.id } })}
+              className="edit-my-list-button"
+              title="Edit this list"
+              style={{ position: 'absolute', top: '15px', right: isMobile ? '70px' : '135px' }} // REMOVED POSITIONING
+            >
+              Edit My List
+            </button>
+          )} */}
+          {/* --- End Edit Button --- */}
 
           </div>
           
-        {/* Meta Info (Date, Desc, Tags) */} 
+        {/* Meta Info (Desc and Tags combined) */}
         <div className="list-meta-section">
-           {selectedList.description && (<p className="list-description">{selectedList.description}</p>)}
-           <div className="list-meta-details">
-              {(selectedList.tags && selectedList.tags.length > 0) && (
-          <div className="full-list-tags">
+           {selectedList.description && (
+             <div className="list-description-container"> {/* New container for description and tags */}
+               <p className="list-description">{selectedList.description}</p>
+               {(selectedList.tags && selectedList.tags.length > 0) && (
+                  <div className="full-list-tags">
                     {selectedList.tags.filter(t => t !== 'season-ranking' && t !== 'survivor-ranking').map(tag => <span key={tag} className={`list-tag ${tag === 'spoiler' ? 'spoiler-tag' : ''}`}>{tag}</span>)}
                  </div>
-            )}
-           </div>
+               )}
+             </div>
+           )}
           </div>
+
+          {/* --- Edit My List Button (NEW POSITION) --- */}
+          {user && selectedList && user.uid === selectedList.userId && (
+             <div className="edit-list-button-container">
+               <button 
+                onClick={() => navigate('/create', { state: { userId: selectedList.userId, listId: selectedList.id } })}
+                className="edit-my-list-button"
+                title="Edit this list"
+                // Removed inline style for position
+              >
+                Edit My List
+              </button>
+            </div>
+          )}
+          {/* --- End Edit Button --- */}
           
         {/* Spoiler Toggle */} 
         {hasSpoilerTag && (
