@@ -65,8 +65,8 @@
 
 .other-rankings-grid {
   display: grid; /* BACK TO GRID */
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* Base on fixed card width */
-  justify-items: center; /* Center fixed-width items */
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); /* Use auto-fill */
+  justify-items: start; /* Align items to the left */
   gap: 40px;
   width: 100%;
   margin: 0 auto;
@@ -81,7 +81,7 @@
 
 .other-lists.ranking-lists .other-rankings-list-container {
   position: relative;
-  width: 150px !important; /* Restore fixed width */
+  width: 250px !important; /* Set width to match minmax */
   height: 200px !important; /* Keep fixed height */
   background-color: #f5f5f5 !important; /* Reverted background color */
   border-radius: 8px;

@@ -56,6 +56,11 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   // -------------------------
   
+  // --- Pagination State ---
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 12;
+  // -----------------------
+  
   // Available tag options for filtering
   const availableTags = [
     { id: 'favorites', label: 'Favorites' },
@@ -406,6 +411,27 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
   console.log('Filtered lists:', filteredLists.length);
   
   const sortedLists = sortLists(filteredLists);
+  
+  // --- Pagination Logic ---
+  const totalPages = Math.ceil(sortedLists.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedLists = sortedLists.slice(startIndex, endIndex);
+  
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll to top
+    }
+  };
+  
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll to top
+    }
+  };
+  // ----------------------
   
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -1675,8 +1701,9 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
       ) : sortedLists.length === 0 ? (
           <div className="no-lists-message">No lists found matching your criteria.</div>
       ) : (
-        <div className="public-lists-grid other-rankings-grid">
-              {sortedLists.map(list => (
+        <>
+          <div className="public-lists-grid other-rankings-grid">
+              {paginatedLists.map(list => (
                 <div 
                   key={`${list.userId}-${list.id}`} 
                   className="other-rankings-list-container" 
@@ -1756,7 +1783,30 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
                   </div>
                 </div>
               ))}
-        </div>
+          </div>
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="pagination-controls">
+              <button 
+                onClick={handlePrevPage} 
+                disabled={currentPage === 1}
+                className="pagination-button prev-button"
+              >
+                &lt; Previous
+              </button>
+              <span className="page-info">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button 
+                onClick={handleNextPage} 
+                disabled={currentPage === totalPages}
+                className="pagination-button next-button"
+              >
+                Next &gt;
+              </button>
+            </div>
+          )}
+        </>
       )}
       {/* Feedback Popup */} 
       {showFeedback && (
