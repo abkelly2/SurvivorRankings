@@ -9,7 +9,7 @@ import { survivorSeasons } from '../data/survivorData';
 import { UserContext } from '../UserContext';
 import './OtherLists.css';
 import './RankingLists.css';
-import './OtherRankings.css';
+import './OtherRankingsLists.css';
 import { useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 
@@ -1260,11 +1260,10 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
       <div className="full-list-view other-lists"> 
         {/* Back Button */}
         <div className="back-button-container">
-           <button className="back-to-lists-button" onClick={handleBackToLists}>
-              ← Back to Lists
+          <button className="back-to-lists-button" onClick={handleBackToLists}>
+            ← Back to Lists
           </button>
         </div>
-
         {/* List Header */} 
         <div className="full-list-header">
           {/* Favorite Button */}
@@ -1337,14 +1336,23 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
           )}
         
         {/* Ranking List Display */}
-        <div className="other-ranking-list-container full-list">
-           <div className={`ranking-list ${hasSpoilerTag && !spoilerRevealed ? 'spoiler-blur' : ''}`}>
-              {(selectedList.contestants || []).length > 0 ? (
+        <div className="ranking-list-container full-list">
+          <div className={`ranking-list ${hasSpoilerTag && !spoilerRevealed ? 'spoiler-blur' : ''}`}> 
+            {(selectedList.contestants || []).length > 0 ? (
               selectedList.contestants.map((contestant, index) => (
-                     <div key={`${contestant.id}-${index}`} className="ranking-item">
+                <div key={`${contestant.id}-${index}`} className="ranking-item">
                   <div className="ranking-number">{index + 1}</div>
-                        <img src={contestantImageUrls[contestant.id] || '...'} alt={contestant.name} className={`contestant-image ${contestant.isSeason ? 'season-logo' : ''}`} draggable="false" />
-                        <div className={contestant.isSeason ? "season-name" : "contestant-name"}>{contestant.isSeason ? contestant.name.replace('Survivor: ', '') : contestant.name}</div>
+                  <img
+                    src={contestantImageUrls[contestant.id] || contestant.imageUrl || "/placeholder.jpg"}
+                    alt={contestant.name}
+                    className={`contestant-image rankings-grid-image ${contestant.isSeason ? 'season-logo' : ''}`}
+                    draggable="false"
+                  />
+                  <div className={contestant.isSeason ? "season-name" : "contestant-name"} style={{ color: '#000000' }}>
+                      {contestant.isSeason 
+                        ? contestant.name.replace('Survivor: ', '').replace('Survivor ', '') 
+                        : contestant.name}
+                  </div>
                 </div>
               ))
             ) : (
@@ -1667,14 +1675,14 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
       ) : sortedLists.length === 0 ? (
           <div className="no-lists-message">No lists found matching your criteria.</div>
       ) : (
-        <div className="other-rankings-container">
+        <div className="public-lists-grid other-rankings-grid">
               {sortedLists.map(list => (
                 <div 
                   key={`${list.userId}-${list.id}`} 
-                  className="other-ranking-list-container" 
+                  className="other-rankings-list-container" 
                   onClick={() => viewFullList(list)}
                 >
-                    <div className="top-left-favorite" onClick={(e) => e.stopPropagation()}>
+                    <div className="top-left-favorite" onClick={(e) => e.stopPropagation()}> {/* Prevent card click */} 
                       <button 
                         className={`favorite-button ${isFavorited(list.userId, list.id) ? 'favorited' : ''}`}
                         onClick={(e) => toggleFavorite(list.userId, list.id, list.name, e)}
@@ -1685,12 +1693,12 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
                       </button>
                     </div>
                   
-                  <div className="top-right-upvote" onClick={(e) => e.stopPropagation()}>
+                  <div className="top-right-upvote" onClick={(e) => e.stopPropagation()}> {/* Prevent card click */} 
                       <button 
                         className={`upvote-button ${hasUserUpvoted(list) ? 'upvoted' : ''}`}
                         onClick={(e) => {
-                          e.stopPropagation();
-                          handleUpvote(list.userId, list.id, e);
+                          e.stopPropagation(); // Prevent card click
+                          handleUpvote(list.userId, list.id, e); // Pass event
                         }}
                         disabled={!user}
                         title={user ? (hasUserUpvoted(list) ? "Remove upvote" : "Upvote this list") : "Sign in to upvote"}
@@ -1706,7 +1714,7 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
                     By <span 
                       className="username"
                       onClick={(e) => {
-                        e.stopPropagation();
+                        e.stopPropagation(); // Prevent card click
                         viewUserLists(list.userId, list.userName, e);
                       }}
                       title="View all rankings by this user"
@@ -1719,7 +1727,7 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
                     <div className="spoiler-warning">Contains Spoilers</div>
                   )}
                   
-                  <div className={`ranking-list clickable ${list.tags && list.tags.includes('spoiler') ? 'spoiler-blur' : ''}`}>
+                  <div className={`other-rankings-list clickable ${list.tags && list.tags.includes('spoiler') ? 'spoiler-blur' : ''}`}> 
                     {list.contestants && list.contestants.length > 0 ? (
                       list.contestants.slice(0, 3).map((contestant, index) => (
                         <div
@@ -1730,7 +1738,7 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
                           <img
                             src={contestantImageUrls[contestant.id] || contestant.imageUrl || "/placeholder.jpg"}
                             alt={contestant.name}
-                            className={`contestant-image ${contestant.isSeason ? 'season-logo' : ''}`}
+                            className={`contestant-image rankings-grid-image ${contestant.isSeason ? 'season-logo' : ''}`}
                             draggable="false"
                           />
                           <div className={contestant.isSeason ? "season-name" : "contestant-name"} style={{ color: '#000000' }}>
@@ -1741,7 +1749,7 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
                         </div>
                       ))
                     ) : (
-                      <div className="empty-list-message">
+                      <div className="other-rankings-empty-list-message"> 
                         This list is empty
                       </div>
                     )}

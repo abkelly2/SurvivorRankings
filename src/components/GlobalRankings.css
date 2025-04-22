@@ -599,9 +599,7 @@
      text-align: left;
      margin-top: 15px;
   }
-}
-
-/* <<< ADD styles for the individual list card container - PREFIXED >>> */
+}/* <<< ADD styles for the individual list card container - PREFIXED >>> */
 .global-rankings-page-wrapper .ranking-list-container {
   background-color: rgba(20, 20, 20, 0.9); 
   
@@ -764,3 +762,4 @@
 .global-rankings-page-wrapper .ranking-list-container .ranking-item.empty-slot .submit-prompt-text {
   color: #bbb; /* Adjust prompt color */
 }
+

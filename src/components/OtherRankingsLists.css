@@ -1,0 +1,202 @@
+/* CSS for list cards on the /rankings page (Other Rankings) */
+
+.other-rankings-list-container {
+  width: 100%; /* Allow grid to control effective width */
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 15px;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
+}
+
+.other-rankings-list-container:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.other-rankings-list-container h2 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  text-align: center;
+  color: #333;
+  font-size: 22px;
+  font-weight: 600;
+  font-family: 'Survivant', sans-serif;
+  background-color: transparent;
+  padding: 0;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+.other-rankings-list {
+  min-height: 150px;
+  background-color: white;
+  border-radius: 4px;
+  padding: 8px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 2px dashed #ccc;
+  transition: all 0.2s ease;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+
+}
+
+.other-rankings-list:hover {
+  border-color: #4a90e2;
+}
+
+.other-rankings-empty-list-message {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100px;
+  color: #999;
+  font-style: italic;
+  text-align: center;
+  padding: 0 20px;
+}
+
+.other-rankings-grid {
+  display: grid; /* BACK TO GRID */
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* Base on fixed card width */
+  justify-items: center; /* Center fixed-width items */
+  gap: 40px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 10px;
+  box-sizing: border-box;
+}
+
+/* Media queries not needed with auto-fit */
+/* @media (max-width: 1200px) { ... } */
+/* @media (max-width: 992px) { ... } */
+/* @media (max-width: 576px) { ... } */
+
+.other-lists.ranking-lists .other-rankings-list-container {
+  position: relative;
+  width: 150px !important; /* Restore fixed width */
+  height: 200px !important; /* Keep fixed height */
+  background-color: #f5f5f5 !important; /* Reverted background color */
+  border-radius: 8px;
+  padding: 5px 2px 2px !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-sizing: border-box !important;
+  font-size: 0.7em !important;
+  overflow: hidden !important;
+}
+
+.other-lists.ranking-lists .other-rankings-list-container h2 {
+  font-size: 0.8rem !important;
+  margin-top: 2px !important;
+  margin-bottom: 2px !important;
+}
+
+.other-lists.ranking-lists .other-rankings-list-container .list-creator {
+  font-size: 0.6rem !important;
+  margin: 1px 0 2px !important;
+}
+
+.other-lists.ranking-lists .other-rankings-list {
+  min-height: 80px !important;
+  padding: 3px !important;
+}
+
+.other-lists.ranking-lists .other-rankings-list-container .ranking-item {
+  padding: 2px 1px !important;
+  margin-bottom: 1px !important;
+}
+
+.other-lists.ranking-lists .other-rankings-list-container .ranking-number {
+  font-size: 0.6rem !important;
+  width: 12px !important;
+  height: 12px !important;
+  min-width: 12px !important;
+}
+
+/* Target the specific class added in OtherLists.js for grid images */
+.other-rankings-list-container .ranking-item .rankings-grid-image {
+  /* Base style for contestant images */
+  width: 60px !important;
+  height: 60px !important;
+  min-width: 20px !important;
+  object-fit: cover !important; /* Ensure contestant image covers the area */
+  margin: 0 !important; /* Remove image margin */
+  padding: 0 !important; /* Remove image padding */
+}
+
+/* Specific style for season logos within the rankings grid */
+.other-rankings-list-container .ranking-item .rankings-grid-image.season-logo {
+  width: 60px !important;  /* Different width for season logos */
+  height: 50px !important; /* Different height for season logos */
+  object-fit: contain !important; /* Contain ensures logo isn't distorted */
+  min-width: 30px !important;
+  margin: 0 !important; /* Remove image margin */
+  padding: 0 !important; /* Remove image padding */
+}
+
+.other-lists.ranking-lists .other-rankings-list-container .contestant-name,
+.other-lists.ranking-lists .other-rankings-list-container .season-name {
+  font-size: 0.7rem !important;
+  max-width: 150px !important;
+}
+
+/* Style for season names within the rankings grid */
+.other-lists .other-rankings-grid .other-rankings-list-container .ranking-item .season-name {
+  font-size: 1.2rem !important;
+  line-height: 1.1 !important;
+  color: #000000 !important; /* Ensure color is also set */
+  margin-left: 7px !important; /* Zero spacing */
+  white-space: nowrap !important; /* Prevent wrapping */
+  padding: 0 !important; /* Remove padding */
+  overflow: hidden !important; /* Hide overflow */
+  text-overflow: ellipsis !important; /* Add ellipsis */
+  flex-grow: 1 !important; /* Allow taking available space */
+}
+
+/* Style for contestant names within the rankings grid */
+.other-lists .other-rankings-grid .other-rankings-list-container .ranking-item .contestant-name {
+  font-size: 1rem !important; /* Consistent with season-name */
+  line-height: 1.1 !important;
+  color: #000000 !important; /* Consistent with season-name */
+  margin-left: 7px !important; /* Zero spacing */
+  white-space: nowrap !important; /* Prevent wrapping */
+  padding: 0 !important; /* Remove padding */
+  overflow: hidden !important; /* Hide overflow */
+  text-overflow: ellipsis !important; /* Add ellipsis */
+  flex-grow: 1 !important; /* Allow taking available space */
+}
+
+/* Style for ranking numbers within the rankings grid - Sleek/Clean */
+.other-lists .other-rankings-grid .other-rankings-list-container .ranking-item .ranking-number {
+  font-size: 1rem !important; /* Slightly larger */
+  font-weight: 600 !important; /* Bolder */
+  color: #000000 !important;      /* Dark grey text */
+  background-color: transparent !important; /* No background */
+  border-radius: 0 !important;       /* No border radius */
+  width: auto !important;          /* Auto width */
+  min-width: 20px !important;       /* Min width for alignment */
+  height: auto !important;         /* Auto height */
+  line-height: normal !important;   /* Normal line height */
+  text-align: right !important;     /* Align right */
+  margin-right: 0px !important;    /* Zero spacing */
+  padding: 0 !important;           /* Remove padding */
+}
+
+/* Ensure ranking-item container has no padding/gap */
+.other-lists .other-rankings-grid .other-rankings-list-container .ranking-item {
+  padding: 1px 0 !important; /* Minimal vertical padding, zero horizontal */
+  margin-bottom: 1px !important; /* Minimal margin */
+  gap: 0 !important; /* Remove gap if flex/grid */
+  display: flex !important; /* Ensure it's flex */
+  align-items: center !important; /* Vertically align items */
+}
+
+/* Add more specific styles for list cards on /rankings as needed */ 
