@@ -13,6 +13,7 @@ import {
 } from './firebase';
 import { UserProvider } from './UserContext';
 import GlobalRankingsIcon from './images/GlobalRankings.png';
+import { preloadImages } from './utils/imageCache';
 
 // Import pages
 import HomePage from './pages/HomePage';
@@ -217,6 +218,12 @@ function App() {
     navigate(`/rankings/user/${userId}`, { state: { userName } });
   };
 
+  // Add useEffect to trigger preloading
+  useEffect(() => {
+    // Preload image URLs in the background
+    preloadImages();
+  }, []); // Empty dependency array ensures this runs only once on mount
+
   return (
     <div className="App">
       <UserProvider user={user}>
@@ -375,7 +382,7 @@ function App() {
         </main>
         <footer className="App-footer">
           <a href="https://www.linkedin.com/in/andrew-kelly-compsci/" target="_blank" rel="noopener noreferrer">LinkedIn</a> | 
-          <a href="#resume" target="_blank" rel="noopener noreferrer">Website Resume</a>
+          <a href="https://andrewkelly.xyz" target="_blank" rel="noopener noreferrer">Website Resume</a>
         </footer>
       </UserProvider>
     </div>

@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getStorage, ref, getDownloadURL } from "firebase/storage";
-import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection } from "firebase/firestore";
-import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "firebase/auth";
+import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, getDocs, updateDoc, arrayUnion, arrayRemove, deleteDoc, query, where, orderBy, serverTimestamp, Timestamp } from "firebase/firestore";
+import { getAuth, signInWithPopup, GoogleAuthProvider, TwitterAuthProvider, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, fetchSignInMethodsForEmail, updateProfile, sendPasswordResetEmail as firebaseSendPasswordResetEmail } from "firebase/auth";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -135,6 +135,8 @@ export const getContestantImageUrl = async (contestant, seasonId) => {
       "Jerome Cooney": "rome",
       "G.C. Brown": "danny",
       "Jon Palyok": "johnp",
+      "Saiounia Hughley": "sai",
+
 
 
 
@@ -251,20 +253,116 @@ export const subscribeToRankingsUpdates = (callback) => {
 
 // Auth functions
 export const signInWithGoogle = async () => {
+  const provider = new GoogleAuthProvider();
   try {
-    const provider = new GoogleAuthProvider();
     const result = await signInWithPopup(auth, provider);
-    return result.user;
+    // This gives you a Google Access Token. You can use it to access the Google API.
+    // const credential = GoogleAuthProvider.credentialFromResult(result);
+    // const token = credential.accessToken;
+    // The signed-in user info.
+    // const user = result.user;
+    // IdP data available using getAdditionalUserInfo(result)
+    // ...
   } catch (error) {
-    console.error('Error signing in with Google:', error);
+    console.error("Error signing in with Google:", error);
+    // Handle Errors here.
+    // const errorCode = error.code;
+    // const errorMessage = error.message;
+    // The email of the user's account used.
+    // const email = error.customData.email;
+    // The AuthCredential type that was used.
+    // const credential = GoogleAuthProvider.credentialFromError(error);
+    // ...
+    throw error; // Re-throw the error to be caught by the calling component
+  }
+};
+
+// Function to sign in with Twitter
+export const signInWithTwitter = async () => {
+  const provider = new TwitterAuthProvider();
+  // Optionally set custom OAuth parameters if needed
+  // provider.setCustomParameters({
+  //   'include_email': 'true'
+  // });
+  try {
+    const result = await signInWithPopup(auth, provider);
+    // This gives you a Twitter Access Token. You can use it to access the Twitter API.
+    // const credential = TwitterAuthProvider.credentialFromResult(result);
+    // const token = credential.accessToken;
+    // The secret for the token.
+    // const secret = credential.secret;
+    // The signed-in user info.
+    // const user = result.user;
+    // IdP data available using getAdditionalUserInfo(result)
+    // ...
+    return result;
+  } catch (error) {
+    console.error("Error signing in with Twitter:", error);
+    console.error("Error code:", error.code);
+    console.error("Error message:", error.message);
+    if (error.customData) {
+      console.error("Custom data:", error.customData);
+    }
+    // Additional error details if available
+    if (error.credential) {
+      console.error("Credential data:", error.credential);
+    }
+    if (error.additionalUserInfo) {
+      console.error("Additional user info:", error.additionalUserInfo);
+    }
+    // Handle Errors here.
+    // const errorCode = error.code;
+    // const errorMessage = error.message;
+    // The email of the user's account used.
+    // const email = error.customData.email;
+    // The AuthCredential type that was used.
+    // const credential = TwitterAuthProvider.credentialFromError(error);
+    // ...
+    throw error; // Re-throw the error to be caught by the calling component
+  }
+};
+
+// Function to sign in with email and password
+export const signInWithEmail = async (email, password) => {
+  try {
+    const result = await signInWithEmailAndPassword(auth, email, password);
+    return result;
+  } catch (error) {
+    console.error("Error signing in with email:", error);
+    console.error("Error code:", error.code);
+    console.error("Error message:", error.message);
     throw error;
+  }
+};
+
+// Function to sign up with email and password
+export const signUpWithEmail = async (email, password) => {
+  try {
+    const result = await createUserWithEmailAndPassword(auth, email, password);
+    return result;
+  } catch (error) {
+    console.error("Error signing up with email:", error);
+    console.error("Error code:", error.code);
+    console.error("Error message:", error.message);
+    throw error;
+  }
+};
+
+// Function to check if an email is already registered
+export const checkEmailExists = async (email) => {
+  try {
+    const methods = await fetchSignInMethodsForEmail(auth, email);
+    return methods.length > 0;
+  } catch (error) {
+    console.error("Error checking email existence:", error);
+    return false;
   }
 };
 
 export const logOut = async () => {
   try {
     await signOut(auth);
-    console.log('User signed out successfully');
+    console.log("User signed out successfully");
     return true;
   } catch (error) {
     console.error('Error signing out:', error);
@@ -278,6 +376,17 @@ export const getCurrentUser = () => {
 
 export const subscribeToAuthChanges = (callback) => {
   return onAuthStateChanged(auth, callback);
+};
+
+// Function to send password reset email
+export const sendPasswordResetEmail = async (email) => {
+  try {
+    await firebaseSendPasswordResetEmail(auth, email);
+    return true;
+  } catch (error) {
+    console.error('Error sending password reset email:', error);
+    throw error;
+  }
 };
 
 export { db, auth };

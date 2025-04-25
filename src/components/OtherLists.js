@@ -4,7 +4,6 @@ import {
   collection, getDocs, doc, updateDoc, arrayUnion, arrayRemove, getDoc, query, where, 
   addDoc, serverTimestamp, orderBy, Timestamp, setDoc, deleteDoc
 } from 'firebase/firestore';
-import { getContestantImageUrl, getSeasonLogoUrl } from '../firebase';
 import { survivorSeasons } from '../data/survivorData';
 import { UserContext } from '../UserContext';
 import './OtherLists.css';
@@ -12,6 +11,7 @@ import './RankingLists.css';
 import './OtherRankingsLists.css';
 import { useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas';
+import { getCachedImageUrl } from '../utils/imageCache';
 
 const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialSelectedList = null }) => {
   const [publicLists, setPublicLists] = useState([]);
@@ -20,12 +20,11 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTags, setSelectedTags] = useState([]);
   const [selectedType, setSelectedType] = useState('all'); // 'all', 'season', 'survivor'
-  const [sortBy, setSortBy] = useState('mostVotes'); // 'mostVotes', 'newest', 'oldest'
+  const [sortBy, setSortBy] = useState('newest'); // 'mostVotes', 'newest', 'oldest'
   const [expandedList, setExpandedList] = useState(null);
   const [selectedList, setSelectedList] = useState(initialSelectedList);
   const [viewingUserId, setViewingUserId] = useState(initialUserId || null);
   const [viewingUserName, setViewingUserName] = useState(initialUserName || '');
-  const [contestantImageUrls, setContestantImageUrls] = useState({});
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [loadingComments, setLoadingComments] = useState(false);
@@ -71,6 +70,9 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
   ];
   
   const navigate = useNavigate();
+  
+  // Add state for user's idol count
+  const [userIdols, setUserIdols] = useState(0);
   
   useEffect(() => {
     const fetchPublicLists = async () => {
@@ -134,8 +136,28 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
       }
     };
     
+    const fetchUserIdols = async () => {
+      if (viewingUserId) {
+        try {
+          const userRef = doc(db, 'users', viewingUserId);
+          const userDoc = await getDoc(userRef);
+          if (userDoc.exists() && userDoc.data().hasOwnProperty('idolsFound')) {
+            setUserIdols(userDoc.data().idolsFound);
+          } else {
+            setUserIdols(0);
+          }
+        } catch (error) {
+          console.error('Error fetching user idols:', error);
+          setUserIdols(0);
+        }
+      } else {
+        setUserIdols(0);
+      }
+    };
+    
     fetchPublicLists();
-  }, [initialUserId]);
+    fetchUserIdols();
+  }, [initialUserId, user, viewingUserId]);
   
   // Set initial viewing user when initialUserId changes
   useEffect(() => {
@@ -478,119 +500,6 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
     // Use window.scrollTo to scroll to top
     window.scrollTo(0, 0);
   };
-  
-  // Add new useEffect for loading preview images
-  useEffect(() => {
-    const loadPreviewImages = async () => {
-      if (!sortedLists || sortedLists.length === 0) return;
-      
-      const newImageUrls = { ...contestantImageUrls };
-      let hasNewImages = false;
-      
-      for (const list of sortedLists) {
-        // Only process first 3 contestants for preview
-        const previewContestants = list.contestants?.slice(0, 3) || [];
-        
-        for (const contestant of previewContestants) {
-          if (!contestantImageUrls[contestant.id]) {
-            if (contestant.isSeason) {
-              try {
-                const url = await getSeasonLogoUrl(contestant.id);
-                newImageUrls[contestant.id] = url;
-                hasNewImages = true;
-              } catch (error) {
-                console.error(`Error loading logo for season ${contestant.id}:`, error);
-                newImageUrls[contestant.id] = '/placeholder.jpg';
-              }
-            } else {
-              // Find the season ID for this contestant
-              let seasonId = null;
-              for (const season of survivorSeasons) {
-                if (season.contestants.some(c => c.id === contestant.id)) {
-                  seasonId = season.id;
-                  break;
-                }
-              }
-              
-              if (seasonId) {
-                try {
-                  // Remove the 's' prefix from seasonId if it exists
-                  const numericSeasonId = seasonId.startsWith('s') ? seasonId.substring(1) : seasonId;
-                  const url = await getContestantImageUrl(contestant, numericSeasonId);
-                  newImageUrls[contestant.id] = url;
-                  hasNewImages = true;
-                } catch (error) {
-                  console.error(`Error loading image for ${contestant.name}:`, error);
-                  newImageUrls[contestant.id] = '/placeholder.jpg';
-                }
-              }
-            }
-          }
-        }
-      }
-      
-      // Only update state if we have new images
-      if (hasNewImages) {
-        setContestantImageUrls(newImageUrls);
-      }
-    };
-    
-    loadPreviewImages();
-  }, [sortedLists, contestantImageUrls]);
-
-  // Modify the existing image loading useEffect to avoid duplicate work
-  useEffect(() => {
-    const loadFullListImages = async () => {
-      if (!selectedList || !selectedList.contestants || selectedList.contestants.length === 0) return;
-      
-      const newImageUrls = { ...contestantImageUrls };
-      let hasNewImages = false;
-      
-      for (const contestant of selectedList.contestants) {
-        if (!contestantImageUrls[contestant.id]) {
-          if (contestant.isSeason) {
-            try {
-              const url = await getSeasonLogoUrl(contestant.id);
-              newImageUrls[contestant.id] = url;
-              hasNewImages = true;
-            } catch (error) {
-              console.error(`Error loading logo for season ${contestant.id}:`, error);
-              newImageUrls[contestant.id] = '/placeholder.jpg';
-            }
-          } else {
-            // Find the season ID for this contestant
-            let seasonId = null;
-            for (const season of survivorSeasons) {
-              if (season.contestants.some(c => c.id === contestant.id)) {
-                seasonId = season.id;
-                break;
-              }
-            }
-            
-            if (seasonId) {
-              try {
-                // Remove the 's' prefix from seasonId if it exists
-                const numericSeasonId = seasonId.startsWith('s') ? seasonId.substring(1) : seasonId;
-                const url = await getContestantImageUrl(contestant, numericSeasonId);
-                newImageUrls[contestant.id] = url;
-                hasNewImages = true;
-              } catch (error) {
-                console.error(`Error loading image for ${contestant.name}:`, error);
-                newImageUrls[contestant.id] = '/placeholder.jpg';
-              }
-            }
-          }
-        }
-      }
-      
-      // Only update state if we have new images
-      if (hasNewImages) {
-        setContestantImageUrls(newImageUrls);
-      }
-    };
-    
-    loadFullListImages();
-  }, [selectedList, contestantImageUrls]);
   
   // Function to fetch comments for a specific list
   const fetchComments = async (listUserId, listId) => {
@@ -1167,7 +1076,7 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
           }
 
           // Load and draw the image for the current entry
-          const imageUrl = contestantImageUrls[contestant.id];
+          const imageUrl = getCachedImageUrl(contestant.id);
           console.log(`[Share Image Rank ${rank}] Attempting to load image for ${name}: ${imageUrl}`); 
           if (imageUrl) {
             try {
@@ -1237,8 +1146,6 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
         }
       };
 
-      // Log the state of contestantImageUrls when starting
-      console.log("[Share Image] contestantImageUrls state:", contestantImageUrls);
       // Call the async drawing function
       drawEntries();
     };
@@ -1332,7 +1239,6 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
               disabled={isGeneratingImage}
               className="share-list-button" 
               title="Share List as Image"
-              style={{ position: 'absolute', top: '15px', right: '70px' }}
             >
               {isGeneratingImage ? 'Generating...' : 'Share'} 
             </button>
@@ -1368,29 +1274,31 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
            )}
           </div>
 
-          {/* --- Edit My List Button (NEW POSITION) --- */}
-          {user && selectedList && user.uid === selectedList.userId && (
-             <div className="edit-list-button-container">
-               <button 
+        {/* --- Mobile Buttons Container (Placed Above Ranking List) --- */} 
+        {isMobile && (
+          <div className="mobile-list-actions-container">
+            {/* Mobile Share Button */} 
+            <button
+              onClick={handleShareClick}
+              disabled={isGeneratingImage}
+              className="mobile-share-list-button"
+              title="Share List as Image"
+            >
+              {isGeneratingImage ? 'Generating...' : 'Share List'}
+            </button>
+            {/* Mobile Edit Button (Conditional) */} 
+            {user && selectedList && user.uid === selectedList.userId && (
+              <button
                 onClick={() => navigate('/create', { state: { userId: selectedList.userId, listId: selectedList.id } })}
                 className="edit-my-list-button"
                 title="Edit this list"
-                // Removed inline style for position
               >
                 Edit My List
               </button>
-            </div>
-          )}
-          {/* --- End Edit Button --- */}
-          
-        {/* Spoiler Toggle */} 
-        {hasSpoilerTag && (
-          <div className="spoiler-reveal-container">
-            <button className="spoiler-reveal-button" onClick={toggleSpoilerReveal}>
-               <span className="eye-icon">{spoilerRevealed ? '👁️' : '👁️‍🗨️'}</span> {spoilerRevealed ? 'Hide Spoilers' : 'Show Spoilers'}
-            </button>
-            </div>
-          )}
+            )}
+          </div>
+        )}
+        {/* --- End Mobile Buttons Container --- */}
         
         {/* Ranking List Display */}
         <div className="ranking-list-container full-list">
@@ -1400,7 +1308,7 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
                 <div key={`${contestant.id}-${index}`} className="ranking-item">
                   <div className="ranking-number">{index + 1}</div>
                   <img
-                    src={contestantImageUrls[contestant.id] || contestant.imageUrl || "/placeholder.jpg"}
+                    src={getCachedImageUrl(contestant.id)}
                     alt={contestant.name}
                     className={`contestant-image rankings-grid-image ${contestant.isSeason ? 'season-logo' : ''}`}
                     draggable="false"
@@ -1639,6 +1547,9 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
         {viewingUserId ? (
           <div className="user-rankings-header">
             <h2>Rankings by <span>{viewingUserName || 'User'}</span></h2>
+            <div className="user-idols" style={{ fontSize: '1.2rem', color: '#ffcc00', marginTop: '10px', fontWeight: 'bold' }}>
+              Hidden Immunity Idols: {userIdols} 🏆
+            </div>
             <span className="user-list-count">
               {sortedLists.length} {sortedLists.length === 1 ? 'ranking' : 'rankings'} created by this user
             </span>
@@ -1681,16 +1592,16 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
                 <div className="sort-options">
                   <span>Sort by:</span>
                   <button 
-                    className={sortBy === 'mostVotes' ? 'active' : ''}
-                    onClick={() => handleSortChange('mostVotes')}
-                  >
-                    Most Votes
-                  </button>
-                  <button 
                     className={sortBy === 'newest' ? 'active' : ''}
                     onClick={() => handleSortChange('newest')}
                   >
                     Newest
+                  </button>
+                  <button 
+                    className={sortBy === 'mostVotes' ? 'active' : ''}
+                    onClick={() => handleSortChange('mostVotes')}
+                  >
+                    Most Votes
                   </button>
                   <button 
                     className={sortBy === 'oldest' ? 'active' : ''}
@@ -1794,7 +1705,7 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
                         >
                           <div className="ranking-number">{index + 1}</div>
                           <img
-                            src={contestantImageUrls[contestant.id] || contestant.imageUrl || "/placeholder.jpg"}
+                            src={getCachedImageUrl(contestant.id)}
                             alt={contestant.name}
                             className={`contestant-image rankings-grid-image ${contestant.isSeason ? 'season-logo' : ''}`}
                             draggable="false"

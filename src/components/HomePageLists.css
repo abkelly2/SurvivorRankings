@@ -349,6 +349,7 @@
       /* Adjust padding if needed */
       padding-top: 4px !important;
       padding-bottom: 4px !important;
+      max-height: 80px;
   }
 
   .favorite-button {

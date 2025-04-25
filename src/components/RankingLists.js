@@ -58,7 +58,8 @@ const RankingLists = ({ onViewUserLists }) => {
       // Combine all lists to avoid duplicate image loading
       const allContestants = [
         ...topVotedLists.flatMap(list => list.contestants.slice(0, 3)),
-        ...recentLists.flatMap(list => list.contestants.slice(0, 3))
+        ...recentLists.flatMap(list => list.contestants.slice(0, 3)),
+        ...favoriteLists.flatMap(list => list.contestants.slice(0, 3))
       ];
       
       if (selectedList) {
@@ -133,10 +134,10 @@ const RankingLists = ({ onViewUserLists }) => {
       setContestantImageUrls(newImageUrls);
     };
 
-    if (topVotedLists.length > 0 || recentLists.length > 0 || selectedList) {
+    if (topVotedLists.length > 0 || recentLists.length > 0 || favoriteLists.length > 0 || selectedList) {
       loadContestantImages();
     }
-  }, [topVotedLists, recentLists, selectedList]);
+  }, [topVotedLists, recentLists, favoriteLists, selectedList]);
 
   // Load user's favorites on component mount and when user changes
   useEffect(() => {

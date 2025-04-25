@@ -31,7 +31,8 @@
         height: 100vh;
         overflow: hidden;
         background-image: url('./images/S44_Tribal_Council.webp');
-        background-size: 100%;
+        background-size: cover;
+        background-repeat: no-repeat;
         background-position: center 90%;
         color: #fff;
         text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
@@ -68,52 +69,56 @@
 
       #torch-container {
         position: fixed;
-        bottom: 30%;
+        bottom: 15%;
         right: 15%;
-        width: 80px;
-        height: 160px;
+        width: 100px;
         z-index: 100;
         cursor: grab;
       }
 
       /* Replace image-based torch with CSS-based torch */
       .torch-handle {
-        width: 20px;
-        height: 100px;
-        background-color: #8B4513;
+        width: 25px;
+        height: 250px;
+        background: linear-gradient(to bottom, #A0522D, #8B4513 70%, #5C2E1F);
         margin: 0 auto;
-        border-radius: 5px;
+        border-radius: 0 0 8px 8px;
         position: relative;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
       }
 
       .torch-head {
-        width: 50px;
-        height: 50px;
-        background-color: #CD853F;
-        border-radius: 50% 50% 0 0;
+        width: 60px;
+        height: 45px;
+        background: radial-gradient(ellipse at top, #D2B48C, #CD853F 60%, #A0522D);
+        border-radius: 50% 50% 10px 10px;
         position: absolute;
-        top: -30px;
+        top: -25px;
         left: 50%;
         transform: translateX(-50%);
         overflow: hidden;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+        border: 1px solid #5C2E1F;
       }
 
       .torch-flame {
         display: none;
-        width: 40px;
-        height: 60px;
-        background: radial-gradient(ellipse at bottom, #FFD700, #FF8C00, #FF4500);
-        border-radius: 50% 50% 20% 20%;
+        width: 50px;
+        height: 70px;
+        background: radial-gradient(ellipse at bottom, #FFED8F, #FFB800, #FF4500 80%, transparent 100%);
+        border-radius: 50% 50% 10% 10% / 80% 80% 20% 20%;
         position: absolute;
-        bottom: 10px;
+        bottom: 5px;
         left: 50%;
         transform: translateX(-50%);
-        animation: flameFlicker 0.5s infinite alternate;
+        animation: flameFlicker 0.4s infinite alternate;
+        filter: blur(1px);
       }
 
       @keyframes flameFlicker {
-        0% { height: 60px; opacity: 0.9; }
-        100% { height: 70px; opacity: 1; }
+        0% { height: 70px; opacity: 0.8; transform: translateX(-50%) scaleY(1); }
+        50% { height: 85px; opacity: 1; transform: translateX(-48%) scaleY(1.05); }
+        100% { height: 75px; opacity: 0.9; transform: translateX(-52%) scaleY(0.98); }
       }
 
       .torch-lit .torch-flame {
@@ -212,6 +217,56 @@
         opacity: 1;
       }
     </style>
+    <!-- Add Mobile Specific Styles -->
+    <style>
+      @media (max-width: 768px) {
+        body {
+          /* Adjust background position for better framing on mobile */
+          background-position: center center;
+        }
+
+        #torch-container {
+          /* Smaller size using scale */
+          transform: scale(0.6);
+          transform-origin: bottom right; /* Scale from bottom right */
+
+          /* Move up and right */
+          bottom: 28%;  /* Increased from desktop 15% */
+          right: 8%;   /* Decreased from desktop 15% */
+        }
+
+        .fire-pit {
+          /* Adjust fire pit position and size */
+          bottom: 12%;
+          left: 20%; /* Move further to the left (was 30%) */
+          transform: translateX(-50%) scale(0.7); /* Make slightly smaller */
+        }
+
+        .overlay {
+           padding-top: 10%; /* Add more space at the top */
+        }
+
+        h1 {
+          font-size: 2.2rem;
+        }
+        p {
+          font-size: 1.1rem;
+          max-width: 90%;
+        }
+        .instructions {
+          font-size: 1rem;
+          bottom: 3%;
+        }
+        .center-message {
+          font-size: 1.3rem;
+        }
+        
+        /* Fix center animation for mobile */
+        .center-animation {
+          transform: translate(-70%, -80%) scale(0.6) !important;
+        }
+      }
+    </style>
     <script>
       // Function to redirect to the main app with the torch parameter
       function redirectToApp() {
@@ -277,14 +332,41 @@
         isDragging = true;
         torchContainer.style.cursor = 'grabbing';
         
-        const torchRect = torchContainer.getBoundingClientRect();
-        offsetX = clientX - torchRect.left;
-        offsetY = clientY - torchRect.top;
+        // Calculate offset for dragging
+        const rect = torchContainer.getBoundingClientRect();
+        offsetX = clientX - rect.left;
+        offsetY = clientY - rect.top;
+        
+        // Get fire pit center position for initial rotation
+        const fireRect = firePit.getBoundingClientRect();
+        const fireCenterX = fireRect.left + fireRect.width / 2;
+        const fireCenterY = fireRect.top + fireRect.height / 2;
+        
+        // Get torch rect for rotation
+        const torchCenterX = rect.left + rect.width / 2;
+        const torchCenterY = rect.top + rect.height / 2;
+        
+        // Calculate angle between torch and fire pit (in radians)
+        const angleRadians = Math.atan2(fireCenterY - torchCenterY, fireCenterX - torchCenterX);
+        
+        // Convert to degrees and adjust by 90 degrees so the top of the torch points at the fire
+        const angleDegrees = (angleRadians * 180 / Math.PI) + 90;
+        
+        // Get the torch handle element
+        let handleEl = torchContainer.querySelector('.torch-handle');
+        
+        // Check if we're on mobile
+        const isMobile = window.innerWidth <= 768;
+        
+        // Apply rotation to just the internal torch elements, not the container
+        handleEl.style.transition = 'transform 0.3s ease-out';
+        handleEl.style.transform = `rotate(${angleDegrees}deg)`;
+        handleEl.style.transformOrigin = 'center center';
       }
       
       function handleTouchMove(e) {
         if (!isDragging) return;
-        e.preventDefault();
+        e.preventDefault(); // Prevent scrolling during drag
         
         const touch = e.touches[0];
         moveTorch(touch.clientX, touch.clientY);
@@ -296,26 +378,75 @@
       }
       
       function moveTorch(clientX, clientY) {
-        // Convert position from fixed to absolute
+        if (!isDragging) return;
+        
+        // Calculate new position
+        const newLeft = clientX - offsetX;
+        const newTop = clientY - offsetY;
+        
+        // Apply the new position directly
         torchContainer.style.position = 'absolute';
+        torchContainer.style.left = newLeft + 'px';
+        torchContainer.style.top = newTop + 'px';
+        torchContainer.style.bottom = 'auto';
+        torchContainer.style.right = 'auto';
         
-        // Update position
-        torchContainer.style.left = (clientX - offsetX) + 'px';
-        torchContainer.style.top = (clientY - offsetY) + 'px';
-        
-        // Remove bottom and right positioning that could conflict
-        torchContainer.style.bottom = '';
-        torchContainer.style.right = '';
-        
-        // Add a slight rotation effect based on movement
-        const rotationAngle = Math.sin((clientX / window.innerWidth) * Math.PI) * 15;
-        torchContainer.style.transform = `rotate(${rotationAngle}deg)`;
-        
-        // Check if torch is over fire pit
-        const torchRect = torchContainer.getBoundingClientRect();
+        // Get fire pit center position
         const fireRect = firePit.getBoundingClientRect();
+        const fireCenterX = fireRect.left + fireRect.width / 2;
+        const fireCenterY = fireRect.top + fireRect.height / 2;
         
-        if (isOverlapping(torchRect, fireRect)) {
+        // Get torch rect for collision detection
+        const torchRect = torchContainer.getBoundingClientRect();
+        const torchCenterX = torchRect.left + torchRect.width / 2;
+        const torchCenterY = torchRect.top + torchRect.height / 2;
+        
+        // Calculate angle between torch and fire pit (in radians)
+        const angleRadians = Math.atan2(fireCenterY - torchCenterY, fireCenterX - torchCenterX);
+        
+        // Convert to degrees and adjust by 90 degrees so the top of the torch points at the fire
+        const angleDegrees = (angleRadians * 180 / Math.PI) + 90;
+        
+        // Get the torch handle element
+        let handleEl = torchContainer.querySelector('.torch-handle');
+        
+        // Remove transition during movement for immediate rotation
+        handleEl.style.transition = 'none';
+        
+        // Check if we're on mobile
+        const isMobile = window.innerWidth <= 768;
+        
+        // Apply rotation to just the internal torch elements, not the container
+        if (isMobile) {
+          // On mobile, we need to combine the scale and rotation
+          handleEl.style.transform = `rotate(${angleDegrees}deg)`;
+          // Keep the rotation origin at center to match desktop behavior
+          handleEl.style.transformOrigin = 'center center';
+        } else {
+          handleEl.style.transform = `rotate(${angleDegrees}deg)`;
+          handleEl.style.transformOrigin = 'center center';
+        }
+        
+        // Get the torch head element for more accurate collision detection
+        const torchHead = torchContainer.querySelector('.torch-head');
+        const torchHeadRect = torchHead.getBoundingClientRect();
+        
+        // Calculate distance between torch head center and fire pit center
+        const headCenterX = torchHeadRect.left + torchHeadRect.width / 2;
+        const headCenterY = torchHeadRect.top + torchHeadRect.height / 2;
+        const distanceToFire = Math.sqrt(
+          Math.pow(headCenterX - fireCenterX, 2) + 
+          Math.pow(headCenterY - fireCenterY, 2)
+        );
+        
+        // Check if torch head is close enough to fire pit to light
+        // Using flexible distance threshold relative to fire pit size
+        // Make threshold larger on mobile for easier lighting
+        const threshold = isMobile ? 
+          fireRect.width * 0.7 :  // Larger threshold on mobile
+          fireRect.width * 0.5;   // Normal threshold on desktop
+        
+        if (distanceToFire < threshold) {
           lightTorch();
         }
       }
@@ -333,17 +464,11 @@
         torchContainer.style.cursor = 'grab';
       }
       
-      function isOverlapping(rect1, rect2) {
-        return !(
-          rect1.right < rect2.left || 
-          rect1.left > rect2.right || 
-          rect1.bottom < rect2.top || 
-          rect1.top > rect2.bottom
-        );
-      }
-      
       function lightTorch() {
         if (torchContainer.classList.contains('torch-lit')) return;
+        
+        // Check if we're on mobile
+        const isMobile = window.innerWidth <= 768;
         
         // Play sound if available
         try {
@@ -366,15 +491,31 @@
         // Create center message element
         const centerMessage = document.createElement('div');
         centerMessage.className = 'center-message';
-        centerMessage.textContent = 'Fire represents life in this game. You are now ready to enter...';
+        centerMessage.textContent = 'Fire represents life in this website. You are now ready to enter...';
         document.body.appendChild(centerMessage);
+        
+        // Get the torch handle element
+        const handleEl = torchContainer.querySelector('.torch-handle');
+        
+        // Save original position for animation
+        const originalRect = torchContainer.getBoundingClientRect();
         
         // First animation: Move torch to center
         setTimeout(() => {
           // Hide fire pit
           firePit.style.opacity = '0';
           
-          // Center the torch
+          // Reset the torch handle rotation to vertical with transition
+          handleEl.style.transition = 'all 1.5s ease-in-out';
+          handleEl.style.transform = 'rotate(0deg)';
+          
+          // Preserve the mobile scaling in the center animation
+          if (isMobile) {
+            // We'll let CSS handle this with !important
+            torchContainer.style.transform = ''; // Clear any inline transform
+          }
+          
+          // Center the torch with class (CSS will handle different sizes)
           torchContainer.classList.add('center-animation');
           
           // After torch centered, show message

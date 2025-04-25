@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
-import { getContestantImageUrl, getSeasonLogoUrl } from '../firebase';
+import { getCachedImageUrl, subscribeToCacheUpdates } from '../utils/imageCache';
 import { survivorSeasons } from '../data/survivorData';
 import './SeasonList.css';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { db } from '../firebase';
+import { auth } from '../firebase';
 
 const SeasonList = forwardRef(({ 
   maddysList, 
@@ -11,8 +14,6 @@ const SeasonList = forwardRef(({
   createMode
 }, ref) => {
   const [selectedSeason, setSelectedSeason] = useState(null);
-  const [contestantImageUrls, setContestantImageUrls] = useState({});
-  const [seasonLogoUrls, setSeasonLogoUrls] = useState({});
   const [foundIdol, setFoundIdol] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -25,6 +26,8 @@ const SeasonList = forwardRef(({
   const [isMobile, setIsMobile] = useState(false);
   const [showMenuOnMobile, setShowMenuOnMobile] = useState(false);
   const [listUpdateCallback, setListUpdateCallback] = useState(null);
+  const [cacheVersion, setCacheVersion] = useState(0);
+  const [showIdolNotification, setShowIdolNotification] = useState(false);
   
   // --- Refs for Handle Drag Resizing ---
   const isHandleDragging = useRef(false);
@@ -232,7 +235,7 @@ const SeasonList = forwardRef(({
   }, [selectedSeason, scrollPosition]);
   
   // Easter egg - chance to find an idol on season card click
-  const handleSeasonClick = (seasonId) => {
+  const handleSeasonClick = async (seasonId) => {
     // Save current scroll position before navigating
     const scrollContainer = document.querySelector('.seasons-section') || 
                            document.querySelector('.seasons-grid')?.parentElement;
@@ -245,35 +248,26 @@ const SeasonList = forwardRef(({
     
     setSelectedSeason(seasonId);
     
-    // 5% chance of finding an immunity idol
+    // 50% chance of finding an immunity idol for testing purposes
     if (Math.random() < 0.05) {
-      setFoundIdol(true);
-      setTimeout(() => setFoundIdol(false), 3000);
+      setShowIdolNotification(true);
+      setTimeout(() => setShowIdolNotification(false), 3000);
+      // Track idol find in Firestore
+      try {
+        const userRef = doc(db, 'users', auth.currentUser.uid);
+        const userDoc = await getDoc(userRef);
+        let currentIdols = 0;
+        if (userDoc.exists() && userDoc.data().hasOwnProperty('idolsFound')) {
+          currentIdols = userDoc.data().idolsFound;
+        }
+        await updateDoc(userRef, {
+          idolsFound: currentIdols + 1
+        });
+      } catch (error) {
+        console.error('Error tracking idol find:', error);
+      }
     }
   };
-
-  // Load season logos
-  useEffect(() => {
-    const loadSeasonLogos = async () => {
-      const newLogoUrls = { ...seasonLogoUrls };
-      
-      for (const season of survivorSeasons) {
-        if (!newLogoUrls[season.id]) {
-          try {
-            const url = await getSeasonLogoUrl(season.id);
-            newLogoUrls[season.id] = url;
-          } catch (error) {
-            console.error(`Error loading logo for season ${season.id}:`, error);
-            newLogoUrls[season.id] = '/placeholder.jpg';
-          }
-        }
-      }
-      
-      setSeasonLogoUrls(newLogoUrls);
-    };
-    
-    loadSeasonLogos();
-  }, []);
 
   // Remove tribal-mode class from body if it exists
   useEffect(() => {
@@ -282,198 +276,6 @@ const SeasonList = forwardRef(({
     };
   }, []);
 
-  useEffect(() => {
-    const loadContestantImages = async () => {
-      if (!selectedSeason) return;
-
-      const newImageUrls = { ...contestantImageUrls };
-      const season = survivorSeasons.find(s => s.id === selectedSeason);
-      
-      if (season) {
-        for (const contestant of season.contestants) {
-          if (!newImageUrls[contestant.id]) {
-            try {
-              const numericSeasonId = season.id.startsWith('s') ? season.id.substring(1) : season.id;
-              const url = await getContestantImageUrl(contestant, numericSeasonId);
-              newImageUrls[contestant.id] = url;
-            } catch (error) {
-              console.error(`Error loading image for ${contestant.name}:`, error);
-              newImageUrls[contestant.id] = '/placeholder.jpg';
-            }
-          }
-        }
-        setContestantImageUrls(newImageUrls);
-      }
-    };
-
-    loadContestantImages();
-  }, [selectedSeason]);
-
-  // Load contestant images from search results
-  useEffect(() => {
-    const loadSearchResultImages = async () => {
-      if (!searchTerm.trim()) return;
-      
-      const matchingContestants = getMatchingContestants();
-      if (matchingContestants.length === 0) return;
-      
-      const newImageUrls = { ...contestantImageUrls };
-      
-      for (const contestant of matchingContestants) {
-        if (!newImageUrls[contestant.id]) {
-          try {
-            const numericSeasonId = contestant.seasonId.startsWith('s') ? 
-              contestant.seasonId.substring(1) : contestant.seasonId;
-            const url = await getContestantImageUrl(contestant, numericSeasonId);
-            newImageUrls[contestant.id] = url;
-          } catch (error) {
-            console.error(`Error loading image for ${contestant.name}:`, error);
-            newImageUrls[contestant.id] = '/placeholder.jpg';
-          }
-        }
-      }
-      
-      setContestantImageUrls(newImageUrls);
-    };
-    
-    loadSearchResultImages();
-  }, [searchTerm, contestantImageUrls]);
-
-  const handleBackClick = () => {
-    // Just go back to seasons view - the useEffect will handle restoring scroll
-    setSelectedSeason(null);
-  };
-
-  // Handle start of dragging for contestants
-  const handleDragStart = (e, contestant) => {
-    if (!contestant || !contestant.id) {
-        console.error("Drag start failed: No contestant or ID");
-        e.preventDefault();
-        return;
-    }
-
-    // Restore original image URL logic
-    const imageUrl = contestant.imageUrl || contestantImageUrls[contestant.id] || "/images/placeholder.jpg";
-
-    const data = {
-        id: contestant.id,
-        name: contestant.name || 'Unknown Contestant',
-        imageUrl: imageUrl, 
-        isSeason: false
-    };
-
-    try {
-        const jsonData = JSON.stringify(data);
-        e.dataTransfer.setData('text/plain', jsonData);
-
-        e.dataTransfer.effectAllowed = 'move';
-
-        if (e.currentTarget) {
-            e.currentTarget.classList.add('dragging-item');
-        }
-    } catch (error) {
-        console.error("Error during drag start:", error);
-        e.preventDefault();
-    }
-  };
-
-  // Handle drag end event
-  const handleDragEnd = (e) => {
-    if (e.currentTarget) {
-        e.currentTarget.classList.remove('dragging-item');
-    }
-  };
-
-  // Handle drag over event
-  const handleDragOver = (e, targetId) => {
-    e.preventDefault();
-    e.stopPropagation();
-    e.dataTransfer.dropEffect = 'move';
-    
-    // Add visual feedback for the drop target
-    if (targetId !== dropTarget) {
-      setDropTarget(targetId);
-      
-      // Remove drag-over class from all elements
-      const dropTargets = document.querySelectorAll('.drop-target');
-      dropTargets.forEach(target => {
-        target.classList.remove('drag-over');
-      });
-      
-      // Add drag-over class to current target
-      if (e.currentTarget) {
-        e.currentTarget.classList.add('drag-over');
-      }
-    }
-    return false;
-  };
-
-  // Handle drag leave event
-  const handleDragLeave = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    e.currentTarget.classList.remove('drag-over');
-    setDropTarget(null);
-  };
-  
-  // Handle drop of contestant
-  const handleDrop = (e, targetId) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    const data = e.dataTransfer.getData('text/plain');
-    if (data) {
-      try {
-        const contestant = JSON.stringify(data);
-        console.log('Dropped contestant:', draggedContestant?.name, 'onto target:', targetId);
-        
-        // Here you would implement the logic to handle the drop
-        // For example, adding the contestant to a list
-        
-        // Remove visual feedback
-        e.currentTarget.classList.remove('drag-over');
-        setDropTarget(null);
-      } catch (error) {
-        console.error('Error parsing dropped data:', error);
-      }
-    }
-  };
-
-  // Add new method for handling season drag start
-  const handleSeasonDragStart = (e, season) => {
-    try {
-      // Add the seasonLogoUrl to the season data for displaying in lists
-      const seasonWithImage = {
-        ...season,
-        imageUrl: seasonLogoUrls[season.id] || "https://via.placeholder.com/150?text=Loading...",
-        isSeason: true // Mark this as a season for type checking later
-      };
-      
-      // Store data in multiple formats for better browser compatibility
-      const data = JSON.stringify(seasonWithImage);
-      console.log('Starting drag with season data:', data);
-      
-      // Set the data in different formats for maximum compatibility
-      e.dataTransfer.setData('application/json', data);
-      e.dataTransfer.setData('text/plain', data);
-      
-      // Set a custom property to indicate the source is a season
-      e.dataTransfer.setData('source', 'season-grid');
-      
-      // Set the drag image
-      if (e.target.querySelector('img')) {
-        const img = e.target.querySelector('img');
-        e.dataTransfer.setDragImage(img, 25, 25);
-      }
-      
-      e.target.classList.add('dragging');
-      
-      console.log('Drag started with season:', season.name, season.id);
-    } catch (error) {
-      console.error('Error in handleSeasonDragStart:', error);
-    }
-  };
-  
   // Filter seasons based on search term when no season is selected
   const getFilteredSeasons = () => {
     if (!searchTerm.trim()) {
@@ -563,10 +365,10 @@ const SeasonList = forwardRef(({
   // Function to handle clicking on contestants to add them to the list
   const handleContestantClick = (contestant) => {
     if (listUpdateCallback && typeof listUpdateCallback === 'function') {
-      // Prepare contestant data with image
+      // Prepare contestant data with image using getCachedImageUrl
       const contestantWithImage = {
         ...contestant,
-        imageUrl: contestantImageUrls[contestant.id] || "/placeholder.jpg"
+        imageUrl: getCachedImageUrl(contestant.id) // Use cache
       };
       listUpdateCallback(contestantWithImage);
       hideMenuOnMobile();
@@ -576,11 +378,11 @@ const SeasonList = forwardRef(({
   };
   
   // New function to handle clicking on a season to add it to the list
-  const handleSeasonCardClick = (season) => {
+  const handleSeasonCardClick = async (season) => {
     console.log('Season card clicked:', season.name, 'createMode:', createMode, 'isMobile:', isMobile);
     
     // Always navigate to the season's contestants view
-    handleSeasonClick(season.id);
+    await handleSeasonClick(season.id);
     
     // For mobile in create mode, we don't want to hide yet
     // (we want to show the contestants first, then hide after selection)
@@ -756,6 +558,114 @@ const SeasonList = forwardRef(({
   };
   // ------------------------------------------
 
+  // Restore handleBackClick
+  const handleBackClick = () => {
+    setSelectedSeason(null);
+  };
+
+  // Restore handleDragStart for contestants
+  const handleDragStart = (e, contestant) => {
+    if (!contestant || !contestant.id) {
+      console.error("Drag start failed: No contestant or ID");
+      e.preventDefault();
+      return;
+    }
+
+    const imageUrl = getCachedImageUrl(contestant.id);
+    const data = {
+      id: contestant.id,
+      name: contestant.name || 'Unknown Contestant',
+      imageUrl: imageUrl,
+      isSeason: false // Mark as contestant
+    };
+
+    try {
+      const jsonData = JSON.stringify(data);
+      e.dataTransfer.setData('text/plain', jsonData);
+      e.dataTransfer.effectAllowed = 'move';
+      if (e.currentTarget) {
+        e.currentTarget.classList.add('dragging-item');
+      }
+      setDraggedContestant(data); // Keep track of dragged item if needed
+    } catch (error) {
+      console.error("Error during drag start:", error);
+      e.preventDefault();
+    }
+  };
+
+  // Restore handleSeasonDragStart for seasons
+  const handleSeasonDragStart = (e, season) => {
+    const imageUrl = getCachedImageUrl(season.id);
+    const seasonWithImage = {
+      ...season,
+      imageUrl: imageUrl,
+      isSeason: true // Mark as season
+    };
+
+    try {
+      const jsonData = JSON.stringify(seasonWithImage);
+      e.dataTransfer.setData('text/plain', jsonData);
+      e.dataTransfer.setData('application/json', jsonData); // Keep if needed elsewhere
+      e.dataTransfer.setData('source', 'season-grid'); // Keep if needed
+      e.dataTransfer.effectAllowed = 'move';
+
+      if (e.target.querySelector('img')) {
+        const img = e.target.querySelector('img');
+        e.dataTransfer.setDragImage(img, 25, 25);
+      }
+      if (e.currentTarget) {
+        e.currentTarget.classList.add('dragging'); // Use 'dragging' or 'dragging-item'
+      }
+    } catch (error) {
+      console.error('Error in handleSeasonDragStart:', error);
+      e.preventDefault();
+    }
+  };
+
+  // Restore handleDragEnd
+  const handleDragEnd = (e) => {
+    if (e.currentTarget) {
+      e.currentTarget.classList.remove('dragging-item');
+      e.currentTarget.classList.remove('dragging');
+    }
+    setDraggedContestant(null); // Clear dragged item
+  };
+
+  // Subscribe to image cache updates to force re-render when URLs become available
+  useEffect(() => {
+    const unsubscribe = subscribeToCacheUpdates(() => {
+      // Increment version number to trigger re-render
+      setCacheVersion(v => v + 1);
+    });
+
+    // Cleanup subscription on component unmount
+    return () => {
+      unsubscribe();
+    };
+  }, []); // Run only once on mount
+
+  // New function to handle adding an entire season to the list
+  const handleAddSeasonToList = (season) => {
+    if (listUpdateCallback && typeof listUpdateCallback === 'function') {
+      // Prepare season data with contestants
+      const seasonData = {
+        id: season.id,
+        name: season.name.replace('Survivor: ', '').replace('Survivor ', ''),
+        contestants: season.contestants.map(contestant => ({
+          ...contestant,
+          imageUrl: getCachedImageUrl(contestant.id),
+          seasonId: season.id,
+          seasonName: season.name.replace('Survivor: ', '').replace('Survivor ', '')
+        }))
+      };
+      // Call the callback with a special flag to indicate it's a season
+      listUpdateCallback(seasonData, true);
+      hideMenuOnMobile();
+    } else {
+      hideMenuOnMobile();
+    }
+  };
+
   // Don't render the component at all ONLY when it's the hidden mobile menu
   // in create mode and not explicitly shown.
   // Render in all other cases (desktop, mobile non-create, mobile create shown).
@@ -767,7 +677,7 @@ const SeasonList = forwardRef(({
   // console.log('[SeasonList Render] Rendering component');
   return (
     <div ref={sectionRef}>
-      {foundIdol && (
+      {showIdolNotification && (
         <div className="idol-notification">
           You found a Hidden Immunity Idol! 🏆
         </div>
@@ -846,10 +756,11 @@ const SeasonList = forwardRef(({
                     onDragEnd={isLoggedIn && createMode ? handleDragEnd : undefined}
                   >
                     <img
-                      src={contestantImageUrls[contestant.id] || "/placeholder.jpg"}
-                      alt={contestant.name}
                       className="contestant-image"
-                      draggable="false"
+                      // Use getCachedImageUrl for contestant images in search results
+                      src={getCachedImageUrl(contestant.id)} // Use cache
+                      alt={contestant.name}
+                      loading="lazy"
                     />
                     <div className="contestant-name">
                       {contestant.name}
@@ -873,18 +784,13 @@ const SeasonList = forwardRef(({
                   onDragStart={isLoggedIn && createMode ? (e) => handleSeasonDragStart(e, season) : undefined}
                   onDragEnd={isLoggedIn && createMode ? handleDragEnd : undefined}
                 >
-                  {seasonLogoUrls[season.id] ? (
-                    <img 
-                      src={seasonLogoUrls[season.id]} 
-                      alt={`Season ${season.id.replace('s', '')} Logo`}
-                      className="season-logo"
-                      draggable="false"
-                    />
-                  ) : (
-                    <div className="season-logo-placeholder">
-                      <h3>S{season.id.replace('s', '')}</h3>
-                    </div>
-                  )}
+                  <img
+                    className="season-logo"
+                    // Use getCachedImageUrl for season logos in grid
+                    src={getCachedImageUrl(season.id)} // Use cache
+                    alt={`Season ${season.id.replace('s', '')} Logo`}
+                    loading="lazy"
+                  />
                   <p>{season.name.replace('Survivor: ', '').replace('Survivor ', '')}</p>
                 </div>
               ))}
@@ -942,16 +848,30 @@ const SeasonList = forwardRef(({
                   }) : undefined}
                 onDragEnd={isLoggedIn && createMode ? handleDragEnd : undefined}
               >
-                <img 
-                  src={contestantImageUrls[contestant.id] || '/placeholder.jpg'}
-                  alt={contestant.name}
+                <img
                   className="contestant-image"
-                  draggable="false"
+                  // Use getCachedImageUrl for contestant images in detail view
+                  src={getCachedImageUrl(contestant.id)} // Use cache
+                  alt={contestant.name}
+                  loading="lazy"
                 />
                 <div className="contestant-name">{contestant.name}</div>
               </div>
             ))}
           </div>
+
+          {/* Add larger season image on mobile for adding the entire season */}
+          {isMobile && createMode && (
+            <div className="season-image-container" onClick={() => handleAddSeasonToList(survivorSeasons.find(s => s.id === selectedSeason))}>
+              <img
+                className="season-large-image"
+                src={getCachedImageUrl(selectedSeason)}
+                alt={`${survivorSeasons.find(s => s.id === selectedSeason)?.name} Logo`}
+                loading="lazy"
+              />
+              <div className="season-add-prompt">Tap to add the season to the list</div>
+            </div>
+          )}
         </div>
       }
     </div>

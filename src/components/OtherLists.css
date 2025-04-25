@@ -412,6 +412,7 @@
     width: calc(100% - 20px); /* Adjust item width to account for container changes */
     margin-left: 10px; /* Add some margin for items */
     margin-right: 10px;
+    min-height: 1px; /* Set min-height for mobile */
   }
 }
 
@@ -431,6 +432,7 @@
     height: 60px;
     /* Keep object-fit: contain for logos if needed */
     object-fit: contain; 
+    margin-top: 0px !important;
   }
 }
 
@@ -508,8 +510,8 @@
   color: #ffcc00;
   text-align: center;
   font-size: 3.5rem;
-  margin-top: 10px;
-  margin-bottom: 30px;
+
+  margin-bottom: 0px;
   text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
   font-weight: 700;
   line-height: 1.2;
@@ -529,6 +531,7 @@
 .full-list-header .created-date {
   color: #ddd;
   font-size: 0.9rem;
+  padding-bottom: 10px;
 }
 
 .full-list-tags {
@@ -578,8 +581,7 @@
   border-radius: 4px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   position: relative;
-  min-height: 140px !important;
-  width: 99.5%;
+  min-height: 140px;
 }
 
 .full-list-view .ranking-item:hover {
@@ -597,7 +599,6 @@
   color: #000000;
   font-family: 'Survivant', sans-serif;
   width: 40px;
-  height: 40px;
   line-height: 1;
   background-color: transparent;
   border: none;
@@ -722,13 +723,19 @@
 
 @media (max-width: 700px) {
   .full-list-view .contestant-image {
-    width: 100px !important; /* Make smaller, not larger */
-    height: 100px !important;
+    width: 45px ; /* Reduced size */
+    height: 45px ; /* Reduced size */
   }
   
   .full-list-view .ranking-item {
-    min-height: 65px; /* Adjust min-height */
+    min-height: 55px; /* Reduced min-height further */
     grid-template-columns: 30px auto 1fr; /* Adjust grid */
+  }
+
+  /* Remove align-self from number */
+  .full-list-view .ranking-number {
+     /* align-self: center; */
+     /* Inherit other styles like width/height/font-size from previous breakpoints */
   }
 
   /* <<< ADD rule for contestant name >>> */
@@ -743,8 +750,8 @@
 
 @media (max-width: 600px) {
   .full-list-view .contestant-image {
-    width: 100px !important; /* Make smaller, not larger */
-    height: 100px !important;
+    width: 45px ; /* Reduced size */
+    height: 45px ; /* Reduced size */
   }
   
   .full-list-view .ranking-item {
@@ -763,8 +770,8 @@
 
 @media (max-width: 500px) {
   .full-list-view .contestant-image {
-    width: 100px !important; /* Make smaller, not larger */
-    height: 100px !important;
+    width: 45px ; /* Reduced size */
+    height: 45px ; /* Reduced size */
   }
   
   .full-list-view .ranking-item {
@@ -1631,6 +1638,7 @@
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  margin-top:-7px;
 }
 
 .favorite-button:hover:not(:disabled) {
@@ -2014,7 +2022,7 @@
   gap: 20px;
   width: 100%;
   max-width: 1200px;
-  margin: 0 auto;
+  
   padding: 0 10px;
   box-sizing: border-box;
 }
@@ -2080,7 +2088,7 @@
 }
 
 .other-lists .ranking-list-container .contestant-image {
-  width: 90px;
+  width: 120px;
   height: 60px;
   min-width: 35px;
 }
@@ -2161,9 +2169,11 @@
 @media (max-width: 480px) {
   .ranking-item .contestant-image,
   .ranking-item .contestant-image.season-logo{
-    width: 100px !important;
-    height: 100px !important;
+    width: 100px;
+    height: 60px;
     font-size: 205px !important;
+    margin-top: 4px;
+
   }
 }
 
@@ -2193,16 +2203,53 @@
 
 /* Basic styles for Share Button (Temporary for Debugging) */
 .share-list-button {
-  display: inline-block; /* Ensure it's displayed */
-  padding: 10px 15px;
-  margin-left: 15px; /* Add some space */
-  background-color: red !important; /* Make it obvious */
-  color: white !important;
-  border: 2px solid yellow !important;
-  font-size: 16px !important;
-  font-weight: bold;
+  /* Base Button Style */
+  padding: 8px 18px; /* Adjusted padding */
+  border-radius: 6px; 
+  font-size: 0.9rem;   
+  font-weight: 600;  
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
   cursor: pointer;
-  z-index: 100; /* Ensure it's not hidden behind something */
+  transition: all 0.15s ease-in-out;
+  border: none; 
+  min-width: auto; 
+  text-align: center;
+  box-sizing: border-box;
+  line-height: 1.4;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15), 
+              inset 0 -1px 0 rgba(0,0,0,0.1);
+  
+  /* Specific Styling & Positioning */
+  background: linear-gradient(to bottom, #3498db, #2980b9); /* Blue gradient */
+  color: white !important; 
+  position: absolute; /* Position within header */
+  bottom: 15px;       /* Align to bottom */
+  right: 15px;        /* Align to right */
+  z-index: 10;       /* Ensure it's above other elements if needed */
+}
+
+.share-list-button:hover {
+  background: linear-gradient(to bottom, #4aa3df, #3498db);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2), 
+              inset 0 -1px 0 rgba(0,0,0,0.1);
+  transform: translateY(-1px); 
+}
+
+.share-list-button:active {
+  background: linear-gradient(to bottom, #2980b9, #206191);
+  transform: translateY(0px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15), 
+              inset 0 -1px 0 rgba(0,0,0,0.1);
+}
+
+.share-list-button:disabled {
+  background: #bdc3c7; /* Clouds */
+  color: #7f8c8d; /* Asbestos */
+  cursor: not-allowed;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1), 
+              inset 0 -1px 0 rgba(0,0,0,0.1);
+  transform: none;
 }
 
 /* Styling for the share modal (add more later) */
@@ -2220,21 +2267,35 @@
 }
 
 .share-modal-content {
-  background-color: white;
-  padding: 30px;
-  border-radius: 8px;
-  max-width: 90%;
-  max-height: 90%;
-  overflow: auto;
+  /* Improved Styling */
+  background-color: rgba(40, 40, 40, 0.98); /* Dark background */
+  padding: 30px 40px; /* Increase padding */
+  border-radius: 12px; /* Softer corners */
+  max-width: 600px;    /* Limit max width */
+  max-height: 90vh;   /* Limit max height */
+  overflow-y: auto;   /* Allow scrolling if content overflows */
   text-align: center;
+  border: 1px solid rgba(255, 204, 0, 0.2); /* Subtle gold border */
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4); /* Deeper shadow */
+  color: #eee; /* Light text color */
+}
+
+/* Style the modal title */
+.share-modal-content h3 {
+  color: #ffcc00; /* Gold title */
+  margin-top: 0;
+  margin-bottom: 25px;
+  font-size: 1.6rem;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 .share-preview-image {
   display: block;
   max-width: 100%;
   max-height: 60vh; /* Limit preview height */
-  margin: 20px auto;
-  border: 1px solid #ccc;
+  margin: 0 auto 25px; /* Center and add bottom margin */
+  border: 2px solid rgba(255, 255, 255, 0.1); /* Subtle border */
+  border-radius: 4px;
 }
 
 .share-modal-actions {
@@ -2244,6 +2305,7 @@
   gap: 15px;
 }
 
+/* Base Button Style (borrowed from global buttons) */
 .download-image-button, .close-modal-button {
   padding: 10px 25px; /* Adjusted padding */
   border-radius: 6px;  /* Slightly less round */
@@ -2388,13 +2450,26 @@
   text-decoration: underline;
 }
 
-/* Container for the Edit My List button */
-.edit-list-button-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-top: 20px; /* Space above the button */
-  margin-bottom: 20px; /* Space below the button */
+/* Container for the Edit My List button (Remove old centering, add positioning) */
+.full-list-header .edit-list-button-container {
+  /* Remove old flex centering */
+  /* display: flex; */
+  /* justify-content: center; */
+  /* align-items: center; */
+  /* margin-top: 20px; */
+  /* margin-bottom: 20px; */
+
+  /* Add absolute positioning */
+  position: absolute;
+  bottom: 15px; /* Adjust as needed */
+  left: 15px;   /* Adjust as needed */
+  z-index: 10; /* Ensure it's above other elements if needed */
+}
+
+/* Ensure the button itself doesn't have conflicting styles */
+.full-list-header .edit-list-button-container .edit-my-list-button {
+  /* Reset margins if they existed */
+  margin: 0;
 }
 
 /* Reset height constraints specifically for mobile breakpoint */
@@ -2407,7 +2482,137 @@
     height: unset !important;
     min-height: unset !important;
   }
+
+  /* Style the new container for mobile buttons */
+  .mobile-list-actions-container {
+    display: flex;
+    justify-content: center; /* Center buttons horizontally */
+    align-items: center;
+    gap: 15px; /* Space between buttons */
+    margin-top: 10px; /* Further reduced */
+    margin-bottom: 0px; /* Space below the container (above the ranking list) */
+    padding: 0 10px; /* Add some horizontal padding */
+    padding-right: 20px;
+  }
+
+  /* Ensure buttons within the container have consistent styling */
+  .mobile-list-actions-container .mobile-share-list-button,
+  .mobile-list-actions-container .edit-my-list-button {
+     /* Example: Make buttons take up available space equally */
+     /* flex-grow: 1; */
+     /* max-width: 200px; /* Optional max width */
+  }
+
+  /* Hide the desktop edit button container as well */
+  .full-list-header > .edit-list-button-container {
+      display: none;
+  }
+
+  /* Reduce top margin for ranking list container on mobile */
+  .full-list-view .ranking-list-container {
+    margin-top: 0px; /* Set to 0px */
+    margin-left: -40px !important;  /* Keep existing mobile adjustment */
+    margin-right: -20px !important; /* Keep existing mobile adjustment */
+    max-width: none !important;      /* Keep existing mobile adjustment */
+    width: auto !important;         /* Keep existing mobile adjustment */
+    padding-top: 0px; /* Set to 0px */
+    padding-bottom: 10px; /* Keep bottom padding */
+    /* Keep horizontal padding if needed, e.g., padding-left: 10px; padding-right: 10px; */
+    /* Or adjust the existing padding rule: padding: 10px; */
+  }
 }
+
+/* Existing styles */
+
+/* Add styles for mobile share button */
+.mobile-share-button-container {
+  /* Default: Centered */
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: 10px;
+  margin-bottom: 15px;
+  /* Ensure position is relative or static by default */
+  position: relative; 
+}
+
+/* Styles when user is owner (for bottom-right positioning) */
+.mobile-share-button-container.owner-view {
+  /* Override centering styles */
+  display: block; /* Or inline-block if needed */
+  justify-content: initial;
+  width: auto; 
+  margin: 0;
+
+  /* Add absolute positioning relative to header */
+  position: absolute;
+  bottom: 15px; /* Match edit button */
+  right: 15px;  /* Match desktop share button */
+  z-index: 10;
+}
+
+.mobile-share-list-button {
+  padding: 8px 15px;
+  font-size: 0.9rem;
+  background-color: #3498db; /* Changed to blue */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  /* Add matching font styles from desktop button */
+  font-weight: 600; 
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.mobile-share-list-button:hover {
+  background-color: #2980b9; /* Darker blue on hover */
+}
+
+.mobile-share-list-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+/* Ensure it only shows on mobile if not handled by JS already */
+@media (min-width: 769px) {
+  .mobile-share-button-container {
+    display: none;
+  }
+}
+
+/* Make sure the desktop one is hidden on mobile */
+@media (max-width: 768px) {
+  .share-list-button { /* Assuming this is the desktop button class */
+    display: none;
+  }
+  /* Hide the desktop edit button container as well */
+  .full-list-header > .edit-list-button-container {
+      display: none;
+  }
+}
+
+/* Add any other necessary styles */
+ 
+/* Style for mobile instruction text */
+.mobile-save-instruction {
+  color: #ccc; /* Light grey text */
+  font-size: 0.9rem;
+  margin-top: -10px; /* Adjust spacing relative to image */
+  margin-bottom: 20px;
+  font-style: italic;
+}
+
+.share-modal-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center; /* Center button(s) by default */
+  gap: 15px;
+}
+
+/* If needed, specific adjustments for when only Close button is visible */
+/* (justify-content: center already handles this, but could add specific rules if layout breaks) */
  
  
  

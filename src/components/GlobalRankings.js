@@ -86,7 +86,7 @@ const GlobalRankings = ({ seasonListRef }) => {
   const sampleLists = [
     {
       id: 'goat-strategy',
-      name: 'GOAT Strategy',
+      name: 'Greatest Strategy',
       userName: 'SurvivorGuru',
       createdAt: new Date().toISOString(),
       description: 'Vote for the greatest strategic players in Survivor history',
@@ -94,7 +94,7 @@ const GlobalRankings = ({ seasonListRef }) => {
     },
     {
       id: 'goat-social',
-      name: 'GOAT Social',
+      name: 'Greatest Social',
       userName: 'IslandFan',
       createdAt: new Date().toISOString(),
       description: 'Vote for the greatest social players in Survivor history',
@@ -102,7 +102,7 @@ const GlobalRankings = ({ seasonListRef }) => {
     },
     {
       id: 'goat-competitor',
-      name: 'GOAT Competitor',
+      name: 'Greatest Competitor',
       userName: 'StrategicMoves',
       createdAt: new Date().toISOString(),
       description: 'Vote for the greatest challenge competitors in Survivor history',
@@ -886,7 +886,7 @@ const GlobalRankings = ({ seasonListRef }) => {
                       : contestant.name)
                   }
                     {contestant.totalScore !== undefined && 
-                      <span className="global-score"> ({contestant.totalScore} pts)</span>
+                      <span className="global-score"> {contestant.totalScore} pts</span>
                   }
                 </div>
               </div>
@@ -1416,9 +1416,19 @@ const GlobalRankings = ({ seasonListRef }) => {
           </p>
         </div>
 
-         {/* Submit Section (Shows buttons conditionally) */}
+         {/* Vote Section Placeholder - update text based on view */}
+         <div className="vote-section">
+           <h3>{showingGlobalRanking ? "Global Top 10 Results" : (userHasSubmitted ? "Edit Your Submission" : "Vote for Your Top 10")}</h3>
+           <p>
+             {showingGlobalRanking
+               ? "This is the current aggregated ranking based on user submissions."
+               : isEditable
+                 ? 'Drag contestants from the right menu to rank them, or drag items within the list to reorder. Hit "Submit My Ranking" above to save your selections.'
+                 : 'Log in to create or edit your ranking.' // Message if not logged in
+             }
+           </p>
          {(userHasSubmitted === true || isEditable) && (
-           <div className="submit-global-ranking-section">
+             <>
              {/* Toggle Button - Only show if user HAS submitted */}
              {userHasSubmitted === true && (
                <button onClick={toggleView} className="toggle-view-button">
@@ -1441,14 +1451,14 @@ const GlobalRankings = ({ seasonListRef }) => {
                  {!user && <p className="login-prompt">Please log in to submit your ranking.</p>}
                </>
              )}
-           </div>
+             </>
          )}
+         </div>
 
         {/* Ranking List Area */}
         {showingGlobalRanking ? (
             // --- Render Read-Only Global Ranking ---
             <div className="ranking-list-container global-results">
-              <h3 className="view-title">Global Top 10</h3>
               {loadingGlobalRanking && <div className="loading">Loading Global Ranking...</div>}
               {errorGlobalRanking && <div className="submit-feedback error">{errorGlobalRanking}</div>}
               {!loadingGlobalRanking && !errorGlobalRanking && (
@@ -1478,7 +1488,7 @@ const GlobalRankings = ({ seasonListRef }) => {
                                       {contestant.name}
                                         {/* Show total points if available */} 
                                         {contestant.totalScore !== undefined && 
-                                          <span className="global-score"> ({contestant.totalScore} pts)</span> 
+                                          <span className="global-score"> {contestant.totalScore} pts</span> 
                                       }
                                   </div>
                                     {/* Optionally show vote count: <span className="global-votes">{currentListTotalVotes} votes</span> */}
@@ -1564,19 +1574,6 @@ const GlobalRankings = ({ seasonListRef }) => {
             </div>
         )}
 
-        {/* Vote Section Placeholder - update text based on view */}
-        <div className="vote-section">
-          <h3>{showingGlobalRanking ? "Global Top 10 Results" : (userHasSubmitted ? "Edit Your Submission" : "Vote for Your Top 10")}</h3>
-          <p>
-            {showingGlobalRanking
-              ? "This is the current aggregated ranking based on user submissions."
-              : isEditable
-                ? 'Drag contestants from the right menu to rank them, or drag items within the list to reorder. Hit "Submit My Ranking" above to save your selections.'
-                : 'Log in to create or edit your ranking.' // Message if not logged in
-            }
-          </p>
-        </div>
-
         {/* --- ADDED COMMENTS SECTION --- */}
         <div className="comments-section">
           <h3 className="comments-title">Discussion</h3>
@@ -1600,7 +1597,7 @@ const GlobalRankings = ({ seasonListRef }) => {
                  >
                     Post Comment
                  </button>
-              </div>
+        </div>
             </div>
           ) : (
             <div className="login-to-comment">
@@ -1743,8 +1740,8 @@ const GlobalRankings = ({ seasonListRef }) => {
       <div className="global-rankings-description">
         <p>
           Who is the Greatest Of All Time? Cast your votes in the ultimate Survivor showdown! 
-          Rank your top 10 strategic masterminds, social butterflies, and challenge beasts. 
-          Once you submit your list for a category, you'll unlock the community's global ranking!
+          Rank your top 10 strategic masterminds, social players, and challenge beasts. 
+          Once you submit your list for a category, you'll see the community's global ranking!
         </p>
       </div>
       

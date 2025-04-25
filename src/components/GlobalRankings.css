@@ -48,7 +48,7 @@
   border-left: 3px solid #ffcc00;
   padding: 20px;
   margin-top: 10px;
-  margin-bottom: 20px;
+  margin-bottom: 0px;
   border-radius: 8px;
 }
 
@@ -136,6 +136,9 @@
   font-weight: 500;
   color: #333;
   flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 @media (max-width: 768px) {
@@ -230,6 +233,8 @@
 }
 
 /* Submission Section Styling */
+/* Removed the wrapper class styles as the wrapper div was removed */
+/*
 .submit-global-ranking-section {
   margin-top: 20px;
   margin-bottom: 20px;
@@ -244,20 +249,28 @@
   align-items: center;
   gap: 20px;
 }
+*/
 
 /* --- Styling for List Titles (Global/User) --- */
 .ranking-list-container > h3 {
   color: #000000; /* Default Black */
-  text-align: center; 
-  margin-bottom: 25px; /* More margin */
-  text-shadow: none; /* Ensure no shadow */
-  font-family: 'Survivant', sans-serif; /* Apply Survivant font */
-  font-size: 2.8rem; /* Even larger font size */
-  font-weight: 700; /* Bolder */
-  line-height: 1.1; /* Adjust line height */
+  font-size: 1.3rem;
+  font-family: 'Survivant', sans-serif;
+  margin-bottom: 15px;
+  text-align: center;
+  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.1);
+  /* Remove background/border from base title */
 }
 
-/* Specific style for Global Top 10 title */
+/* Add margin-top to buttons and feedback inside vote-section */
+.vote-section .toggle-view-button,
+.vote-section .submit-global-ranking-button,
+.vote-section .submit-feedback,
+.vote-section .login-prompt { /* Include login-prompt here */
+  margin-top: 20px;
+}
+
+/* Global Ranking View Specific Title */
 .ranking-list-container.global-results > h3 {
   color: #ffcc00; /* Survivor Gold */
   /* Add subtle text shadow for depth on dark background */
@@ -365,10 +378,10 @@
 }
 
 .login-prompt {
-  color: #ffcc00;
-  font-style: italic;
-  margin-top: 10px;
+  color: #aaa;
   font-size: 0.9rem;
+  text-align: center;
+  width: 100%; /* Ensure it takes full width in flex */
 }
 
 /* Read-Only Global Results List - REMOVE specific styling to match personal list */
@@ -394,8 +407,10 @@
 .global-score {
   font-size: 0.8em;
   color: #ffcc00;
-  margin-left: 5px;
+  margin-left: 0;
   font-weight: bold;
+  display: block;
+  margin-top: 4px;
 }
 
 /* Ensure submit section doesn't show in global view */
@@ -433,13 +448,6 @@
   background-color: #f8d7da; /* Light red */
   color: #721c24; /* Dark red */
   border: 1px solid #f5c6cb;
-}
-
-.login-prompt {
-  margin-top: 10px;
-  color: #ffc107; /* Warning yellow */
-  font-size: 0.9em;
-  text-align: center;
 }
 
 /* End of file */ 
@@ -719,7 +727,7 @@
 .global-rankings-page-wrapper .ranking-list-container .ranking-item {
   background-color: rgb(255, 255, 255); /* Slightly lighter item background */
   border-color: rgba(255, 215, 0, 0.3); /* Fainter gold border */
-  margin-bottom: 8px;
+  margin-bottom: 10px; /* Increased spacing */
   /* Reset hover effects from general styles if needed */
   /* transition: none; */ 
   /* box-shadow: none; */
@@ -761,5 +769,20 @@
     height: unset !important;
     min-height: unset !important;
   }
+}
+
+/* Inline login button style */
+.inline-login-button {
+  background: none;
+  border: none;
+  color: #ffcc00; /* Match link color */
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  font: inherit; /* Inherit font settings */
+}
+
+.inline-login-button:hover {
+  color: #ffd633;
 }
 

@@ -107,7 +107,6 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
   transition: all 0.3s ease;
   padding: 0;
   max-width: 100%;
@@ -824,7 +823,7 @@ body.tribal-mode .back-button::after {
 /* Add collapse toggle button styles */
 .collapse-toggle {
   position: absolute;
-  left: -15px;
+  left: -6px;
   top: 35%;
   transform: translateY(-50%);
   width: 15px;
@@ -1060,7 +1059,36 @@ body.tribal-mode .back-button::after {
        visibility: hidden;
   }
 
-  /* ... rest of mobile styles ... */
+  /* Styles for the larger season image in mobile view */
+  .season-image-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-top: 20px;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+  }
+
+  .season-image-container:hover {
+    transform: scale(1.05);
+  }
+
+  .season-large-image {
+    width: 60%;
+    max-width: 200px;
+    height: auto;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  .season-add-prompt {
+    margin-top: 10px;
+    font-size: 0.9rem;
+    color: #ffcc00;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    text-align: center;
+  }
 }
 
 /* Add styles for the swipe handle at the top of the mobile menu */

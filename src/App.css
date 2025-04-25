@@ -41,6 +41,8 @@
   font-family: 'Survivant', sans-serif;
 }
 
+/* Remove fire emojis */
+/*
 .App-header h1::before {
   content: '🔥';
   position: absolute;
@@ -58,6 +60,7 @@
   font-size: 2rem;
   animation: flicker 2s infinite alternate;
 }
+*/
 
 @keyframes flicker {
   0%, 100% { opacity: 1; transform: scale(1); }
@@ -421,6 +424,7 @@ body.tribal-mode .App {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
 }
 
 .global-rankings-button img {
@@ -431,6 +435,35 @@ body.tribal-mode .App {
 
 .global-rankings-button:hover {
   transform: scale(1.1);
+}
+
+/* Added Vote Now! alert with pulsing effect */
+.global-rankings-button::after {
+  content: 'Vote Now!';
+  position: absolute;
+  bottom: 20%;
+  right: 10%;
+  background-color: rgba(255, 204, 0, 0.9);
+  color: #333;
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  animation: pulse 2s infinite;
+  transform: rotate(3deg);
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .global-rankings-container {
@@ -462,7 +495,15 @@ body.tribal-mode .App {
   .global-rankings-button img {
     width: 200px;
     height: 200px;
-    margin-top: 30px;
+    margin-top: 1px;
+    margin-bottom: -50px;
+  }
+
+  /* Adjust alert position for mobile */
+  .global-rankings-button::after {
+    bottom: 10%;
+    right: 5%;
+    transform: rotate(3deg);
   }
 }
 
@@ -536,13 +577,13 @@ body.tribal-mode .App {
   text-align: center;
   font-style: italic;
   color: #888;
-  margin-top: 5px; /* Adjust spacing as needed */
+  margin-top: 5px;
   margin-bottom: 10px;
   font-size: 0.9em;
   padding: 5px;
   background-color: rgba(0, 0, 0, 0.03);
   border-radius: 4px;
-  cursor: pointer; /* Indicate it's clickable */
+  cursor: pointer;
 }
 
 /* Optional: Add hover effect */
@@ -587,22 +628,22 @@ body.tribal-mode .App {
 /* <<< ADD Footer Styles >>> */
 .App-footer {
   padding: 15px 0;
-  margin-top: 30px; /* Add space above footer */
+  margin-top: 30px;
   text-align: center;
-  font-size: 0.8rem; /* Small font size */
-  color: #aaa; /* Light grey color */
-  border-top: 1px solid rgba(255, 255, 255, 0.1); /* Subtle top border */
+  font-size: 0.8rem;
+  color: #aaa;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .App-footer a {
-  color: #ccc; /* Slightly brighter link color */
+  color: #ccc;
   text-decoration: none;
-  margin: 0 10px; /* Space around the separator */
+  margin: 0 10px;
   transition: color 0.2s ease;
 }
 
 .App-footer a:hover {
-  color: #ffcc00; /* Highlight color on hover */
+  color: #ffcc00;
   text-decoration: underline;
 }
 /* <<< End Footer Styles >>> */ 

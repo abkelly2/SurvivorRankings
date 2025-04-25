@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../firebase';
 import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
-import { getContestantImageUrl, getSeasonLogoUrl } from '../firebase';
 import { survivorSeasons } from '../data/survivorData';
 import './UserListCreator.css';
 import { useNavigate } from 'react-router-dom';
-import SeasonList from './SeasonList';
+import { getCachedImageUrl } from '../utils/imageCache';
 
 const UserListCreator = ({ 
   userList, 
@@ -27,7 +26,6 @@ const UserListCreator = ({
   const [error, setError] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const listRef = useRef(null);
-  const [contestantImageUrls, setContestantImageUrls] = useState({});
   const [currentListId, setCurrentListId] = useState(editingListId || null);
   const navigate = useNavigate();
   
@@ -127,52 +125,6 @@ const UserListCreator = ({
     return () => clearTimeout(autosaveTimer);
   }, [userList, listName, listDescription, listTags, user, editingListId]);
   
-  // Load image URLs for contestants in the list
-  useEffect(() => {
-    const loadImages = async () => {
-      if (userList.length === 0) return;
-      
-      const newImageUrls = { ...contestantImageUrls };
-      
-      for (const contestant of userList) {
-        if (!contestantImageUrls[contestant.id] && !contestant.isSeason) {
-          // Find the season ID for this contestant
-          let seasonId = null;
-          for (const season of survivorSeasons) {
-            if (season.contestants.some(c => c.id === contestant.id)) {
-              seasonId = season.id;
-              break;
-            }
-          }
-          
-          if (seasonId) {
-            try {
-              // Remove the 's' prefix from seasonId if it exists
-              const numericSeasonId = seasonId.startsWith('s') ? seasonId.substring(1) : seasonId;
-              const url = await getContestantImageUrl(contestant, numericSeasonId);
-              newImageUrls[contestant.id] = url;
-            } catch (error) {
-              console.error(`Error loading image for ${contestant.name}:`, error);
-              newImageUrls[contestant.id] = '/images/placeholder.jpg';
-            }
-          }
-        } else if (!contestantImageUrls[contestant.id] && contestant.isSeason) {
-          try {
-            const url = await getSeasonLogoUrl(contestant.id);
-            newImageUrls[contestant.id] = url;
-          } catch (error) {
-            console.error(`Error loading logo for season ${contestant.id}:`, error);
-            newImageUrls[contestant.id] = '/images/placeholder.jpg';
-          }
-        }
-      }
-      
-      setContestantImageUrls(newImageUrls);
-    };
-    
-    loadImages();
-  }, [userList]);
-  
   // <<< ADDED: Effect to load existing list data when editingListId is provided >>>
   useEffect(() => {
     const loadListForEditing = async () => {
@@ -250,7 +202,6 @@ const UserListCreator = ({
     setListDescription('');
     setListTags([]);
     setError('');
-    setContestantImageUrls({});
     // Reset the current list ID when clearing the list
     setCurrentListId(null);
     
@@ -318,8 +269,9 @@ const UserListCreator = ({
             lists: existingLists
           });
           
-          setSaveSuccess(true);
-          setTimeout(() => setSaveSuccess(false), 3000);
+          // Navigate to the updated list page
+          navigate(`/list/${user.uid}/${currentListId}`);
+          
         } else {
           setError('List not found. It may have been deleted.');
         }
@@ -350,13 +302,10 @@ const UserListCreator = ({
         }, { merge: true });
         
         // Store the ID of the newly created list
-        setCurrentListId(newListId);
+        // setCurrentListId(newListId); // No longer needed if we navigate away
         
-        setSaveSuccess(true);
-        setTimeout(() => {
-          setSaveSuccess(false);
-          // Don't clear the form after saving - let the user continue editing the list
-        }, 3000);
+        // Navigate to the new list page
+        navigate(`/list/${user.uid}/${newListId}`);
       }
     } catch (error) {
       console.error("Error saving list:", error);
@@ -786,11 +735,13 @@ const UserListCreator = ({
     // Rerun effect if isMobile changes or listRef becomes available
   }, [isMobile, listRef]); 
 
-  // <<< Update handleTouchStart >>>
+  // <<< REPLACED Touch Handlers (Adapted from GlobalRankings.js) >>>
   const handleTouchStart = (e, index) => {
-    if (!isMobile) return; 
+    // Check if editing is allowed (e.g., not viewing read-only list)
+    // For UserListCreator, we assume it's always editable when this component is active
+    if (!isMobile) return;
 
-    e.stopPropagation(); 
+    e.stopPropagation(); // Prevent triggering parent handlers if needed
     clearTimeout(touchDragTimer.current);
     const currentTarget = e.currentTarget;
     draggedItemElement.current = currentTarget;
@@ -799,255 +750,242 @@ const UserListCreator = ({
     initialTouchX.current = touch.clientX;
     initialTouchY.current = touch.clientY;
 
+    // Start timer to initiate drag
     touchDragTimer.current = setTimeout(() => {
       isTouchDragging.current = true;
       draggedItemIndex.current = index;
       if (currentTarget) {
-          draggedItemHeight.current = currentTarget.offsetHeight; 
-          currentTarget.classList.add('touch-dragging-item');
+          draggedItemHeight.current = currentTarget.offsetHeight; // Store height
+          // Apply dragging class
+          currentTarget.classList.add('touch-dragging-item'); // Or a specific class for UserListCreator
       }
+      // Prevent body scroll
       originalBodyOverflow.current = document.body.style.overflow; 
       document.body.style.overflow = 'hidden';
-      console.log('[TouchDrag - Create] Drag started after delay. Initial Touch Y:', initialTouchY.current);
-    }, 50);
+      console.log('[TouchDrag - UserListCreator] Drag started after delay.');
+    }, 150); // Adjust delay if needed
   };
 
-  // <<< Update handleTouchMove >>>
   const handleTouchMove = (e) => {
     if (!isTouchDragging.current || !isMobile || draggedItemIndex.current === null) return;
     
-    e.preventDefault(); 
+    e.preventDefault(); // Prevent page scroll while dragging item
 
     const touch = e.touches[0];
     const listContainer = listRef.current; 
     const draggedElement = draggedItemElement.current;
     if (!touch || !listContainer || !draggedElement) return;
 
-    // Apply transform to follow finger (existing logic)
+    // Apply transform to follow finger, maybe scale slightly
     const deltaX = touch.clientX - initialTouchX.current;
     const deltaY = touch.clientY - initialTouchY.current;
     draggedElement.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(1.03)`;
 
-    // --- Target Index Calculation using offsetTop --- 
+    // Target Index Calculation based on finger position relative to other items
     const touchY = touch.clientY;
     const listRect = listContainer.getBoundingClientRect();
     const touchRelativeToContainer = touchY - listRect.top;
-    const listItems = Array.from(listContainer.querySelectorAll('.ranking-item'));
+    const listItems = Array.from(listContainer.querySelectorAll('.ranking-item')); // Ensure this selector is correct
     
     let targetIndex = -1;
     let closestItemOriginalIndex = -1;
     let minDistance = Infinity;
 
-    // Find item whose original center is closest to the touch point
+    // Calculate target based on proximity to center of other items
     for (let i = 0; i < listItems.length; i++) {
         const item = listItems[i];
-        if (item === draggedElement) continue; // Skip self
+        // Skip the element currently being dragged
+        if (item === draggedElement) continue;
         
-        const itemOriginalOffsetTop = item.offsetTop;
+        const itemOriginalOffsetTop = item.offsetTop; // Use offsetTop relative to parent
         const itemHeight = item.offsetHeight;
         const itemOriginalCenterY = itemOriginalOffsetTop + itemHeight / 2;
         const distance = Math.abs(touchRelativeToContainer - itemOriginalCenterY);
 
+        // Find the item whose center is closest to the touch point
         if (distance < minDistance) {
             minDistance = distance;
-            const itemIndexAttr = item.dataset.index; 
-            closestItemOriginalIndex = itemIndexAttr !== undefined ? parseInt(itemIndexAttr, 10) : i;
+            closestItemOriginalIndex = i; // Store index relative to CURRENT visible items
         }
     }
-    
-    // Determine target index based on touch relative to closest item's original center
-    if (closestItemOriginalIndex !== -1 && closestItemOriginalIndex < listItems.length) {
-        const closestItem = listItems.find(item => parseInt(item.dataset.index, 10) === closestItemOriginalIndex);
-        if (closestItem) {
-            const closestItemOriginalOffsetTop = closestItem.offsetTop;
-            const closestItemHeight = closestItem.offsetHeight;
-            const closestItemOriginalCenterY = closestItemOriginalOffsetTop + closestItemHeight / 2;
-            
-            // Use the original center for comparison
-            targetIndex = (touchRelativeToContainer < closestItemOriginalCenterY) ? closestItemOriginalIndex : closestItemOriginalIndex + 1;
+
+    // Determine if we are hovering above or below the closest item
+    if (closestItemOriginalIndex !== -1) {
+        const closestItem = listItems[closestItemOriginalIndex];
+        const itemOriginalOffsetTop = closestItem.offsetTop;
+        const itemOriginalCenterY = itemOriginalOffsetTop + closestItem.offsetHeight / 2;
+        
+        // targetIndex is where the dragged item should be inserted *before*
+        if (touchRelativeToContainer < itemOriginalCenterY) {
+            targetIndex = closestItemOriginalIndex;
         } else {
-             // Fallback: Use previous simpler calculation if item not found (shouldn't happen)
-             const draggedHeight = draggedItemHeight.current;
-             if (draggedHeight > 0) {
-                targetIndex = Math.max(0, Math.min(Math.floor(touchRelativeToContainer / draggedHeight), userList.length));
-             } else {
-                 targetIndex = 0;
-             }
-             console.warn("[TouchDrag - Move] Could not find closest item by index for offsetTop calc.");
+            targetIndex = closestItemOriginalIndex + 1;
+        }
+    } else if (listItems.length > 0) { 
+        // If no closest found but list isn't empty, likely near top/bottom
+        if (touchRelativeToContainer < listItems[0].offsetTop + listItems[0].offsetHeight / 2) {
+            targetIndex = 0; // Hovering above the first item
+        } else {
+            targetIndex = listItems.length; // Hovering below the last item
         }
     } else {
-        // If no closest item (e.g., list has only the dragged item, or calculation issue)
-        // Fallback to simple calculation
-        const draggedHeight = draggedItemHeight.current;
-         if (draggedHeight > 0) {
-            targetIndex = Math.max(0, Math.min(Math.floor(touchRelativeToContainer / draggedHeight), userList.length));
-         } else {
-             targetIndex = 0;
-         }
-        console.log("[TouchDrag - Move] No specific closest item for offsetTop calc.");
+        targetIndex = 0; // List was empty, insert at start
     }
-    
-    // Clamp final index
-    targetIndex = Math.max(0, Math.min(targetIndex, userList.length));
-    // console.log(`[TouchDrag - Move] Start: ${draggedItemIndex.current}, Target: ${targetIndex}, Closest Original Idx: ${closestItemOriginalIndex}`);
 
-    // --- Apply Transforms to Create Gap AND Fill Origin (Existing Logic) --- 
-    const draggedHeight = draggedItemHeight.current;
-    const startIndex = draggedItemIndex.current; 
-    if (draggedHeight > 0 && startIndex !== null) {
-        listItems.forEach((item) => {
-            if (item === draggedElement) return;             
-            const itemIndex = parseInt(item.dataset.index, 10);
-            let transformY = 0; 
-            if (targetIndex > startIndex) {
-                if (itemIndex > startIndex && itemIndex < targetIndex) {
-                    transformY = -draggedHeight;
-                }
-            } else if (targetIndex < startIndex) {
-                if (itemIndex >= targetIndex && itemIndex < startIndex) {
-                    transformY = draggedHeight;
-                }
-            }
-            item.style.transform = `translateY(${transformY}px)`;
-        });
-    }
+    // --- Shift items visually --- 
+    const currentDraggedIndex = draggedItemIndex.current;
+    const currentDraggedHeight = draggedItemHeight.current || draggedElement.offsetHeight; // Fallback height
+    const gap = 10; // Assumed gap between items from CSS
+
+    listItems.forEach((item, index) => {
+      if (item === draggedElement) {
+        // Ensure transition is off for the actively moved item
+        item.style.transition = 'none';
+        return; // Don't shift the item being dragged
+      } 
+
+      let shiftY = 0;
+      if (currentDraggedIndex === null) return;
+
+      // Determine shift based on target insertion point and original position
+      if (index >= targetIndex && index < currentDraggedIndex) {
+          // Item is below target insertion, but above original position -> shift down
+          shiftY = currentDraggedHeight + gap;
+      } else if (index < targetIndex && index >= currentDraggedIndex) {
+          // Item is above target insertion, but below original position -> shift up
+          shiftY = -(currentDraggedHeight + gap);
+      } else {
+          // Item is unaffected by this specific drop target relative to original position
+          shiftY = 0;
+      }
+      
+      // Apply smooth transition for shifting items
+      item.style.transition = 'transform 0.2s ease-in-out';
+      item.style.transform = `translateY(${shiftY}px)`;
+    });
   };
 
-  // <<< Update handleTouchEnd >>>
   const handleTouchEnd = (e) => {
-    clearTimeout(touchDragTimer.current); 
-    const wasDragging = isTouchDragging.current;
-    const draggedElement = draggedItemElement.current; // Keep reference
-
-    // --- Clear Transforms and Styles --- 
-    const listContainer = listRef.current; 
-    if(listContainer) {
-        const allItems = listContainer.querySelectorAll('.ranking-item');
-        allItems.forEach(item => {
-          item.style.transform = ''; // Clear transforms from other items
-        });
-    }
-    if (draggedElement) {
-        draggedElement.classList.remove('touch-dragging-item');
-        // <<< Clear transform from the dragged item itself >>>
-        draggedElement.style.transform = ''; 
-    }
-    if (document.body.style.overflow === 'hidden') {
-        document.body.style.overflow = originalBodyOverflow.current;
-    }
-    // --- End Clear Transforms --- 
-
-    // Exit if not actually dragging
-    if (!wasDragging || !isMobile) {
-      // ... (reset refs including initialTouchX/Y) ...
-      isTouchDragging.current = false;
-      draggedItemIndex.current = null;
-      draggedItemElement.current = null;
-      draggedItemHeight.current = 0;
-      initialTouchX.current = 0;
-      initialTouchY.current = 0;
-      return;
+    if (!isMobile || !isTouchDragging.current) { // Check isTouchDragging flag
+      clearTimeout(touchDragTimer.current);
+      touchDragTimer.current = null;
+      return; // Exit if not dragging
     }
     
-    e.preventDefault();
+    clearTimeout(touchDragTimer.current);
+    touchDragTimer.current = null;
     e.stopPropagation();
 
-    const touch = e.changedTouches[0]; 
-    let targetIndex = -1; // Default to invalid
-    
-    // --- Target Index Calculation using offsetTop --- 
-    if (touch && listContainer) { 
-        const listRect = listContainer.getBoundingClientRect();
-        const touchY = touch.clientY;
-        const touchRelativeToContainer = touchY - listRect.top;
-        const listItems = Array.from(listContainer.querySelectorAll('.ranking-item'));
-        
-        let closestItemOriginalIndex = -1;
-        let minDistance = Infinity;
+    const draggedElement = draggedItemElement.current;
+    const startIndex = draggedItemIndex.current;
 
-        for (let i = 0; i < listItems.length; i++) {
+    // Reset visual styles
+    if (draggedElement) {
+      draggedElement.classList.remove('touch-dragging-item');
+      draggedElement.style.transform = '';
+      draggedElement.style.transition = ''; // Let CSS handle transitions again
+    }
+    // Reset shifts on other items
+    Object.values(listItemRefs.current).forEach(el => {
+       if (el && el !== draggedElement) { // Ensure el exists
+         el.style.transform = '';
+         el.style.transition = ''; 
+       }
+     });
+
+    // Restore body scroll
+    document.body.style.overflow = originalBodyOverflow.current;
+
+    // --- Determine Final Drop Target Index --- 
+    const listContainer = listRef.current;
+    let targetIndex = -1;
+    if (listContainer && startIndex !== null) {
+      const listRect = listContainer.getBoundingClientRect();
+      // Use changedTouches as e.touches might be empty
+      const lastTouch = e.changedTouches?.[0]; 
+      
+      if (lastTouch) {
+          const finalTouchY = lastTouch.clientY;
+          const touchRelativeToContainer = finalTouchY - listRect.top;
+          const listItems = Array.from(listContainer.querySelectorAll('.ranking-item'));
+          
+          let closestItemOriginalIndex = -1;
+          let minDistance = Infinity;
+
+          // Find closest item center logic (same as move)
+          for (let i = 0; i < listItems.length; i++) {
             const item = listItems[i];
-            // Allow comparing against the final position of the item being dropped
-            // if (item === draggedElement) continue; 
-            
-            const itemOriginalOffsetTop = item.offsetTop;
+            // Use the static original position, not the potentially transformed one
+            if (i === startIndex) continue; // Skip self
+            const itemOriginalOffsetTop = item.offsetTop; 
             const itemHeight = item.offsetHeight;
             const itemOriginalCenterY = itemOriginalOffsetTop + itemHeight / 2;
             const distance = Math.abs(touchRelativeToContainer - itemOriginalCenterY);
-
             if (distance < minDistance) {
                 minDistance = distance;
-                const itemIndexAttr = item.dataset.index; 
-                closestItemOriginalIndex = itemIndexAttr !== undefined ? parseInt(itemIndexAttr, 10) : i;
+                closestItemOriginalIndex = i; 
             }
-        }
-        
-        if (closestItemOriginalIndex !== -1 && closestItemOriginalIndex < listItems.length) {
-            const closestItem = listItems.find(item => parseInt(item.dataset.index, 10) === closestItemOriginalIndex);
-            if (closestItem) {
-                const closestItemOriginalOffsetTop = closestItem.offsetTop;
-                const closestItemHeight = closestItem.offsetHeight;
-                const closestItemOriginalCenterY = closestItemOriginalOffsetTop + closestItemHeight / 2;
-                targetIndex = (touchRelativeToContainer < closestItemOriginalCenterY) ? closestItemOriginalIndex : closestItemOriginalIndex + 1;
+          }
+          
+          // Determine target index based on closest item
+          if (closestItemOriginalIndex !== -1) {
+            const closestItem = listItems[closestItemOriginalIndex];
+            const itemOriginalOffsetTop = closestItem.offsetTop;
+            const itemOriginalCenterY = itemOriginalOffsetTop + closestItem.offsetHeight / 2;
+            if (touchRelativeToContainer < itemOriginalCenterY) {
+                targetIndex = closestItemOriginalIndex;
             } else {
-                 const draggedHeight = draggedItemHeight.current;
-                 if (draggedHeight > 0) {
-                    targetIndex = Math.max(0, Math.min(Math.floor(touchRelativeToContainer / draggedHeight), userList.length));
-                 } else {
-                     targetIndex = draggedItemIndex.current !== null ? draggedItemIndex.current : 0;
-                 }
-                 console.warn("[TouchDrag - End] Could not find closest item by index for offsetTop calc.");
+                targetIndex = closestItemOriginalIndex + 1;
             }
-        } else {
-             const draggedHeight = draggedItemHeight.current;
-             if (draggedHeight > 0) {
-                targetIndex = Math.max(0, Math.min(Math.floor(touchRelativeToContainer / draggedHeight), userList.length));
-             } else {
-                 targetIndex = draggedItemIndex.current !== null ? draggedItemIndex.current : 0;
-             }
-            console.log("[TouchDrag - End] No specific closest item for offsetTop calc.");
-        }
-        
-        targetIndex = Math.max(0, Math.min(targetIndex, userList.length));
-        console.log(`[TouchDrag - End] TouchY: ${touchY}, TouchRelativeToContainer: ${touchRelativeToContainer.toFixed(2)}, Closest Original Idx: ${closestItemOriginalIndex}, TargetIndex: ${targetIndex}`);
+          } else if (listItems.length > 0) {
+            if (touchRelativeToContainer < listItems[0].offsetTop + listItems[0].offsetHeight / 2) {
+              targetIndex = 0;
+            } else {
+              targetIndex = listItems.length; 
+            }
+          } else {
+            targetIndex = 0;
+          }
 
-    } else if (listContainer && userList.length === 0) {
-        targetIndex = 0; 
+          // Adjust index if dragging downwards past original spot
+          if (targetIndex > startIndex) {
+            targetIndex--;
+          }
+          
+      } else {
+          console.log("[TouchDrag - UserListCreator End] No touch data found on touchend.");
+          targetIndex = startIndex; // Fallback: No move
+      }
+      
+      // --- Perform State Update --- 
+      if (targetIndex !== -1 && targetIndex !== startIndex && startIndex !== null) {
+         console.log(`[TouchDrag - UserListCreator End] Reordering: Item from index ${startIndex} to ${targetIndex}`);
+         // <<< Use userList and setUserList >>>
+         const itemToMove = userList[startIndex]; 
+         const remainingItems = userList.filter((_, i) => i !== startIndex);
+         const newList = [
+            ...remainingItems.slice(0, targetIndex),
+            itemToMove,
+            ...remainingItems.slice(targetIndex)
+         ];
+         setUserList(newList); // Update the state
+      } else {
+         console.log(`[TouchDrag - UserListCreator End] Drop occurred but target index (${targetIndex}) is same as start (${startIndex}) or invalid. No reorder.`);
+      }
     } else {
-        console.warn("[TouchDrag - End] Could not calculate target index (no touch or container).");
-        targetIndex = draggedItemIndex.current !== null ? draggedItemIndex.current : 0; // Fallback
-    }
-    // --- End Target Index Calculation ---
-
-    const startIndex = draggedItemIndex.current;
-
-    // --- Perform Reordering (Existing Logic) --- 
-    if (startIndex !== null && targetIndex !== -1) {
-        let insertIndex = targetIndex;
-        if (startIndex < targetIndex) { 
-            insertIndex = targetIndex - 1; 
-        }
-        
-        console.log(`[TouchDrag - End] Reordering from ${startIndex} to insert position ${insertIndex} (Original target: ${targetIndex})`);
-        const newList = [...userList];
-        const [movedItem] = newList.splice(startIndex, 1);
-        insertIndex = Math.min(insertIndex, newList.length);
-        newList.splice(insertIndex, 0, movedItem);
-        setUserList(newList);
-    } else {
-      console.log(`[TouchDrag - End] Drop occurred on invalid target (Index: ${targetIndex}) or start index was null (${startIndex}). No reorder.`);
+      console.log("[TouchDrag - UserListCreator End] List element or start index missing.");
     }
 
-    // Reset drag state refs AFTER potential reorder
+    // Final state reset
     isTouchDragging.current = false;
     draggedItemIndex.current = null;
-    draggedItemElement.current = null; 
-    draggedItemHeight.current = 0;
+    draggedItemElement.current = null;
     initialTouchX.current = 0;
     initialTouchY.current = 0;
   };
-  
-  // <<< Add useEffect for Desktop DragOver Listener >>>
+  // --- End REPLACED Handlers --- 
+
+  // <<< Keep existing useEffect for Desktop DragOver Listener >>>
   useEffect(() => {
     const listElement = listRef.current;
     if (isMobile || !listElement) return; // Only for desktop and if element exists
@@ -1142,7 +1080,7 @@ const UserListCreator = ({
             <div className="empty-list-message">
               {isMobile ? 
                 "Tap here to open the seasons menu and start adding contestants!" : 
-                "Your list is empty. Start adding contestants!"
+                "Your list is empty. Start adding contestants / seasons by dragging them here!"
               }
             </div>
           ) : (
@@ -1159,7 +1097,7 @@ const UserListCreator = ({
               >
                 <div className="ranking-number">{index + 1}</div>
                 <img
-                  src={contestantImageUrls[contestant.id] || contestant.imageUrl || "/images/placeholder.jpg"}
+                  src={getCachedImageUrl(contestant.id)}
                   alt={contestant.name}
                   className={`contestant-image ${contestant.isSeason ? 'season-logo' : ''}`}
                   draggable={false}

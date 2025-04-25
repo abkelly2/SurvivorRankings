@@ -42,18 +42,50 @@ const ListCreatorPage = ({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const handleAddContestantToListCreator = (contestant) => {
-    const isAlreadyInList = userList.some(
-      item => !item.isEmpty && item.id === contestant.id
-    );
-    if (isAlreadyInList) {
-      console.warn(`${contestant.name} is already in this list.`);
+  const handleAddContestantToListCreator = (itemData, isSeason = false) => {
+    // --- Type Checking --- 
+    const listHasSeasons = userList.some(item => !item.isEmpty && item.isSeason);
+    const listHasContestants = userList.some(item => !item.isEmpty && !item.isSeason);
+    
+    if (isSeason && listHasContestants) {
+      alert("Cannot mix seasons and contestants in the same list. This list already contains individual contestants.");
       return;
     }
     
-    const newList = [...userList, { ...contestant, isEmpty: false }];
+    if (!isSeason && listHasSeasons) {
+      alert("Cannot mix seasons and contestants in the same list. This list already contains seasons.");
+      return;
+    }
+    // --- End Type Checking ---
+    
+    // Check if the specific item (contestant or season) is already in the list
+    const isAlreadyInList = userList.some(
+      item => !item.isEmpty && item.id === itemData.id
+    );
+    
+    if (isAlreadyInList) {
+      // Handle seasons differently - perhaps allow adding even if present? Or show different warning?
+      // For now, just warn and return for both.
+      console.warn(`${itemData.name} is already in this list.`);
+      return;
+    }
+    
+    // Create the new item, adding the isSeason flag if provided
+    const newItem = { 
+      ...itemData, 
+      isEmpty: false,
+      ...(isSeason && { isSeason: true }) // Conditionally add isSeason property
+    };
+    
+    const newList = [...userList, newItem];
     setUserList(newList);
-    console.log(`Added ${contestant.name} via mobile click to ListCreator (length: ${newList.length})`);
+    
+    // Log appropriately based on type
+    if (isSeason) {
+      console.log(`Added Season: ${itemData.name} via mobile click to ListCreator (length: ${newList.length})`);
+    } else {
+      console.log(`Added Contestant: ${itemData.name} via mobile click to ListCreator (length: ${newList.length})`);
+    }
   };
 
   useEffect(() => {

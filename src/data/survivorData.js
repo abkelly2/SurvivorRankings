@@ -1054,5 +1054,30 @@ export const survivorSeasons = [
       { id: "terran-foster", name: "Terran Foster" },
       { id: "tiyana-hallums", name: "Tiyana Hallums" }
     ]
+  },
+
+  {
+    id: "s48",
+    name: "Survivor 48",
+    contestants: [
+      { id: "bianca-roses", name: "Bianca Roses" },
+      { id: "cedrek-mcfadden", name: "Cedrek McFadden" },
+      { id: "charity-nelms", name: "Charity Nelms" },
+      { id: "chrissy-sarnowsky", name: "Chrissy Sarnowsky" },
+      { id: "david-kinne", name: "David Kinne" },
+      { id: "eva-erickson", name: "Eva Erickson" },
+      { id: "mary-zheng", name: "Mary Zheng" },
+      { id: "kyle-fraser", name: "Kyle Fraser" },
+      { id: "kevin-leung", name: "Kevin Leung" },
+      { id: "kamilla-karthigesu", name: "Kamilla Karthigesu" },
+      { id: "justin-pioppi", name: "Justin Pioppi" },
+      { id: "joe-hunter", name: "Joe Hunter" },
+      { id: "mitch-guerra", name: "Mitch Guerra" },
+      { id: "saiounia-hughley", name: "Saiounia Hughley" },
+      { id: "shauhin-davari", name: "Shauhin Davari" },
+      { id: "star-toomey", name: "Star Toomey" },
+      { id: "stephanie-berger", name: "Stephanie Berger" },
+      { id: "thomas-krottinger", name: "Thomas Krottinger" }
+    ]
   }
 ]; 

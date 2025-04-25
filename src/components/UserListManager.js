@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db, auth } from '../firebase';
-import { doc, getDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, deleteDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
 import './UserListManager.css';
 
@@ -13,6 +13,7 @@ const UserListManager = ({ user, onSelectList, onCreateNew }) => {
   const [newUsername, setNewUsername] = useState('');
   const [usernameChangeSuccess, setUsernameChangeSuccess] = useState(false);
   const [usernameError, setUsernameError] = useState('');
+  const [userIdols, setUserIdols] = useState(0);
 
   // Initialize new username from current display name when user object is available
   useEffect(() => {
@@ -59,6 +60,30 @@ const UserListManager = ({ user, onSelectList, onCreateNew }) => {
     loadUserLists();
   }, [user]);
   
+  // Fetch user's idols count
+  useEffect(() => {
+    const fetchUserIdols = async () => {
+      if (user) {
+        try {
+          const userRef = doc(db, 'users', user.uid);
+          const userDoc = await getDoc(userRef);
+          if (userDoc.exists() && userDoc.data().hasOwnProperty('idolsFound')) {
+            setUserIdols(userDoc.data().idolsFound);
+          } else {
+            setUserIdols(0);
+          }
+        } catch (error) {
+          console.error('Error fetching user idols:', error);
+          setUserIdols(0);
+        }
+      } else {
+        setUserIdols(0);
+      }
+    };
+    
+    fetchUserIdols();
+  }, [user]);
+  
   const handleUsernameChange = async () => {
     if (!newUsername || newUsername.trim() === '') {
       setUsernameError('Username cannot be empty');
@@ -66,13 +91,62 @@ const UserListManager = ({ user, onSelectList, onCreateNew }) => {
     }
 
     try {
+      // Check if username already exists in users collection
+      console.log('Checking username:', newUsername);
+      const usersRef = collection(db, 'users');
+      const querySnapshot = await getDocs(usersRef);
+      console.log('Total users found:', querySnapshot.size);
+
+      let existingUser = null;
+      querySnapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.displayName && data.displayName.toLowerCase() === newUsername.toLowerCase() && doc.id !== user.uid) {
+          console.log('Username already taken by user ID:', doc.id);
+          existingUser = doc;
+        }
+      });
+
+      if (existingUser) {
+        setUsernameError('This username is already taken (case-insensitive match). Please choose another.');
+        return;
+      }
+
+      // If not found in users, check in userLists collection as well
+      const userListsRef = collection(db, 'userLists');
+      const listsQuery = query(userListsRef);
+      const listsSnapshot = await getDocs(listsQuery);
+      console.log('Checking userLists collection for username:', newUsername);
+      let foundInLists = false;
+      listsSnapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.lists && data.lists.length > 0) {
+          data.lists.forEach(list => {
+            if (list.userName && list.userName.toLowerCase() === newUsername.toLowerCase() && doc.id !== user.uid) {
+              console.log('Username found in userLists for user ID:', doc.id);
+              foundInLists = true;
+            }
+          });
+        }
+      });
+
+      if (foundInLists) {
+        setUsernameError('This username is already taken (case-insensitive match). Please choose another.');
+        return;
+      }
+
       // Update Firebase Auth profile
       await updateProfile(auth.currentUser, {
         displayName: newUsername
       });
       
+      // Update user document in Firestore
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, {
+        displayName: newUsername
+      });
+      
       // Update all lists with the new username
-      const userDocRef = doc(db, "userLists", user.uid);
+      const userDocRef = doc(db, 'userLists', user.uid);
       const userDoc = await getDoc(userDocRef);
       
       if (userDoc.exists() && userDoc.data().lists) {
@@ -164,6 +238,12 @@ const UserListManager = ({ user, onSelectList, onCreateNew }) => {
   return (
     <div className="user-list-manager">
       <h2 className="section-title">My Survivor Rankings</h2>
+      
+      {user && (
+        <div className="user-idols" style={{ fontSize: '1.2rem', color: '#ffcc00', marginTop: '10px', fontWeight: 'bold' }}>
+          Hidden Immunity Idols: {userIdols} 🏆
+        </div>
+      )}
       
       <div className="user-profile-section">
         {isEditingUsername ? (
