@@ -14,6 +14,7 @@ import {
 import { UserProvider } from './UserContext';
 import GlobalRankingsIcon from './images/GlobalRankings.png';
 import { preloadImages } from './utils/imageCache';
+import Notifications from './components/Notifications';
 
 // Import pages
 import HomePage from './pages/HomePage';
@@ -247,6 +248,9 @@ function App() {
             )}
             
             <div className="user-actions">
+                {/* Notifications Button */}
+                {user && <Notifications />}
+                
                 {/* My Lists Button */} 
                 <button 
                   onClick={() => user ? navigateToMyLists() : navigate('/login')}
@@ -266,18 +270,11 @@ function App() {
                     Sign Out
                   </button>
                  ) : (
-                   <button onClick={() => navigate('/login')} className="login-button"> {/* Use a different class if needed */} 
+                   <button onClick={() => navigate('/login')} className="login-button">
                     Login
                   </button>
                 )}
             </div>
-            
-            {/* Show last updated only if logged in (optional, could be moved) */} 
-            {user && lastUpdated && !createMode && !showUserLists && !showOtherLists && (
-              <p className="last-updated">
-                Last updated: {new Date(lastUpdated).toLocaleString()}
-              </p>
-            )}
           </div>
         </header>
         <main>

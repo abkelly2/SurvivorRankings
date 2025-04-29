@@ -339,6 +339,21 @@ export const signInWithEmail = async (email, password) => {
 export const signUpWithEmail = async (email, password) => {
   try {
     const result = await createUserWithEmailAndPassword(auth, email, password);
+    
+    // Set a default display name based on the email
+    const defaultDisplayName = email.split('@')[0];
+    await updateProfile(result.user, {
+      displayName: defaultDisplayName
+    });
+    
+    // Create a user document in Firestore
+    const userRef = doc(db, 'users', result.user.uid);
+    await setDoc(userRef, {
+      displayName: defaultDisplayName,
+      email: email,
+      createdAt: serverTimestamp()
+    });
+    
     return result;
   } catch (error) {
     console.error("Error signing up with email:", error);

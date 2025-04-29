@@ -157,7 +157,7 @@ const UserListCreator = ({
             console.error(`[UserListCreator] User document not found or has no lists: ${user.uid}`);
             setError('Failed to load user data for editing.');
           }
-        } catch (error) {
+            } catch (error) {
           console.error('[UserListCreator] Error loading list for editing:', error);
           setError('An error occurred while loading the list.');
         }
@@ -739,7 +739,7 @@ const UserListCreator = ({
   const handleTouchStart = (e, index) => {
     // Check if editing is allowed (e.g., not viewing read-only list)
     // For UserListCreator, we assume it's always editable when this component is active
-    if (!isMobile) return;
+    if (!isMobile) return; 
 
     e.stopPropagation(); // Prevent triggering parent handlers if needed
     clearTimeout(touchDragTimer.current);
@@ -825,7 +825,7 @@ const UserListCreator = ({
         // If no closest found but list isn't empty, likely near top/bottom
         if (touchRelativeToContainer < listItems[0].offsetTop + listItems[0].offsetHeight / 2) {
             targetIndex = 0; // Hovering above the first item
-        } else {
+             } else {
             targetIndex = listItems.length; // Hovering below the last item
         }
     } else {
@@ -867,7 +867,7 @@ const UserListCreator = ({
 
   const handleTouchEnd = (e) => {
     if (!isMobile || !isTouchDragging.current) { // Check isTouchDragging flag
-      clearTimeout(touchDragTimer.current);
+    clearTimeout(touchDragTimer.current); 
       touchDragTimer.current = null;
       return; // Exit if not dragging
     }
@@ -881,8 +881,8 @@ const UserListCreator = ({
 
     // Reset visual styles
     if (draggedElement) {
-      draggedElement.classList.remove('touch-dragging-item');
-      draggedElement.style.transform = '';
+        draggedElement.classList.remove('touch-dragging-item');
+        draggedElement.style.transform = ''; 
       draggedElement.style.transition = ''; // Let CSS handle transitions again
     }
     // Reset shifts on other items
@@ -900,24 +900,24 @@ const UserListCreator = ({
     const listContainer = listRef.current;
     let targetIndex = -1;
     if (listContainer && startIndex !== null) {
-      const listRect = listContainer.getBoundingClientRect();
+        const listRect = listContainer.getBoundingClientRect();
       // Use changedTouches as e.touches might be empty
       const lastTouch = e.changedTouches?.[0]; 
       
       if (lastTouch) {
           const finalTouchY = lastTouch.clientY;
           const touchRelativeToContainer = finalTouchY - listRect.top;
-          const listItems = Array.from(listContainer.querySelectorAll('.ranking-item'));
-          
-          let closestItemOriginalIndex = -1;
-          let minDistance = Infinity;
+        const listItems = Array.from(listContainer.querySelectorAll('.ranking-item'));
+        
+        let closestItemOriginalIndex = -1;
+        let minDistance = Infinity;
 
           // Find closest item center logic (same as move)
-          for (let i = 0; i < listItems.length; i++) {
+        for (let i = 0; i < listItems.length; i++) {
             const item = listItems[i];
             // Use the static original position, not the potentially transformed one
             if (i === startIndex) continue; // Skip self
-            const itemOriginalOffsetTop = item.offsetTop; 
+            const itemOriginalOffsetTop = item.offsetTop;
             const itemHeight = item.offsetHeight;
             const itemOriginalCenterY = itemOriginalOffsetTop + itemHeight / 2;
             const distance = Math.abs(touchRelativeToContainer - itemOriginalCenterY);
@@ -940,10 +940,10 @@ const UserListCreator = ({
           } else if (listItems.length > 0) {
             if (touchRelativeToContainer < listItems[0].offsetTop + listItems[0].offsetHeight / 2) {
               targetIndex = 0;
-            } else {
+                 } else {
               targetIndex = listItems.length; 
             }
-          } else {
+        } else {
             targetIndex = 0;
           }
 
@@ -952,7 +952,7 @@ const UserListCreator = ({
             targetIndex--;
           }
           
-      } else {
+    } else {
           console.log("[TouchDrag - UserListCreator End] No touch data found on touchend.");
           targetIndex = startIndex; // Fallback: No move
       }
@@ -979,7 +979,7 @@ const UserListCreator = ({
     // Final state reset
     isTouchDragging.current = false;
     draggedItemIndex.current = null;
-    draggedItemElement.current = null;
+    draggedItemElement.current = null; 
     initialTouchX.current = 0;
     initialTouchY.current = 0;
   };
@@ -1156,4 +1156,5 @@ const UserListCreator = ({
 export default UserListCreator; 
  
  
-  
+ 
+ 

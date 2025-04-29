@@ -4,6 +4,7 @@
 const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 // Import the admin SDK
 const admin = require("firebase-admin");
+const { onCreateListLike, onCreateCommentLike, onCreateComment } = require('./src/notifications');
 
 // Initialize Admin SDK (should only happen once)
 admin.initializeApp();
@@ -173,3 +174,8 @@ exports.calculateGlobalRanking = onDocumentWritten("userGlobalRankings/{userId}"
 
     return null; // Indicate function finished
 });
+
+// Export the notification functions
+exports.onCreateListLike = onCreateListLike;
+exports.onCreateCommentLike = onCreateCommentLike;
+exports.onCreateComment = onCreateComment;

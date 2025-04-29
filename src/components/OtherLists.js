@@ -1266,14 +1266,14 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
              <div className="list-description-container"> {/* New container for description and tags */}
                <p className="list-description">{selectedList.description}</p>
                {(selectedList.tags && selectedList.tags.length > 0) && (
-                  <div className="full-list-tags">
+          <div className="full-list-tags">
                     {selectedList.tags.filter(t => t !== 'season-ranking' && t !== 'survivor-ranking').map(tag => <span key={tag} className={`list-tag ${tag === 'spoiler' ? 'spoiler-tag' : ''}`}>{tag}</span>)}
                  </div>
-               )}
+            )}
              </div>
-           )}
+            )}
           </div>
-
+          
         {/* --- Mobile Buttons Container (Placed Above Ranking List) --- */} 
         {isMobile && (
           <div className="mobile-list-actions-container">
@@ -1295,8 +1295,8 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
               >
                 Edit My List
               </button>
-            )}
-          </div>
+          )}
+        </div>
         )}
         {/* --- End Mobile Buttons Container --- */}
         
@@ -1314,9 +1314,9 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
                     draggable="false"
                   />
                   <div className={contestant.isSeason ? "season-name" : "contestant-name"} style={{ color: '#000000' }}>
-                      {contestant.isSeason 
-                        ? contestant.name.replace('Survivor: ', '').replace('Survivor ', '') 
-                        : contestant.name}
+                    {contestant.isSeason 
+                      ? contestant.name.replace('Survivor: ', '').replace('Survivor ', '') 
+                      : contestant.name}
                   </div>
                 </div>
               ))
@@ -1532,10 +1532,10 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
                 <button onClick={handleDownloadImage} className="download-image-button">Download Image</button>
                 <button onClick={closeShareModal} className="close-modal-button">Close</button>
           </div>
-                </div>
-                </div>
-        )}
-
+          </div>
+        </div>
+      )}
+    
                   </div>
     );
   }
@@ -1620,13 +1620,13 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
                         const tagInfo = availableTags.find(t => t.id === tagId);
                         const label = tagInfo ? tagInfo.label : tagId; // Fallback to ID if not in predefined
                         return (
-                          <button
+                      <button
                             key={tagId}
                             className={selectedTags.includes(tagId) ? 'tag-button selected' : 'tag-button'}
                             onClick={() => handleTagSelect(tagId)}
                           >
                             {label}
-                          </button>
+                      </button>
                         );
                      })
                     }
@@ -1637,94 +1637,94 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
           </>
         )}
       </div>
-
+      
       {loading ? (
           <div className="loading">Loading lists...</div>
       ) : sortedLists.length === 0 ? (
           <div className="no-lists-message">No lists found matching your criteria.</div>
       ) : (
         <>
-          <div className="public-lists-grid other-rankings-grid">
+        <div className="public-lists-grid other-rankings-grid">
               {paginatedLists.map(list => (
-                <div 
-                  key={`${list.userId}-${list.id}`} 
+            <div 
+              key={`${list.userId}-${list.id}`} 
                   className="other-rankings-list-container" 
-                  onClick={() => viewFullList(list)}
-                >
+              onClick={() => viewFullList(list)}
+            >
                     <div className="top-left-favorite" onClick={(e) => e.stopPropagation()}> {/* Prevent card click */} 
-                      <button 
-                        className={`favorite-button ${isFavorited(list.userId, list.id) ? 'favorited' : ''}`}
-                        onClick={(e) => toggleFavorite(list.userId, list.id, list.name, e)}
-                        disabled={!user}
-                        title={user ? (isFavorited(list.userId, list.id) ? "Remove from favorites" : "Add to favorites") : "Login to favorite lists"}
-                      >
-                        <span className="favorite-icon">★</span>
-                      </button>
-                    </div>
-                  
+                  <button 
+                    className={`favorite-button ${isFavorited(list.userId, list.id) ? 'favorited' : ''}`}
+                    onClick={(e) => toggleFavorite(list.userId, list.id, list.name, e)}
+                    disabled={!user}
+                    title={user ? (isFavorited(list.userId, list.id) ? "Remove from favorites" : "Add to favorites") : "Login to favorite lists"}
+                  >
+                    <span className="favorite-icon">★</span>
+                  </button>
+                </div>
+              
                   <div className="top-right-upvote" onClick={(e) => e.stopPropagation()}> {/* Prevent card click */} 
-                      <button 
-                        className={`upvote-button ${hasUserUpvoted(list) ? 'upvoted' : ''}`}
-                        onClick={(e) => {
+                  <button 
+                    className={`upvote-button ${hasUserUpvoted(list) ? 'upvoted' : ''}`}
+                    onClick={(e) => {
                           e.stopPropagation(); // Prevent card click
                           handleUpvote(list.userId, list.id, e); // Pass event
-                        }}
-                        disabled={!user}
+                    }}
+                    disabled={!user}
                         title={user ? (hasUserUpvoted(list) ? "Remove upvote" : "Upvote this list") : "Sign in to upvote"}
-                      >
-                      <span className="upvote-icon">▲</span>
-                      <span className="upvote-count">{list.upvoteCount || 0}</span>
-                      </button>
-                  </div>
-                  
-                  <h2 className="list-title">{list.name}</h2>
-                  
-                  <p className="list-creator">
-                    By <span 
-                      className="username"
-                      onClick={(e) => {
+                  >
+                  <span className="upvote-icon">▲</span>
+                  <span className="upvote-count">{list.upvoteCount || 0}</span>
+                  </button>
+              </div>
+              
+              <h2 className="list-title">{list.name}</h2>
+              
+              <p className="list-creator">
+                By <span 
+                  className="username"
+                  onClick={(e) => {
                         e.stopPropagation(); // Prevent card click
-                        viewUserLists(list.userId, list.userName, e);
-                      }}
-                      title="View all rankings by this user"
-                    >
-                      {list.userName || "Unknown User"}
-                    </span>
-                  </p>
-                  
-                  {list.tags && list.tags.includes('spoiler') && (
-                    <div className="spoiler-warning">Contains Spoilers</div>
-                  )}
-                  
+                    viewUserLists(list.userId, list.userName, e);
+                  }}
+                  title="View all rankings by this user"
+                >
+                  {list.userName || "Unknown User"}
+                </span>
+              </p>
+              
+              {list.tags && list.tags.includes('spoiler') && (
+                <div className="spoiler-warning">Contains Spoilers</div>
+              )}
+              
                   <div className={`other-rankings-list clickable ${list.tags && list.tags.includes('spoiler') ? 'spoiler-blur' : ''}`}> 
-                    {list.contestants && list.contestants.length > 0 ? (
-                      list.contestants.slice(0, 3).map((contestant, index) => (
-                        <div
-                          key={`${contestant.id}-${index}`}
-                          className="ranking-item"
-                        >
-                          <div className="ranking-number">{index + 1}</div>
-                          <img
+                {list.contestants && list.contestants.length > 0 ? (
+                  list.contestants.slice(0, 3).map((contestant, index) => (
+                    <div
+                      key={`${contestant.id}-${index}`}
+                      className="ranking-item"
+                    >
+                      <div className="ranking-number">{index + 1}</div>
+                      <img
                             src={getCachedImageUrl(contestant.id)}
-                            alt={contestant.name}
+                        alt={contestant.name}
                             className={`contestant-image rankings-grid-image ${contestant.isSeason ? 'season-logo' : ''}`}
-                            draggable="false"
-                          />
+                        draggable="false"
+                      />
                           <div className={contestant.isSeason ? "season-name" : "contestant-name"} style={{ color: '#000000' }}>
-                              {contestant.isSeason 
-                                ? contestant.name.replace('Survivor: ', '').replace('Survivor ', '') 
-                                : contestant.name}
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="other-rankings-empty-list-message"> 
-                        This list is empty
+                          {contestant.isSeason 
+                            ? contestant.name.replace('Survivor: ', '').replace('Survivor ', '') 
+                            : contestant.name}
                       </div>
-                    )}
+                    </div>
+                  ))
+                ) : (
+                      <div className="other-rankings-empty-list-message"> 
+                    This list is empty
                   </div>
-                </div>
-              ))}
+                )}
+              </div>
+            </div>
+          ))}
           </div>
           {/* Pagination Controls */}
           {totalPages > 1 && (

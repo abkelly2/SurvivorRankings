@@ -81,7 +81,7 @@ const GlobalRankings = ({ seasonListRef }) => {
   const [replyingTo, setReplyingTo] = useState(null); // { id: commentId, userName: commentUserName }
   const [replyText, setReplyText] = useState('');
   // ---------------------
-  
+
   // Sample data for the list cards - this would be replaced with real data from your API
   const sampleLists = [
     {
@@ -492,14 +492,14 @@ const GlobalRankings = ({ seasonListRef }) => {
     const listElement = listRef.current;
     if (listElement && !listElement.contains(e.relatedTarget)) {
         console.log("[Desktop Drag Leave] Left list container.");
-        setDragOver(false);
+    setDragOver(false);
         // Clear transforms when leaving the container
         const allItems = listElement.querySelectorAll('.ranking-item'); 
         allItems.forEach(item => item.style.transform = '');
         desktopDropTargetIndexRef.current = null; // Reset target index
     }
   };
-
+  
   // Handle drag start for reordering within the list
   const handleItemDragStart = (e, index) => {
     if (!isEditable || isMobile) return; 
@@ -561,7 +561,7 @@ const GlobalRankings = ({ seasonListRef }) => {
         draggedElement.classList.remove('drag-source--hidden');
     } else if (e.currentTarget) {
          // Fallback to currentTarget if querySelector failed (less reliable)
-         e.currentTarget.classList.remove('dragging-item');
+        e.currentTarget.classList.remove('dragging-item');
          e.currentTarget.classList.remove('drag-source--hidden');
     }
     
@@ -603,8 +603,8 @@ const GlobalRankings = ({ seasonListRef }) => {
       
         // Calculate final insertion index
         let insertIndex = targetIndex;
-        if (fromIndex < targetIndex) { 
-            insertIndex = targetIndex - 1; 
+        if (fromIndex < targetIndex) {
+            insertIndex = targetIndex - 1;
         }
         // Clamp insert index to valid range
         insertIndex = Math.max(0, Math.min(insertIndex, currentRanking.contestants.length -1)); 
@@ -614,9 +614,9 @@ const GlobalRankings = ({ seasonListRef }) => {
         // No reorder if indices are effectively the same
         if (fromIndex === insertIndex) {
             console.log("[Desktop Drop Reorder] Same index, no reorder needed.");
-        return;
-      }
-      
+            return;
+        }
+
         // Perform state update
         const newList = [...currentRanking.contestants];
         const [movedItem] = newList.splice(fromIndex, 1);
@@ -860,19 +860,19 @@ const GlobalRankings = ({ seasonListRef }) => {
               const isFirstEmptySlot = !hasUserSubmitted && index === 0 && contestant.isEmpty;
 
               return (
-              <div
-                key={`${contestant.id}-${index}`}
-                className={`ranking-item ${contestant.isEmpty ? 'empty-slot' : ''}`}
-              >
+                <div
+                  key={`${contestant.id}-${index}`}
+                  className={`ranking-item ${contestant.isEmpty ? 'empty-slot' : ''}`}
+                >
                   <div className={`ranking-number ${!hasUserSubmitted ? 'number-hidden' : ''}`}>
                     {index + 1}
                   </div>
-                <img
-                  src={contestant.imageUrl || "/images/placeholder.jpg"}
-                  alt={contestant.name}
+                  <img
+                    src={contestant.imageUrl || "/images/placeholder.jpg"}
+                    alt={contestant.name}
                     className={`contestant-image ${contestant.isSeason ? 'season-logo' : ''} ${contestant.isEmpty ? 'placeholder-hidden' : ''}`}
-                  draggable="false"
-                />
+                    draggable="false"
+                  />
                   <div 
                     className={`${contestant.isSeason ? "season-name" : "contestant-name"} ${contestant.isEmpty ? 'empty-name' : ''} ${contestant.isEmpty && !isFirstEmptySlot ? 'placeholder-hidden' : ''}`} 
                     style={{ color: contestant.isEmpty ? '#999' : '#000000' }}
@@ -883,13 +883,13 @@ const GlobalRankings = ({ seasonListRef }) => {
                             ? contestant.name
                             : (contestant.isSeason 
                                 ? contestant.name.replace("Survivor: ", "").replace("Survivor ", "") 
-                      : contestant.name)
-                  }
+                                : contestant.name)
+                    }
                     {contestant.totalScore !== undefined && 
                       <span className="global-score"> {contestant.totalScore} pts</span>
-                  }
+                    }
+                  </div>
                 </div>
-              </div>
               );
             })
           )}
@@ -1406,7 +1406,7 @@ const GlobalRankings = ({ seasonListRef }) => {
           <h2>{selectedList.name}</h2>
           
           {/* Description (Now directly follows title) */}
-        {selectedList.description && (
+          {selectedList.description && (
             <p className="list-description-inline">{selectedList.description}</p>
           )}
           
@@ -1427,32 +1427,32 @@ const GlobalRankings = ({ seasonListRef }) => {
                  : 'Log in to create or edit your ranking.' // Message if not logged in
              }
            </p>
-         {(userHasSubmitted === true || isEditable) && (
+        {(userHasSubmitted === true || isEditable) && (
              <>
-             {/* Toggle Button - Only show if user HAS submitted */}
-             {userHasSubmitted === true && (
-               <button onClick={toggleView} className="toggle-view-button">
-                 {showingGlobalRanking ? 'View/Edit My Submission' : 'View Global Ranking'}
-               </button>
-             )}
+            {/* Toggle Button - Only show if user HAS submitted */}
+            {userHasSubmitted === true && (
+              <button onClick={toggleView} className="toggle-view-button">
+                {showingGlobalRanking ? 'View/Edit My Submission' : 'View Global Ranking'}
+              </button>
+            )}
 
-             {/* Submit Button & Feedback (Only shows when editable) */}
-             {isEditable && (
-               <>
-                 {submitSuccess && <div className="submit-feedback success">Ranking Submitted!</div>}
-                 {submitError && <div className="submit-feedback error">{submitError}</div>}
-                 <button
-                   onClick={handleSubmitRanking}
-                   disabled={isSubmitting || !user} // Ensure user check here too
-                   className="submit-global-ranking-button"
-                 >
-                   {isSubmitting ? 'Submitting...' : 'Submit My Ranking'}
-                 </button>
-                 {!user && <p className="login-prompt">Please log in to submit your ranking.</p>}
-               </>
-             )}
+            {/* Submit Button & Feedback (Only shows when editable) */}
+            {isEditable && (
+              <>
+                {submitSuccess && <div className="submit-feedback success">Ranking Submitted!</div>}
+                {submitError && <div className="submit-feedback error">{submitError}</div>}
+                <button
+                  onClick={handleSubmitRanking}
+                  disabled={isSubmitting || !user} // Ensure user check here too
+                  className="submit-global-ranking-button"
+                >
+                  {isSubmitting ? 'Submitting...' : 'Submit My Ranking'}
+                </button>
+                {!user && <p className="login-prompt">Please log in to submit your ranking.</p>}
+              </>
+            )}
              </>
-         )}
+        )}
          </div>
 
         {/* Ranking List Area */}
@@ -1476,23 +1476,23 @@ const GlobalRankings = ({ seasonListRef }) => {
                                 : null;
 
                               return (
-                              <div key={`${contestant.id}-${index}`} className="ranking-item">
-                                  <div className="ranking-number">{index + 1}</div>
-                                  <img
-                                      src={contestant.imageUrl || "/images/placeholder.jpg"}
-                                      alt={contestant.name}
+                                <div key={`${contestant.id}-${index}`} className="ranking-item">
+                                    <div className="ranking-number">{index + 1}</div>
+                                    <img
+                                        src={contestant.imageUrl || "/images/placeholder.jpg"}
+                                        alt={contestant.name}
                                         className={`contestant-image`} 
-                                      draggable="false"
-                                  />
-                                  <div className="contestant-name">
-                                      {contestant.name}
+                                        draggable="false"
+                                    />
+                                    <div className="contestant-name">
+                                        {contestant.name}
                                         {/* Show total points if available */} 
                                         {contestant.totalScore !== undefined && 
                                           <span className="global-score"> {contestant.totalScore} pts</span> 
-                                      }
-                                  </div>
+                                        }
+                                    </div>
                                     {/* Optionally show vote count: <span className="global-votes">{currentListTotalVotes} votes</span> */}
-                              </div>
+                                </div>
                               );
                           })
                       ) : (
