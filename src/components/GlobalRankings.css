@@ -38,6 +38,7 @@
   display: flex;
   gap: 30px;
   flex-wrap: wrap;
+  justify-content: center;
   width: 100%;
   margin-bottom: 30px;
 }
@@ -608,7 +609,7 @@
      margin-top: 15px;
   }
 }/* <<< ADD styles for the individual list card container - PREFIXED >>> */
-.global-rankings-page-wrapper .ranking-list-container {
+.global-rankings-page-wrapper > .global-lists-container > .ranking-list-container {
   background-color: rgba(20, 20, 20, 0.9); 
   
   /* <<< Remove background image and animation properties >>> */
@@ -625,9 +626,9 @@
   border: 2px solid #ffd700; 
   border-radius: 12px; 
   padding: 25px; 
-  flex: 1 1 360px; 
-  min-width: 320px; 
-  max-width: calc(50% - 20px); 
+  flex: 1 1 500px; /* Increased flex-basis */
+  min-width: 400px; /* Increased min-width */
+  max-width: 700px !important; /* TESTING: Added !important */
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3), 
               inset 0 0 10px rgba(255, 215, 0, 0.2); 
   transition: transform 0.25s ease-in-out, box-shadow 0.25s ease-in-out;

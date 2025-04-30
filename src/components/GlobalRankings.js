@@ -85,29 +85,14 @@ const GlobalRankings = ({ seasonListRef }) => {
   // Sample data for the list cards - this would be replaced with real data from your API
   const sampleLists = [
     {
-      id: 'goat-strategy',
-      name: 'Greatest Strategy',
-      userName: 'SurvivorGuru',
-      createdAt: new Date().toISOString(),
-      description: 'Vote for the greatest strategic players in Survivor history',
-      contestants: Array(10).fill(null).map((_, i) => ({ id: `slot-strategy-${i+1}`, name: `Vote for #${i+1}`, imageUrl: '/images/placeholder.jpg', isEmpty: true }))
-    },
-    {
-      id: 'goat-social',
-      name: 'Greatest Social',
-      userName: 'IslandFan',
-      createdAt: new Date().toISOString(),
-      description: 'Vote for the greatest social players in Survivor history',
-      contestants: Array(10).fill(null).map((_, i) => ({ id: `slot-social-${i+1}`, name: `Vote for #${i+1}`, imageUrl: '/images/placeholder.jpg', isEmpty: true }))
-    },
-    {
-      id: 'goat-competitor',
-      name: 'Greatest Competitor',
-      userName: 'StrategicMoves',
-      createdAt: new Date().toISOString(),
-      description: 'Vote for the greatest challenge competitors in Survivor history',
-      contestants: Array(10).fill(null).map((_, i) => ({ id: `slot-competitor-${i+1}`, name: `Vote for #${i+1}`, imageUrl: '/images/placeholder.jpg', isEmpty: true }))
+      id: 'season-48',
+      name: 'Season 48',
+      userName: 'Global Rankings',
+      createdAt: new Date().toISOString(), // Use a consistent creation time or fetch it?
+      description: 'Vote for your favorite castaways from Survivor Season 48!',
+      contestants: Array(10).fill(null).map((_, i) => ({ id: `slot-s48-${i+1}`, name: `Vote for #${i+1}`, imageUrl: '/images/placeholder.jpg', isEmpty: true }))
     }
+    // Removed other sample lists
   ];
 
   // Effect to find the selected list, load user's ranking, check submission status, and load global ranking if needed
@@ -174,27 +159,27 @@ const GlobalRankings = ({ seasonListRef }) => {
         // --- MODIFIED: Fetch global ranking regardless of submission status --- 
         // Default to showing global view if user HAS submitted OR if user is NOT logged in
         setShowingGlobalRanking(submitted || !user); 
-        setLoadingGlobalRanking(true);
-        const globalRankingRef = doc(db, 'globalRankingsData', listId);
-        try {
-          const globalSnap = await getDoc(globalRankingRef);
-          if (globalSnap.exists()) {
-            const globalData = globalSnap.data();
-            setGlobalTop10(globalData.top10 || []);
-            setCurrentListTotalVotes(globalData.totalVotes || 0);
-            console.log(`Loaded global top 10 and total votes (${globalData.totalVotes || 0}) for:`, listId);
-          } else {
-            console.log("No global ranking data found for:", listId);
+          setLoadingGlobalRanking(true);
+          const globalRankingRef = doc(db, 'globalRankingsData', listId);
+          try {
+            const globalSnap = await getDoc(globalRankingRef);
+            if (globalSnap.exists()) {
+              const globalData = globalSnap.data();
+              setGlobalTop10(globalData.top10 || []);
+              setCurrentListTotalVotes(globalData.totalVotes || 0);
+              console.log(`Loaded global top 10 and total votes (${globalData.totalVotes || 0}) for:`, listId);
+            } else {
+              console.log("No global ranking data found for:", listId);
+              setGlobalTop10([]);
+              setCurrentListTotalVotes(0);
+            }
+          } catch (error) {
+            console.error("Error loading global ranking:", error);
+            setErrorGlobalRanking('Failed to load global ranking.');
             setGlobalTop10([]);
             setCurrentListTotalVotes(0);
-          }
-        } catch (error) {
-          console.error("Error loading global ranking:", error);
-          setErrorGlobalRanking('Failed to load global ranking.');
-          setGlobalTop10([]);
-          setCurrentListTotalVotes(0);
-        } finally {
-          setLoadingGlobalRanking(false);
+          } finally {
+            setLoadingGlobalRanking(false);
         }
 
         setCheckingSubmissionStatus(false);
@@ -215,43 +200,43 @@ const GlobalRankings = ({ seasonListRef }) => {
   useEffect(() => {
     const loadGlobalRankings = async () => {
       // Removed: if (!user) return; // Load even if user is not logged in
-      
+        
       // Set loading state for all lists initially
       const initialLoadingState = {};
       sampleLists.forEach(list => {
         initialLoadingState[list.id] = true;
-      });
+        });
       setLoadingGlobalRankings(initialLoadingState);
-
+        
       // Load global rankings for each list defined in sampleLists
       const newGlobalRankings = {};
-
+        
       for (const list of sampleLists) {
         const listId = list.id;
-        try {
-          const globalRankingRef = doc(db, 'globalRankingsData', listId);
-          const globalSnap = await getDoc(globalRankingRef);
-          
-          if (globalSnap.exists()) {
-            const globalData = globalSnap.data();
-            newGlobalRankings[listId] = {
-              top10: globalData.top10 || [],
-              totalVotes: globalData.totalVotes || 0
-            };
-          } else {
+          try {
+            const globalRankingRef = doc(db, 'globalRankingsData', listId);
+            const globalSnap = await getDoc(globalRankingRef);
+            
+            if (globalSnap.exists()) {
+              const globalData = globalSnap.data();
+              newGlobalRankings[listId] = {
+                top10: globalData.top10 || [],
+                totalVotes: globalData.totalVotes || 0 
+              };
+            } else {
             // If no data, store empty structure
-            newGlobalRankings[listId] = { top10: [], totalVotes: 0 };
-          }
-        } catch (error) {
+              newGlobalRankings[listId] = { top10: [], totalVotes: 0 };
+            }
+          } catch (error) {
           console.error(`Error loading global ranking for ${listId}:`, error);
           newGlobalRankings[listId] = { top10: [], totalVotes: 0, error: 'Failed to load' }; // Indicate error
         } finally {
           // Update loading state for this specific list
           setLoadingGlobalRankings(prev => ({ ...prev, [listId]: false }));
+          }
         }
-      }
-      
-      setGlobalRankings(newGlobalRankings);
+        
+        setGlobalRankings(newGlobalRankings);
       console.log("Finished loading all global rankings overview:", newGlobalRankings);
 
       /* --- OLD LOGIC --- 
@@ -311,7 +296,7 @@ const GlobalRankings = ({ seasonListRef }) => {
       // }
       */
     };
-
+    
     loadGlobalRankings();
   }, []); // Run only once on mount
 
@@ -858,7 +843,7 @@ const GlobalRankings = ({ seasonListRef }) => {
     
     // Check if the user *specifically* has submitted for this list (used for points calc maybe)
     const userHasSubmittedForThisList = user && globalDataForList !== undefined; 
-
+    
     return (
       <div 
         className="ranking-list-container" 
@@ -1782,13 +1767,11 @@ const GlobalRankings = ({ seasonListRef }) => {
       
       <div className="global-rankings-description">
         <p>
-          Who is the Greatest Of All Time? Cast your votes in the ultimate Survivor showdown! 
-          Rank your top 10 strategic masterminds, social players, and challenge beasts. 
-          Once you submit your list for a category, you'll see the community's global ranking!
+          Welcome to the Global Rankings! This page features special ranking categories that change periodically. Submit your votes for the current category to see how your choices compare to the community's overall ranking. Check back often for new ranking challenges!
         </p>
       </div>
       
-      <h2 className="section-title">Vote for the GOATs</h2>
+      <h2 className="section-title">Current Global Ranking</h2> {/* Updated title */}
       <div className="global-lists-container">
         {sampleLists.map(list => renderRankingListCard(list))}
       </div>

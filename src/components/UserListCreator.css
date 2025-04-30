@@ -1085,8 +1085,8 @@
   .drag-handle {
     min-height: 44px; /* Apple's recommended minimum size for touch targets */
   }
-}
-
+} 
+ 
 /* Keep existing mobile styles for the button if they exist */
 /* (Assuming mobile styles might be under .mobile-only-button or within a max-width query) */
  
