@@ -53,6 +53,7 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareImageDataUrl, setShareImageDataUrl] = useState(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [shareImageDataUrl2, setShareImageDataUrl2] = useState(null); // Keep second URL state
   // -------------------------
   
   // --- Pagination State ---
@@ -827,336 +828,303 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
   };
   // --- End Load Image Helper ---
 
-  // --- Share Image Functions (Updated) ---
+  // --- Refactored Canvas Drawing Function ---
+  const generateShareCanvas = async (bgImage, listData) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = bgImage.naturalWidth;
+    canvas.height = bgImage.naturalHeight;
+    const ctx = canvas.getContext('2d');
+
+    // Draw the background image
+    ctx.drawImage(bgImage, 0, 0);
+
+    // --- Load Wood Texture for Title --- 
+    let woodPattern = null;
+    try {
+      const woodTextureImg = await loadImage('/images/wood_texture.png');
+      const scaleFactor = 1;
+      const patternCanvas = document.createElement('canvas');
+      const patternCtx = patternCanvas.getContext('2d');
+      patternCanvas.width = woodTextureImg.width * scaleFactor;
+      patternCanvas.height = woodTextureImg.height * scaleFactor;
+      patternCtx.drawImage(woodTextureImg, 0, 0, patternCanvas.width, patternCanvas.height);
+      woodPattern = ctx.createPattern(patternCanvas, 'repeat');
+    } catch (error) {
+      console.error("[generateShareCanvas] Failed to load/scale wood texture:", error);
+    }
+
+    // --- Text Wrapping Helper (Internal) ---
+    const wrapText = (context, text, maxWidth, initialFontSize, minFontSize, lineHeight) => {
+        let words = text.split(' ');
+        let lines = [];
+        let currentLine = words[0] || ''; // Handle empty text
+        let fontSize = initialFontSize;
+        const attemptWrap = (size) => {
+            context.font = `${size}px Survivant`;
+            lines = [];
+            currentLine = words[0] || '';
+            for (let i = 1; i < words.length; i++) {
+                let word = words[i];
+                let width = context.measureText(currentLine + " " + word).width;
+                if (width < maxWidth) {
+                    currentLine += " " + word;
+                } else {
+                    lines.push(currentLine);
+                    currentLine = word;
+                }
+            }
+            lines.push(currentLine);
+            return lines;
+        };
+        attemptWrap(fontSize);
+        const titleBox = { x: 210, y: 150, width: 624, height: 290 }; // Define needed box dimensions
+        let totalHeight = lines.length * lineHeight;
+        let anyLineTooWide = lines.some(line => context.measureText(line).width > maxWidth);
+        while ((anyLineTooWide || totalHeight > titleBox.height) && fontSize > minFontSize) {
+            fontSize--;
+            attemptWrap(fontSize);
+            totalHeight = lines.length * lineHeight;
+            anyLineTooWide = lines.some(line => context.measureText(line).width > maxWidth);
+            if (lines.length > 1 && fontSize >= minFontSize) {
+                let singleLineAttempt = attemptWrap(fontSize);
+                if (singleLineAttempt.length === 1 && context.measureText(singleLineAttempt[0]).width <= maxWidth) {
+                    lines = singleLineAttempt;
+                    totalHeight = lines.length * lineHeight;
+                    anyLineTooWide = false;
+                }
+            }
+        }
+        return { lines, fontSize };
+    };
+    
+    // --- Draw Title --- 
+    const titleBox = { x: 210, y: 150, width: 624, height: 290 };
+    const title = listData.name || "Untitled List";
+    const initialTitleFontSize = 130;
+    const minTitleFontSize = 20;
+    const titleLineHeight = 97;
+    const { lines: titleLines, fontSize: finalTitleFontSize } = wrapText(
+        ctx, title, titleBox.width, initialTitleFontSize, minTitleFontSize, titleLineHeight
+    );
+    ctx.font = `${finalTitleFontSize}px Survivant`;
+    ctx.fillStyle = woodPattern || 'rgb(29, 21, 4)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const totalTextHeight = titleLines.length * titleLineHeight;
+    let startY = titleBox.y + (titleBox.height - totalTextHeight) / 2 + titleLineHeight / 2;
+    if (titleLines.length === 1) startY += 10;
+    const titleX = titleBox.x + titleBox.width / 2;
+    titleLines.forEach((line, index) => {
+        const lineY = startY + index * titleLineHeight;
+        ctx.fillText(line, titleX, lineY);
+    });
+
+    // --- Draw Entries --- 
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgb(38, 20, 3)';
+    const topContestants = listData.contestants.slice(0, 5);
+    const imageWidth = 110;
+    const imageHeight = 110;
+    const seasonImageWidth = 160;
+    const seasonImageHeight = 160;
+    const namePadding = 35;
+    const isSeasonList = topContestants.length > 0 && topContestants[0].isSeason;
+
+    for (let i = 0; i < topContestants.length; i++) {
+      const contestant = topContestants[i];
+      const name = contestant.isSeason ? contestant.name.replace('Survivor: ', '') : contestant.name;
+      let entryX = 210;
+      let entryY = 0;
+      let nameX = entryX + (contestant.isSeason ? seasonImageWidth : imageWidth) + namePadding;
+      let nameY = 0;
+      if (isSeasonList) {
+        switch (i) {
+          case 0: entryY = 403; break; case 1: entryY = 558; break; case 2: entryY = 713; break; case 3: entryY = 873; break; case 4: entryY = 1032; break; default: entryY = 0;
+        }
+      } else {
+        switch (i) {
+          case 0: entryY = 433; break; case 1: entryY = 588; break; case 2: entryY = 743; break; case 3: entryY = 903; break; case 4: entryY = 1062; break; default: entryY = 0;
+        }
+      }
+      nameY = entryY + (contestant.isSeason ? seasonImageHeight : imageHeight) / 2;
+      const defaultFontSize = 64;
+      let currentFontSize = defaultFontSize;
+      ctx.font = `${currentFontSize}px Survivant`;
+      const horizontalLimit = 835;
+      let fontWasAdjusted = false;
+      const minFontSize = 10;
+      let measuredWidth = ctx.measureText(name).width;
+      let endX = nameX + measuredWidth;
+      while (endX > horizontalLimit && currentFontSize > minFontSize) {
+        currentFontSize--;
+        ctx.font = `${currentFontSize}px Survivant`;
+        measuredWidth = ctx.measureText(name).width;
+        endX = nameX + measuredWidth;
+        fontWasAdjusted = true;
+      }
+      ctx.fillText(name, nameX, nameY);
+      if (fontWasAdjusted) {
+        ctx.font = `${defaultFontSize}px Survivant`;
+      }
+      const imageUrl = getCachedImageUrl(contestant.id);
+      if (imageUrl) {
+        try {
+          const img = await loadImage(imageUrl);
+          if (contestant.isSeason) {
+            const maxHeight = seasonImageHeight; const maxWidth = seasonImageWidth;
+            const scale = Math.min(maxWidth / img.width, maxHeight / img.height);
+            const scaledWidth = img.width * scale; const scaledHeight = img.height * scale;
+            const xOffset = entryX + (maxWidth - scaledWidth) / 2;
+            const yOffset = entryY + (maxHeight - scaledHeight) / 2;
+            ctx.drawImage(img, xOffset, yOffset, scaledWidth, scaledHeight);
+          } else {
+            ctx.drawImage(img, entryX, entryY, imageWidth, imageHeight);
+          }
+        } catch (error) {
+          ctx.fillStyle = '#eee'; ctx.fillRect(entryX, entryY, imageWidth, imageHeight);
+          ctx.fillStyle = 'black'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText('?', entryX + imageWidth / 2, entryY + imageHeight / 2);
+          ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        }
+      } else {
+        ctx.fillStyle = '#eee'; ctx.fillRect(entryX, entryY, imageWidth, imageHeight);
+        ctx.fillStyle = 'black'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('?', entryX + imageWidth / 2, entryY + imageHeight / 2);
+        ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      }
+    }
+    
+    // Return the completed canvas
+    return canvas;
+  };
+  // --- End Refactored Drawing Function ---
+
+  // --- DUPLICATED Canvas Drawing Function for Beach Layout ---
+  const generateShareCanvasBeachLayout = async (bgImage, listData) => {
+    // THIS IS A COPY of generateShareCanvas. 
+    // Modify coordinates (entryX, entryY, nameX, nameY) inside the loop below.
+    const canvas = document.createElement('canvas');
+    canvas.width = bgImage.naturalWidth;
+    canvas.height = bgImage.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(bgImage, 0, 0);
+    let woodPattern = null;
+    try { /* Load texture */ 
+        const woodTextureImg = await loadImage('/images/wood_texture.png');
+        const scaleFactor = 1; const patternCanvas = document.createElement('canvas');
+        const patternCtx = patternCanvas.getContext('2d');
+        patternCanvas.width = woodTextureImg.width * scaleFactor; patternCanvas.height = woodTextureImg.height * scaleFactor;
+        patternCtx.drawImage(woodTextureImg, 0, 0, patternCanvas.width, patternCanvas.height);
+        woodPattern = ctx.createPattern(patternCanvas, 'repeat'); 
+    } catch (error) { console.error("[generateShareCanvasBeachLayout] Failed to load/scale wood texture:", error); }
+    const wrapText = (context, text, maxWidth, initialFontSize, minFontSize, lineHeight) => {
+        let words = text.split(' '); let lines = []; let currentLine = words[0] || ''; let fontSize = initialFontSize;
+        const attemptWrap = (size) => { /* ... wrap logic ... */ 
+            context.font = `${size}px Survivant`; lines = []; currentLine = words[0] || '';
+            for (let i = 1; i < words.length; i++) { let word = words[i]; let width = context.measureText(currentLine + " " + word).width; if (width < maxWidth) { currentLine += " " + word; } else { lines.push(currentLine); currentLine = word; } } lines.push(currentLine); return lines;
+        };
+        attemptWrap(fontSize); const titleBox = { x: 210, y: 150, width: 624, height: 290 }; let totalHeight = lines.length * lineHeight; let anyLineTooWide = lines.some(line => context.measureText(line).width > maxWidth);
+        while ((anyLineTooWide || totalHeight > titleBox.height) && fontSize > minFontSize) { fontSize--; attemptWrap(fontSize); totalHeight = lines.length * lineHeight; anyLineTooWide = lines.some(line => context.measureText(line).width > maxWidth); if (lines.length > 1 && fontSize >= minFontSize) { let singleLineAttempt = attemptWrap(fontSize); if (singleLineAttempt.length === 1 && context.measureText(singleLineAttempt[0]).width <= maxWidth) { lines = singleLineAttempt; totalHeight = lines.length * lineHeight; anyLineTooWide = false; } } }
+        return { lines, fontSize };
+    };
+    const titleBox = { x: 210, y: 150, width: 624, height: 290 }; const title = listData.name || "Untitled List"; const initialTitleFontSize = 130; const minTitleFontSize = 20; const titleLineHeight = 97;
+    const { lines: titleLines, fontSize: finalTitleFontSize } = wrapText(ctx, title, titleBox.width, initialTitleFontSize, minTitleFontSize, titleLineHeight);
+    ctx.font = `${finalTitleFontSize}px Survivant`; ctx.fillStyle = woodPattern || 'rgb(29, 21, 4)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const totalTextHeight = titleLines.length * titleLineHeight; let startY = titleBox.y + (titleBox.height - totalTextHeight) / 2 + titleLineHeight / 2; if (titleLines.length === 1) startY += 10; const titleX = titleBox.x + titleBox.width / 2;
+    titleLines.forEach((line, index) => { const lineY = startY + index * titleLineHeight; ctx.fillText(line, titleX, lineY); });
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = 'rgb(38, 20, 3)';
+    const topContestants = listData.contestants.slice(0, 5); const imageWidth = 110; const imageHeight = 110; const seasonImageWidth = 160; const seasonImageHeight = 160; const namePadding = 35;
+    const isSeasonList = topContestants.length > 0 && topContestants[0].isSeason;
+    for (let i = 0; i < topContestants.length; i++) {
+        const contestant = topContestants[i]; const name = contestant.isSeason ? contestant.name.replace('Survivor: ', '') : contestant.name;
+        
+        // ***** EDIT POSITIONING FOR BEACH LAYOUT HERE *****
+        let entryX = 210; // X coordinate for image/logo
+        let entryY = 0;   // Y coordinate for image/logo (Calculated below)
+        let nameX = entryX + (contestant.isSeason ? seasonImageWidth : imageWidth) + namePadding; // X for name
+        let nameY = 0;   // Y coordinate for name (Calculated below)
+        if (isSeasonList) { /* season Y positions */ switch (i) { case 0: entryY = 403; break; case 1: entryY = 558; break; case 2: entryY = 713; break; case 3: entryY = 873; break; case 4: entryY = 1032; break; default: entryY = 0; } } else { /* contestant Y positions */ switch (i) { case 0: entryY = 433; break; case 1: entryY = 588; break; case 2: entryY = 743; break; case 3: entryY = 903; break; case 4: entryY = 1062; break; default: entryY = 0; } }
+        nameY = entryY + (contestant.isSeason ? seasonImageHeight : imageHeight) / 2; 
+        // ***** END OF POSITIONING TO EDIT *****
+        
+        const defaultFontSize = 64; let currentFontSize = defaultFontSize; ctx.font = `${currentFontSize}px Survivant`; const horizontalLimit = 835; let fontWasAdjusted = false; const minFontSize = 10; let measuredWidth = ctx.measureText(name).width; let endX = nameX + measuredWidth;
+        while (endX > horizontalLimit && currentFontSize > minFontSize) { /* shrink font */ currentFontSize--; ctx.font = `${currentFontSize}px Survivant`; measuredWidth = ctx.measureText(name).width; endX = nameX + measuredWidth; fontWasAdjusted = true; }
+        ctx.fillText(name, nameX, nameY); if (fontWasAdjusted) { ctx.font = `${defaultFontSize}px Survivant`; }
+        const imageUrl = getCachedImageUrl(contestant.id);
+        if (imageUrl) { try { /* draw image */ const img = await loadImage(imageUrl); if (contestant.isSeason) { const maxHeight = seasonImageHeight; const maxWidth = seasonImageWidth; const scale = Math.min(maxWidth / img.width, maxHeight / img.height); const scaledWidth = img.width * scale; const scaledHeight = img.height * scale; const xOffset = entryX + (maxWidth - scaledWidth) / 2; const yOffset = entryY + (maxHeight - scaledHeight) / 2; ctx.drawImage(img, xOffset, yOffset, scaledWidth, scaledHeight); } else { ctx.drawImage(img, entryX, entryY, imageWidth, imageHeight); } } catch (error) { /* draw placeholder on error */ ctx.fillStyle = '#eee'; ctx.fillRect(entryX, entryY, imageWidth, imageHeight); ctx.fillStyle = 'black'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('?', entryX + imageWidth / 2, entryY + imageHeight / 2); ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; } } else { /* draw placeholder if no url */ ctx.fillStyle = '#eee'; ctx.fillRect(entryX, entryY, imageWidth, imageHeight); ctx.fillStyle = 'black'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('?', entryX + imageWidth / 2, entryY + imageHeight / 2); ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; }
+    }
+    return canvas;
+  };
+  // --- End DUPLICATED Drawing Function ---
+
+  // --- Updated Share Image Function ---
   const handleShareClick = async () => {
     if (!selectedList || !selectedList.contestants) {
       console.error("No selected list or contestants to share.");
       return;
     }
     setIsGeneratingImage(true);
+    setShareImageDataUrl(null); 
+    setShareImageDataUrl2(null);
 
-    const backgroundImage = new Image();
-    // Assuming the image is in the public folder
-    backgroundImage.src = '/images/Shareimage.png'; 
-    backgroundImage.crossOrigin = 'Anonymous'; // Needed if fonts/images are from different origins
+    // Load both background images
+    const bgImage1 = new Image();
+    bgImage1.src = '/images/Shareimage.png'; 
+    bgImage1.crossOrigin = 'Anonymous'; 
 
-    backgroundImage.onload = async () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = backgroundImage.naturalWidth;
-      canvas.height = backgroundImage.naturalHeight;
-      const ctx = canvas.getContext('2d');
+    const bgImage2 = new Image();
+    bgImage2.src = '/images/beach.png'; // <<< Use beach.png for the second image
+    bgImage2.crossOrigin = 'Anonymous'; 
 
-      // Draw the background image
-      ctx.drawImage(backgroundImage, 0, 0);
-
-      // --- Load Wood Texture for Title ---
-      let woodPattern = null;
-      try {
-          const woodTextureImg = await loadImage('/images/wood_texture.png'); // ASSUMED PATH
-          
-          // <<< Create scaled pattern >>>
-          const scaleFactor = 1; // Adjust this value to control zoom level (0.5 = 50% size)
-          const patternCanvas = document.createElement('canvas');
-          const patternCtx = patternCanvas.getContext('2d');
-          
-          patternCanvas.width = woodTextureImg.width * scaleFactor;
-          patternCanvas.height = woodTextureImg.height * scaleFactor;
-          
-          // Draw the scaled image onto the pattern canvas
-          patternCtx.drawImage(woodTextureImg, 0, 0, patternCanvas.width, patternCanvas.height);
-          
-          // Create the pattern from the scaled canvas
-          woodPattern = ctx.createPattern(patternCanvas, 'repeat'); 
-          
-          console.log(`[Share Image] Wood texture loaded and scaled pattern created (scale: ${scaleFactor}).`);
-      } catch (error) {
-          console.error("[Share Image] Failed to load/scale wood texture, falling back to solid color:", error);
-          // Fallback color will be set later if woodPattern is null
-      }
-      // --- End Load Texture ---
-
-      // --- Helper function for text wrapping ---
-      const wrapText = (context, text, maxWidth, initialFontSize, minFontSize, lineHeight) => {
-          let words = text.split(' ');
-          let lines = [];
-          let currentLine = words[0];
-          let fontSize = initialFontSize;
-
-          // Function to measure and attempt wrapping at a given font size
-          const attemptWrap = (size) => {
-              context.font = `${size}px Survivant`;
-              lines = [];
-              currentLine = words[0];
-              for (let i = 1; i < words.length; i++) {
-                  let word = words[i];
-                  let width = context.measureText(currentLine + " " + word).width;
-                  if (width < maxWidth) {
-                      currentLine += " " + word;
-                  } else {
-                      lines.push(currentLine);
-                      currentLine = word;
-                  }
-              }
-              lines.push(currentLine);
-              return lines;
+    try {
+      // Wait for BOTH background images to load using Promise.all
+      await Promise.all([
+        new Promise((resolve, reject) => {
+          bgImage1.onload = resolve;
+          bgImage1.onerror = (err) => {
+             console.error("Error loading background image 1 '/images/Shareimage.png'", err);
+             reject(new Error("Failed to load background image 1")); 
           };
+        }),
+        new Promise((resolve, reject) => {
+          bgImage2.onload = resolve;
+          bgImage2.onerror = (err) => {
+             console.error("Error loading background image 2 '/images/beach.png'", err);
+             reject(new Error("Failed to load background image 2")); 
+          };
+        })
+      ]);
 
-          // Initial attempt
-          attemptWrap(fontSize);
+      // If both backgrounds loaded successfully, proceed with generation
+      console.log("Generating first share image (Shareimage.png background)...");
+      const canvas1 = await generateShareCanvas(bgImage1, selectedList); // <<< Pass bgImage1
+      const dataUrl1 = canvas1.toDataURL('image/png');
+      setShareImageDataUrl(dataUrl1);
+      console.log("First share image generated.");
 
-          // Reduce font size if any line is too wide or total height exceeds box height
-          let totalHeight = lines.length * lineHeight;
-          let anyLineTooWide = lines.some(line => context.measureText(line).width > maxWidth);
-          
-          while ((anyLineTooWide || totalHeight > titleBox.height) && fontSize > minFontSize) {
-              fontSize--;
-              attemptWrap(fontSize);
-              totalHeight = lines.length * lineHeight;
-              anyLineTooWide = lines.some(line => context.measureText(line).width > maxWidth);
-              // Try fewer lines if possible at this smaller size (helps fit height)
-              if (lines.length > 1 && fontSize >= minFontSize) { 
-                  let singleLineAttempt = attemptWrap(fontSize); // Rerun wrap logic
-                  if(singleLineAttempt.length === 1 && context.measureText(singleLineAttempt[0]).width <= maxWidth){
-                      lines = singleLineAttempt;
-                      totalHeight = lines.length * lineHeight;
-                      anyLineTooWide = false;
-                      console.log(`[Share Image Title Wrap] Switched back to single line at size ${fontSize}px`);
-                  }
-              } 
-          }
-          
-          console.log(`[Share Image Title Wrap] Final lines: ${lines.length}, Font size: ${fontSize}px`);
-          return { lines, fontSize };
-      };
-      // --- End Helper --- 
+      console.log("Generating second share image (beach.png background)...");
+      const canvas2 = await generateShareCanvasBeachLayout(bgImage2, selectedList); // <<< CALL DUPLICATED FUNCTION
+      const dataUrl2 = canvas2.toDataURL('image/png');
+      setShareImageDataUrl2(dataUrl2);
+      console.log("Second share image generated.");
 
-      // --- Draw Title (Updated for Wrapping) --- 
-      const titleBox = { x: 210, y: 150, width: 624, height: 290 }; // width: 804-180, height: 378-180
-      const title = selectedList.name || "Untitled List";
-      const initialTitleFontSize = 130; // Start large
-      const minTitleFontSize = 20; // Minimum acceptable size
-      const titleLineHeight = 97; // Approximate line height based on font size
-
-      // Debug box
-      // ctx.strokeStyle = 'red'; // <<< REMOVE THIS DEBUG LINE
-      // ctx.strokeRect(titleBox.x, titleBox.y, titleBox.width, titleBox.height); // Debug rect
-      
-      // Get wrapped lines and final font size
-      const { lines: titleLines, fontSize: finalTitleFontSize } = wrapText(
-          ctx, 
-          title, 
-          titleBox.width, 
-          initialTitleFontSize, 
-          minTitleFontSize, 
-          titleLineHeight
-      );
-
-      // Set final text properties
-      ctx.font = `${finalTitleFontSize}px Survivant`;
-      // <<< Use pattern if loaded, otherwise fallback color >>>
-      ctx.fillStyle = woodPattern || 'rgb(29, 21, 4)'; 
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-
-      // Calculate starting Y position for vertical centering
-      const totalTextHeight = titleLines.length * titleLineHeight;
-      let startY = titleBox.y + (titleBox.height - totalTextHeight) / 2 + titleLineHeight / 2;
-      
-      // Adjust startY slightly if only one line to better center visually
-      if (titleLines.length === 1) {
-          startY += 10; // Small adjustment may be needed depending on font baseline
+      if (dataUrl1 || dataUrl2) { 
+        setShowShareModal(true);
       }
 
-      // Draw each line
-      const titleX = titleBox.x + titleBox.width / 2;
-      titleLines.forEach((line, index) => {
-          const lineY = startY + index * titleLineHeight;
-          ctx.fillText(line, titleX, lineY);
-          console.log(`[Share Image Title Draw] Drawing line ${index + 1}: "${line}" at Y=${lineY}`);
-      });
-      // --- End Draw Title ---
-
-      // --- Reset settings for contestant names ---
-      ctx.textAlign = 'left'; 
-      ctx.textBaseline = 'middle';
-      // The main font size for names will be set within drawEntries
-      // --- End Reset ---
-
-      // --- Text Styling (Contestants - Font size set later) ---
-      const fontSize = 64; // Base size for contestants
-      // ctx.font = `${fontSize}px Survivant`; // Font set within drawEntries loop
-      ctx.fillStyle = 'rgb(38, 20, 3)'; 
-      // ctx.textAlign = 'left'; // Reset above
-      // ctx.textBaseline = 'middle'; // Reset above
-
-      // --- Draw Top 5 Contestant Names (Now called drawEntries) ---
-      const topContestants = selectedList.contestants.slice(0, 5);
-      // Define image size and padding
-      const imageWidth = 110; // Base width for contestant images
-      const imageHeight = 110; // Base height for contestant images
-      const seasonImageWidth = 160; // Larger width for season logos
-      const seasonImageHeight = 160; // Larger height for season logos
-      const namePadding = 35; // Unchanged
-
-      // Determine if this is a season list by checking the first contestant
-      const isSeasonList = topContestants.length > 0 && topContestants[0].isSeason;
-
-      // Use async function to handle image loading within loop/drawing
-      const drawEntries = async () => {
-        for (let i = 0; i < topContestants.length; i++) {
-          const contestant = topContestants[i];
-          const name = contestant.isSeason ? contestant.name.replace('Survivor: ', '') : contestant.name;
-          const rank = i + 1;
-
-          // --- Placement Logic --- 
-          let entryX = 210; // Keep X constant
-          let entryY = 0;   // Y will be determined by rank
-          let nameX = entryX + (contestant.isSeason ? seasonImageWidth : imageWidth) + namePadding;
-          let nameY = 0;   // Y will be determined by rank
-
-          // Determine Y coordinates based on rank (index i) and list type
-          if (isSeasonList) {
-            // Season list entries - positioned higher
-            switch (i) {
-              case 0: entryY = 403; break; // 30px higher
-              case 1: entryY = 558; break; // 30px higher
-              case 2: entryY = 713; break; // 30px higher
-              case 3: entryY = 873; break; // 30px higher
-              case 4: entryY = 1032; break; // 30px higher
-              default: entryY = 0;
-            }
-          } else {
-            // Survivor contestant entries - original positions
-            switch (i) {
-              case 0: entryY = 433; break;
-              case 1: entryY = 588; break;
-              case 2: entryY = 743; break;
-              case 3: entryY = 903; break;
-              case 4: entryY = 1062; break;
-              default: entryY = 0;
-            }
-          }
-          
-          // Calculate name Y based on entry Y for middle alignment
-          nameY = entryY + (contestant.isSeason ? seasonImageHeight : imageHeight) / 2;
-
-          // --- Font Size Adjustment Logic ---
-          const defaultFontSize = 64; 
-          let currentFontSize = defaultFontSize;
-          ctx.font = `${currentFontSize}px Survivant`; // Ensure font is set before measuring
-
-          const horizontalLimit = 835; // Define the limit here
-          let fontWasAdjusted = false; // Define the flag here
-          const minFontSize = 10; // Minimum font size to prevent excessive shrinking
-
-          // Loop to reduce font size until text fits or hits minimum size
-          let measuredWidth = ctx.measureText(name).width; // Initial measure
-          let endX = nameX + measuredWidth;
-
-          while (endX > horizontalLimit && currentFontSize > minFontSize) {
-            currentFontSize--; // Decrease font size by 1
-            ctx.font = `${currentFontSize}px Survivant`; // Apply smaller font
-            // Re-measure with the new font size
-            measuredWidth = ctx.measureText(name).width;
-            endX = nameX + measuredWidth;
-            fontWasAdjusted = true;
-          }
-
-          // Log if the font was adjusted
-          if (fontWasAdjusted) {
-            console.log(`[Share Image Rank ${rank}] Text ('${name}') exceeded ${horizontalLimit}px. Reducing font size to ${currentFontSize}px.`);
-          }
-
-          // Draw the name for the current entry (using potentially adjusted font)
-          ctx.fillText(name, nameX, nameY); 
-
-          // --- Reset Font Size if it was adjusted ---
-          if (fontWasAdjusted) {
-            ctx.font = `${defaultFontSize}px Survivant`; // Reset font back to default
-          }
-
-          // Load and draw the image for the current entry
-          const imageUrl = getCachedImageUrl(contestant.id);
-          console.log(`[Share Image Rank ${rank}] Attempting to load image for ${name}: ${imageUrl}`); 
-          if (imageUrl) {
-            try {
-              const img = await loadImage(imageUrl); 
-              
-              if (contestant.isSeason) {
-                // For season logos, maintain aspect ratio within the larger available space
-                const maxHeight = seasonImageHeight;
-                const maxWidth = seasonImageWidth;
-                
-                // Calculate scaling to fit within bounds while preserving aspect ratio
-                const scale = Math.min(
-                  maxWidth / img.width,
-                  maxHeight / img.height
-                );
-                
-                // Calculate dimensions that preserve aspect ratio
-                const scaledWidth = img.width * scale;
-                const scaledHeight = img.height * scale;
-                
-                // Center the image in the available space
-                const xOffset = entryX + (maxWidth - scaledWidth) / 2;
-                const yOffset = entryY + (maxHeight - scaledHeight) / 2;
-                
-                // Draw the season logo with preserved aspect ratio
-                ctx.drawImage(img, xOffset, yOffset, scaledWidth, scaledHeight);
-              } else {
-                // For contestant images, use fixed square dimensions
-                ctx.drawImage(img, entryX, entryY, imageWidth, imageHeight);
-              }
-            } catch (error) {
-              console.error(`[Share Image Rank ${rank}] Error loading image for ${name}:`, error);
-              // Draw placeholder if image fails
-              ctx.fillStyle = '#eee';
-              ctx.fillRect(entryX, entryY, imageWidth, imageHeight);
-              ctx.fillStyle = 'black';
-              ctx.textAlign = 'center';
-              ctx.textBaseline = 'middle';
-              ctx.fillText('?', entryX + imageWidth / 2, entryY + imageHeight / 2); 
-              ctx.textAlign = 'left'; 
-              ctx.textBaseline = 'middle';
-            }
-          } else {
-            // Draw placeholder if no image URL
-            console.log(`[Share Image Rank ${rank}] No image URL found for ${name}. Drawing placeholder.`);
-            ctx.fillStyle = '#eee';
-            ctx.fillRect(entryX, entryY, imageWidth, imageHeight);
-            ctx.fillStyle = 'black'; 
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('?', entryX + imageWidth / 2, entryY + imageHeight / 2);
-            ctx.textAlign = 'left'; 
-            ctx.textBaseline = 'middle';
-          }
-        }
-
-        // After all drawing is done (including async image loads), generate data URL
-        try {
-          const dataUrl = canvas.toDataURL('image/png');
-          setShareImageDataUrl(dataUrl);
-          setShowShareModal(true);
-        } catch (error) {
-          console.error("Error generating canvas data URL:", error);
-          alert("Sorry, couldn't generate the shareable image.");
-        } finally {
-          setIsGeneratingImage(false);
-        }
-      };
-
-      // Call the async drawing function
-      drawEntries();
-    };
-
-    backgroundImage.onerror = () => {
-      console.error("Error loading background image '/images/Shareimage.png'");
-      alert("Sorry, couldn't load the background image for sharing.");
+    } catch (error) { 
+      console.error("Error during share image generation process:", error);
+      alert(`Sorry, couldn't generate the shareable images. Error: ${error.message}`);
+      setShareImageDataUrl(null);
+      setShareImageDataUrl2(null);
+    } finally {
       setIsGeneratingImage(false);
-    };
+    }
   };
+  // --- End Updated Share ---
 
+  // --- Download and Close Handlers ---
   const handleDownloadImage = () => {
     if (!shareImageDataUrl) return;
     const link = document.createElement('a');
@@ -1167,11 +1135,24 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
     link.click();
     document.body.removeChild(link);
   };
+  
+  const handleDownloadImage2 = () => { // Keep separate download for second image
+    if (!shareImageDataUrl2) return;
+    const link = document.createElement('a');
+    link.href = shareImageDataUrl2; 
+    const filename = selectedList?.name ? `${selectedList.name.replace(/\s+/g, '_')}_ranking_alt.png` : 'survivor_ranking_alt.png'; 
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
-  const closeShareModal = () => {
+  const closeShareModal = () => { // Single close function
     setShowShareModal(false);
     setShareImageDataUrl(null);
+    setShareImageDataUrl2(null); // Clear both image URLs
   };
+  // --- End Download and Close Handlers ---
 
   // <<< ADDED: Function to handle clicking the edit button >>>
   const handleEditListClick = () => {
@@ -1241,10 +1222,10 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
             </button>
           </div>
           
-          {/* --- Share Button (Desktop Only) --- */} 
+          {/* --- SINGLE Share Button (Desktop Only) --- */} 
           {!isMobile && (
             <button 
-              onClick={handleShareClick}
+              onClick={handleShareClick} // Calls the combined handler
               disabled={isGeneratingImage}
               className="share-list-button" 
               title="Share List as Image"
@@ -1252,21 +1233,8 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
               {isGeneratingImage ? 'Generating...' : 'Share'} 
             </button>
           )}
-          {/* --- End Share Button --- */}
-
-          {/* --- Edit My List Button (MOVED) --- */}
-          {/* {user && selectedList && user.uid === selectedList.userId && (
-             <button 
-              onClick={() => navigate('/create', { state: { userId: selectedList.userId, listId: selectedList.id } })}
-              className="edit-my-list-button"
-              title="Edit this list"
-              style={{ position: 'absolute', top: '15px', right: isMobile ? '70px' : '135px' }} // REMOVED POSITIONING
-            >
-              Edit My List
-            </button>
-          )} */}
-          {/* --- End Edit Button --- */}
-
+          {/* --- Removed Duplicate Desktop Button --- */}
+          
           {/* --- ADDED Desktop Edit Button --- */}
           {!isMobile && user && selectedList.userId === user.uid && (
              <button 
@@ -1296,15 +1264,17 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
         {/* --- Mobile Buttons Container (Placed Above Ranking List) --- */} 
         {isMobile && (
           <div className="mobile-list-actions-container">
-            {/* Mobile Share Button */} 
+            {/* SINGLE Mobile Share Button */} 
             <button
-              onClick={handleShareClick}
+              onClick={handleShareClick} // Calls the combined handler
               disabled={isGeneratingImage}
               className="mobile-share-list-button"
               title="Share List as Image"
             >
               {isGeneratingImage ? 'Generating...' : 'Share List'}
             </button>
+            {/* --- Removed Duplicate Mobile Button --- */}
+            
             {/* Mobile Edit Button (Conditional) */} 
             {user && selectedList && user.uid === selectedList.userId && (
               <button
@@ -1537,39 +1507,54 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
           )}
         </div>
 
-        {/* Share Modal */} 
-        {showShareModal && (
+        {/* SINGLE Share Modal (Displays Both Images) */} 
+        {showShareModal && (shareImageDataUrl || shareImageDataUrl2) && (
           <div className="share-modal-overlay" onClick={closeShareModal}>
-            <div className="share-modal-content" onClick={(e) => e.stopPropagation()}> 
-              <h3>Share List Image</h3>
-              {shareImageDataUrl ? (
-                <img src={shareImageDataUrl} alt="List Ranking Preview" className="share-preview-image" />
-              ) : (
-                <p>Loading preview...</p>
+            <div className="share-modal-content" onClick={(e) => e.stopPropagation()}>
+              <h3>Share Your Ranking</h3>
+              
+              {/* Display First Image */} 
+              {shareImageDataUrl && (
+                <img 
+                   src={shareImageDataUrl} 
+                   alt="Generated ranking list" 
+                   className="share-preview-image" 
+                />
               )}
-
-              {/* --- ADDED Mobile Instruction Text --- */}
-              {isMobile && (
-                <p className="mobile-save-instruction">
-                  Long-press or tap and hold the image above to save it to your device.
-                </p>
+              
+              {/* Display Second Image (if generated) */} 
+              {shareImageDataUrl2 && (
+                <img 
+                   src={shareImageDataUrl2} 
+                   alt="Generated alt ranking list" 
+                   className="share-preview-image share-preview-image-alt" 
+                />
               )}
-
+              
+              {/* Buttons Container */} 
               <div className="share-modal-actions">
-                {/* --- HIDE Download Button on Mobile --- */}
-                {!isMobile && shareImageDataUrl && (
+                {/* Download Button 1 */} 
+                {shareImageDataUrl && (
                   <button onClick={handleDownloadImage} className="download-image-button">
-                    Download Image
+                    Download Image 1 
                   </button>
                 )}
-                <button onClick={closeShareModal} className="close-modal-button">Close</button>
+                {/* Download Button 2 */} 
+                {shareImageDataUrl2 && (
+                  <button onClick={handleDownloadImage2} className="download-image-button alt-download">
+                    Download Image 2
+                  </button>
+                )}
+                {/* Close Button */} 
+                <button onClick={closeShareModal} className="close-modal-button">
+                  Close
+                </button>
               </div>
             </div>
           </div>
         )}
-      )}
-    
-                  </div>
+        
+      </div> // End of full-list-view
     );
   }
 

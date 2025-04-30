@@ -38,6 +38,7 @@
   display: flex;
   gap: 30px;
   flex-wrap: wrap;
+  justify-content: center;
   width: 100%;
   margin-bottom: 30px;
 }
@@ -608,7 +609,7 @@
      margin-top: 15px;
   }
 }/* <<< ADD styles for the individual list card container - PREFIXED >>> */
-.global-rankings-page-wrapper .ranking-list-container {
+.global-rankings-page-wrapper > .global-lists-container > .ranking-list-container {
   background-color: rgba(20, 20, 20, 0.9); 
   
   /* <<< Remove background image and animation properties >>> */
@@ -625,9 +626,9 @@
   border: 2px solid #ffd700; 
   border-radius: 12px; 
   padding: 25px; 
-  flex: 1 1 360px; 
-  min-width: 320px; 
-  max-width: calc(50% - 20px); 
+  flex: 1 1 500px; /* Increased flex-basis */
+  min-width: 400px; /* Increased min-width */
+  max-width: 700px !important; /* TESTING: Added !important */
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3), 
               inset 0 0 10px rgba(255, 215, 0, 0.2); 
   transition: transform 0.25s ease-in-out, box-shadow 0.25s ease-in-out;
@@ -769,6 +770,27 @@
     height: unset !important;
     min-height: unset !important;
   }
+  /* Adjust container styles for mobile */
+  .ranking-list-container { /* General mobile adjustments if needed */
+    /* Example: reduce padding */
+    /* padding: 15px; */
+  }
+  
+  /* Override specific desktop styles for the list container on mobile */
+  .global-rankings-page-wrapper > .global-lists-container > .ranking-list-container {
+    flex-basis: 100%; /* Take full width in the column layout */
+    min-width: 0; /* Remove minimum width constraint */
+    max-width: 100%; /* Allow it to shrink to screen width */
+    width: 100%; /* Explicitly set width to fill */
+    box-sizing: border-box; /* Include padding/border in width */
+    margin-bottom: 20px; /* Add space between stacked cards */
+  }
+  
+  .ranking-list {
+    /* Adjustments for the inner list if needed */
+  }
+  
+  /* ... other existing mobile styles ... */
 }
 
 /* Inline login button style */

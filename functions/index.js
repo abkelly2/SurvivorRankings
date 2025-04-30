@@ -23,72 +23,107 @@ function getPointsForRank(index) {
 
 // Helper function to perform recalculation for a specific listId
 async function recalculateForList(listId) {
-    console.log(`Recalculating global ranking for: ${listId}`);
+    console.log(`[recalculateForList] START - Recalculating for: ${listId}`); // START Log
 
-    const contestantScores = {}; // { contestantId: { totalScore: X, name: Y, imageUrl: Z, votes: N } }
+    const contestantScores = {};
     let totalVotes = 0;
+    let errorsProcessingUserRankings = 0;
 
     // 1. Fetch all user rankings
-    const allUserRankingsSnapshot = await db.collection("userGlobalRankings").get();
+    let allUserRankingsSnapshot;
+    try {
+        allUserRankingsSnapshot = await db.collection("userGlobalRankings").get();
+        console.log(`[recalculateForList] Fetched ${allUserRankingsSnapshot.size} user ranking documents for ${listId}.`);
+    } catch (fetchError) {
+        console.error(`[recalculateForList] CRITICAL ERROR fetching user rankings for ${listId}:`, fetchError);
+        return; // Cannot proceed without data
+    }
 
     allUserRankingsSnapshot.forEach((doc) => {
+        const userId = doc.id;
         const userData = doc.data();
-        // Check if this user has submitted a ranking for the specific listId
+        
+        // 2. Check if this user has data for the specific listId
         if (userData && userData[listId] && userData[listId].ranking) {
-            const userRanking = userData[listId].ranking;
-            totalVotes++; // Count this user's submission
-
-            // 2. Iterate through the user's ranking and assign points
-            userRanking.forEach((contestant, index) => {
-                // Only score non-empty slots
-                if (contestant && !contestant.isEmpty && contestant.id) {
-                    const points = getPointsForRank(index);
-                    if (points > 0) {
-                        if (!contestantScores[contestant.id]) {
-                            // First time seeing this contestant
-                            contestantScores[contestant.id] = {
-                                id: contestant.id, // Ensure ID is stored
-                                totalScore: 0,
-                                name: contestant.name || "Unknown",
-                                imageUrl: contestant.imageUrl || "/images/placeholder.jpg",
-                                voteCount: 0, // How many lists included this contestant
-                            };
-                        }
-                        contestantScores[contestant.id].totalScore += points;
-                        contestantScores[contestant.id].voteCount += 1;
-                        // Update name/image potentially (take latest seen?) - simple approach for now
-                        contestantScores[contestant.id].name = contestant.name || contestantScores[contestant.id].name;
-                        contestantScores[contestant.id].imageUrl = contestant.imageUrl || contestantScores[contestant.id].imageUrl;
-                    }
+            // <<< ADDED Try-Catch around processing a single user's ranking >>>
+            try {
+                const userRanking = userData[listId].ranking;
+                
+                // Check if userRanking is actually an array
+                if (!Array.isArray(userRanking)) {
+                    console.warn(`[recalculateForList] Skipping user ${userId} for list ${listId}: ranking data is not an array. Data:`, userRanking);
+                    throw new Error('Ranking data is not an array'); // Throw to be caught below
                 }
-            });
+                
+                totalVotes++; // Count this user's submission only if data is valid array
+                console.log(`[recalculateForList] Processing valid ranking for user ${userId}, list ${listId}. Current totalVotes: ${totalVotes}`);
+
+                // 3. Iterate through the user's ranking
+                userRanking.forEach((contestant, index) => {
+                    if (contestant && !contestant.isEmpty && contestant.id) {
+                        const points = getPointsForRank(index);
+                        if (points > 0) {
+                            if (!contestantScores[contestant.id]) {
+                                contestantScores[contestant.id] = {
+                                    id: contestant.id,
+                                    totalScore: 0,
+                                    name: contestant.name || "Unknown",
+                                    imageUrl: contestant.imageUrl || "/images/placeholder.jpg",
+                                    voteCount: 0,
+                                };
+                            }
+                            contestantScores[contestant.id].totalScore += points;
+                            contestantScores[contestant.id].voteCount += 1;
+                            contestantScores[contestant.id].name = contestant.name || contestantScores[contestant.id].name;
+                            contestantScores[contestant.id].imageUrl = contestant.imageUrl || contestantScores[contestant.id].imageUrl;
+                        }
+                    }
+                });
+            } catch (userError) {
+                errorsProcessingUserRankings++;
+                console.error(`[recalculateForList] ERROR processing ranking for user ${userId}, list ${listId}:`, userError);
+                // Continue to the next user, do not increment totalVotes if processing failed here
+            }
+        } else {
+           // Optional log: console.log(`[recalculateForList] User ${userId} has no submission for list ${listId}.`);
         }
-    });
+    }); // End loop through all users
 
-    // 3. Convert scores object to array and sort
-    const sortedContestants = Object.values(contestantScores).sort(
-        (a, b) => b.totalScore - a.totalScore // Sort descending by score
-    );
+    console.log(`[recalculateForList] Finished processing user rankings for ${listId}. Total valid votes: ${totalVotes}. Errors encountered: ${errorsProcessingUserRankings}.`);
 
-    // 4. Get the top 10
+    // 4. Convert scores object to array and sort
+    let sortedContestants = [];
+    try {
+        sortedContestants = Object.values(contestantScores).sort(
+            (a, b) => b.totalScore - a.totalScore
+        );
+    } catch (sortError) {
+        console.error(`[recalculateForList] ERROR sorting contestant scores for ${listId}:`, sortError);
+        // Attempt to continue with unsorted data or handle appropriately
+        sortedContestants = Object.values(contestantScores); 
+    }
+
+    // 5. Get the top 10
     const top10 = sortedContestants.slice(0, 10);
 
-    console.log(`Top 10 for ${listId}:`, top10.map((c) => `${c.name}: ${c.totalScore}`).join(", "));
+    console.log(`[recalculateForList] Top 10 calculated for ${listId}:`, top10.map((c) => `${c.name}: ${c.totalScore}`).join(", ")); // Log 2
 
-    // 5. Save the result to Firestore
+    // 6. Save the result
     const globalRankingRef = db.collection("globalRankingsData").doc(listId);
     try {
-        await globalRankingRef.set({
-            top10: top10, // Store the array of top 10 contestant objects
-            totalVotes: totalVotes, // Store how many users contributed
+        await globalRankingRef.set({ // <--- The critical step
+            top10: top10,
+            totalVotes: totalVotes, // Use the count of *successfully processed* votes
             calculatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            lastProcessedVotes: totalVotes, // Add explicit fields for debugging
+            processingErrors: errorsProcessingUserRankings
         });
-        console.log(`Successfully saved global ranking for ${listId}`);
-    } catch (error) {
-        console.error(`Failed to save global ranking for ${listId}:`, error);
-        // Rethrow error to be caught by the main try/catch
-        throw error;
+        console.log(`[recalculateForList] SUCCESS - Saved global ranking for ${listId}`); // Log 3
+    } catch (saveError) {
+        console.error(`[recalculateForList] CRITICAL ERROR saving global ranking for ${listId}:`, saveError); // Log 4
+        // Do not rethrow here, allow the main function to handle overall errors if needed
     }
+    console.log(`[recalculateForList] END - Recalculation attempt finished for: ${listId}`);
 }
 
 
@@ -113,7 +148,7 @@ exports.calculateGlobalRanking = onDocumentWritten("userGlobalRankings/{userId}"
     }
 
     const changedListIds = new Set();
-    const validListIds = ["goat-strategy", "goat-social", "goat-competitor"];
+    const validListIds = ["goat-strategy", "goat-social", "goat-competitor", "season-48"];
 
     // Determine which listIds were actually changed or added
     for (const listId in afterData) {

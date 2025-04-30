@@ -48,13 +48,14 @@ const GlobalRankings = ({ seasonListRef }) => {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [targetMobileAddIndex, setTargetMobileAddIndex] = useState(null);
   
-  // --- State/Refs for Mobile Touch Drag Reordering (FROM UserListCreator) --- 
+  // --- State/Refs for Mobile Touch Drag Reordering (COPIED FROM UserListCreator) --- 
   const touchDragTimer = useRef(null);
   const isTouchDragging = useRef(false);
   const draggedItemIndex = useRef(null);
   const draggedItemElement = useRef(null);
   const originalBodyOverflow = useRef(document.body.style.overflow);
-  const draggedItemHeight = useRef(0); 
+  const draggedItemHeight = useRef(0);
+  const listItemRefs = useRef({}); // Copied, though might not be used heavily here
   const initialTouchX = useRef(0);
   const initialTouchY = useRef(0);
   // ----------------------------------------------
@@ -85,29 +86,14 @@ const GlobalRankings = ({ seasonListRef }) => {
   // Sample data for the list cards - this would be replaced with real data from your API
   const sampleLists = [
     {
-      id: 'goat-strategy',
-      name: 'Greatest Strategy',
-      userName: 'SurvivorGuru',
-      createdAt: new Date().toISOString(),
-      description: 'Vote for the greatest strategic players in Survivor history',
-      contestants: Array(10).fill(null).map((_, i) => ({ id: `slot-strategy-${i+1}`, name: `Vote for #${i+1}`, imageUrl: '/images/placeholder.jpg', isEmpty: true }))
-    },
-    {
-      id: 'goat-social',
-      name: 'Greatest Social',
-      userName: 'IslandFan',
-      createdAt: new Date().toISOString(),
-      description: 'Vote for the greatest social players in Survivor history',
-      contestants: Array(10).fill(null).map((_, i) => ({ id: `slot-social-${i+1}`, name: `Vote for #${i+1}`, imageUrl: '/images/placeholder.jpg', isEmpty: true }))
-    },
-    {
-      id: 'goat-competitor',
-      name: 'Greatest Competitor',
-      userName: 'StrategicMoves',
-      createdAt: new Date().toISOString(),
-      description: 'Vote for the greatest challenge competitors in Survivor history',
-      contestants: Array(10).fill(null).map((_, i) => ({ id: `slot-competitor-${i+1}`, name: `Vote for #${i+1}`, imageUrl: '/images/placeholder.jpg', isEmpty: true }))
+      id: 'season-48',
+      name: 'Season 48',
+      userName: 'Global Rankings',
+      createdAt: new Date().toISOString(), // Use a consistent creation time or fetch it?
+      description: 'Vote for your favorite castaways from Survivor Season 48!',
+      contestants: Array(10).fill(null).map((_, i) => ({ id: `slot-s48-${i+1}`, name: `Vote for #${i+1}`, imageUrl: '/images/placeholder.jpg', isEmpty: true }))
     }
+    // Removed other sample lists
   ];
 
   // Effect to find the selected list, load user's ranking, check submission status, and load global ranking if needed
@@ -174,27 +160,27 @@ const GlobalRankings = ({ seasonListRef }) => {
         // --- MODIFIED: Fetch global ranking regardless of submission status --- 
         // Default to showing global view if user HAS submitted OR if user is NOT logged in
         setShowingGlobalRanking(submitted || !user); 
-        setLoadingGlobalRanking(true);
-        const globalRankingRef = doc(db, 'globalRankingsData', listId);
-        try {
-          const globalSnap = await getDoc(globalRankingRef);
-          if (globalSnap.exists()) {
-            const globalData = globalSnap.data();
-            setGlobalTop10(globalData.top10 || []);
-            setCurrentListTotalVotes(globalData.totalVotes || 0);
-            console.log(`Loaded global top 10 and total votes (${globalData.totalVotes || 0}) for:`, listId);
-          } else {
-            console.log("No global ranking data found for:", listId);
+          setLoadingGlobalRanking(true);
+          const globalRankingRef = doc(db, 'globalRankingsData', listId);
+          try {
+            const globalSnap = await getDoc(globalRankingRef);
+            if (globalSnap.exists()) {
+              const globalData = globalSnap.data();
+              setGlobalTop10(globalData.top10 || []);
+              setCurrentListTotalVotes(globalData.totalVotes || 0);
+              console.log(`Loaded global top 10 and total votes (${globalData.totalVotes || 0}) for:`, listId);
+            } else {
+              console.log("No global ranking data found for:", listId);
+              setGlobalTop10([]);
+              setCurrentListTotalVotes(0);
+            }
+          } catch (error) {
+            console.error("Error loading global ranking:", error);
+            setErrorGlobalRanking('Failed to load global ranking.');
             setGlobalTop10([]);
             setCurrentListTotalVotes(0);
-          }
-        } catch (error) {
-          console.error("Error loading global ranking:", error);
-          setErrorGlobalRanking('Failed to load global ranking.');
-          setGlobalTop10([]);
-          setCurrentListTotalVotes(0);
-        } finally {
-          setLoadingGlobalRanking(false);
+          } finally {
+            setLoadingGlobalRanking(false);
         }
 
         setCheckingSubmissionStatus(false);
@@ -215,43 +201,43 @@ const GlobalRankings = ({ seasonListRef }) => {
   useEffect(() => {
     const loadGlobalRankings = async () => {
       // Removed: if (!user) return; // Load even if user is not logged in
-      
+        
       // Set loading state for all lists initially
       const initialLoadingState = {};
       sampleLists.forEach(list => {
         initialLoadingState[list.id] = true;
-      });
+        });
       setLoadingGlobalRankings(initialLoadingState);
-
+        
       // Load global rankings for each list defined in sampleLists
       const newGlobalRankings = {};
-
+        
       for (const list of sampleLists) {
         const listId = list.id;
-        try {
-          const globalRankingRef = doc(db, 'globalRankingsData', listId);
-          const globalSnap = await getDoc(globalRankingRef);
-          
-          if (globalSnap.exists()) {
-            const globalData = globalSnap.data();
-            newGlobalRankings[listId] = {
-              top10: globalData.top10 || [],
-              totalVotes: globalData.totalVotes || 0
-            };
-          } else {
+          try {
+            const globalRankingRef = doc(db, 'globalRankingsData', listId);
+            const globalSnap = await getDoc(globalRankingRef);
+            
+            if (globalSnap.exists()) {
+              const globalData = globalSnap.data();
+              newGlobalRankings[listId] = {
+                top10: globalData.top10 || [],
+                totalVotes: globalData.totalVotes || 0 
+              };
+            } else {
             // If no data, store empty structure
-            newGlobalRankings[listId] = { top10: [], totalVotes: 0 };
-          }
-        } catch (error) {
+              newGlobalRankings[listId] = { top10: [], totalVotes: 0 };
+            }
+          } catch (error) {
           console.error(`Error loading global ranking for ${listId}:`, error);
           newGlobalRankings[listId] = { top10: [], totalVotes: 0, error: 'Failed to load' }; // Indicate error
         } finally {
           // Update loading state for this specific list
           setLoadingGlobalRankings(prev => ({ ...prev, [listId]: false }));
+          }
         }
-      }
-      
-      setGlobalRankings(newGlobalRankings);
+        
+        setGlobalRankings(newGlobalRankings);
       console.log("Finished loading all global rankings overview:", newGlobalRankings);
 
       /* --- OLD LOGIC --- 
@@ -311,7 +297,7 @@ const GlobalRankings = ({ seasonListRef }) => {
       // }
       */
     };
-
+    
     loadGlobalRankings();
   }, []); // Run only once on mount
 
@@ -330,90 +316,40 @@ const GlobalRankings = ({ seasonListRef }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // <<< Effect to Initialize and Animate Raining Trophies >>>
-  /*
+  // <<< ADDED useEffect for TouchMove Listener (COPIED FROM UserListCreator) >>>
   useEffect(() => {
-    const containerElement = containerRef.current;
-    if (!containerElement) return; // Need container bounds
-
-    const containerWidth = containerElement.offsetWidth;
-    const containerHeight = containerElement.offsetHeight;
-
-    // Initialize trophies only once
-    if (rainingTrophies.length === 0) {
-      const initialTrophies = [];
-      for (let i = 0; i < NUM_TROPHIES; i++) {
-        initialTrophies.push({
-          id: i,
-          x: Math.random() * containerWidth,
-          y: Math.random() * containerHeight, // Start at random Y positions
-          speed: MIN_SPEED + Math.random() * (MAX_SPEED - MIN_SPEED),
-          size: MIN_SIZE + Math.random() * (MAX_SIZE - MIN_SIZE),
-          rotation: MIN_ROTATION + Math.random() * (MAX_ROTATION - MIN_ROTATION),
-        });
-      }
-      setRainingTrophies(initialTrophies);
-      console.log("[Trophy Rain] Initialized trophies:", initialTrophies.length);
-    }
-
-    // Animation loop
-    const animate = () => {
-      setRainingTrophies(prevTrophies => 
-        prevTrophies.map(trophy => {
-          let newY = trophy.y + trophy.speed;
-          let newX = trophy.x;
-          // Reset if trophy falls below the container
-          if (newY > containerHeight) {
-            newY = -MAX_SIZE; // Reset above the top
-            newX = Math.random() * containerWidth; // Randomize X position on reset
-          }
-          return { ...trophy, y: newY, x: newX };
-        })
-      );
-      animationFrameId.current = requestAnimationFrame(animate);
-    };
-
-    // Start animation only if there are trophies
-    if (rainingTrophies.length > 0) {
-        animationFrameId.current = requestAnimationFrame(animate);
-        console.log("[Trophy Rain] Animation started.");
-    }
-
-    // Cleanup function to cancel animation frame
-    return () => {
-      if (animationFrameId.current) {
-        cancelAnimationFrame(animationFrameId.current);
-        console.log("[Trophy Rain] Animation stopped.");
-      }
-    };
-  // Depend on containerElement dimensions (might need resize observer for accuracy) 
-  // For simplicity, we depend on isMobile or other state that might trigger re-render
-  // A more robust solution would use ResizeObserver to get exact bounds if they change.
-  // Re-run if listId changes (indicating page change) or if trophies initialize.
-  }, [containerRef.current, listId, rainingTrophies.length]); // Added rainingTrophies.length
-  */
-  // ---------------------------------------------------------
-
-  // <<< Add useEffect for TouchMove Listener on Container >>>
-  useEffect(() => {
-    const listElement = listRef.current; // Assuming listRef points to the list container
+    const listElement = listRef.current; // Uses the same listRef
     if (!listElement || !isMobile) return;
 
+    // Handler for touchstart to prevent default scroll
+    const handleListTouchStartCapture = (e) => {
+      // Only prevent default if editable and touch is on a list item
+      if (isEditable && e.target.closest('.ranking-item')) {
+        console.log('[TouchStart Capture] Preventing default scroll.');
+        e.preventDefault(); 
+      }
+    };
+
+    // Handler for touchmove (references the component's handleTouchMove)
     const handleMove = (e) => {
-      // Call the handleTouchMove logic (defined below)
       handleTouchMove(e); 
     };
 
+    // Add listeners with passive: false
+    listElement.addEventListener('touchstart', handleListTouchStartCapture, { passive: false });
     listElement.addEventListener('touchmove', handleMove, { passive: false });
-    console.log('[TouchDrag - Global] Added passive:false touchmove listener');
+    console.log('[TouchDrag - Global] Added passive:false touchstart and touchmove listeners');
 
+    // Cleanup function
     return () => {
+      listElement.removeEventListener('touchstart', handleListTouchStartCapture, { passive: false });
       listElement.removeEventListener('touchmove', handleMove, { passive: false });
-      console.log('[TouchDrag - Global] Removed touchmove listener');
+      console.log('[TouchDrag - Global] Removed touchstart and touchmove listeners');
     };
-  }, [isMobile, listRef]); // Add listRef if it might change, otherwise just isMobile
+    // Rerun effect if isMobile or isEditable changes, or listRef becomes available
+  }, [isMobile, isEditable, listRef.current]); // Added isEditable dependency
 
-  // --- Drag and Drop Handlers ---
+  // --- Drag and Drop Handlers (DESKTOP) ---
 
   const handleDragOver = (e) => {
     if (!isEditable || isMobile) return; // <<< Added isMobile check >>>
@@ -858,7 +794,7 @@ const GlobalRankings = ({ seasonListRef }) => {
     
     // Check if the user *specifically* has submitted for this list (used for points calc maybe)
     const userHasSubmittedForThisList = user && globalDataForList !== undefined; 
-
+    
     return (
       <div 
         className="ranking-list-container" 
@@ -982,9 +918,9 @@ const GlobalRankings = ({ seasonListRef }) => {
     // Dependencies ensure this runs when conditions change
   }, [isMobile, user, userHasSubmitted, showingGlobalRanking, seasonListRef, handleAddContestantLocally]); // Add handleAddContestantLocally if using useCallback
 
-  // --- REPLACED Touch Handlers (Adapted from UserListCreator) --- 
+  // --- REPLACED Touch Handlers (COPIED FROM UserListCreator) --- 
   const handleTouchStart = (e, index) => {
-    if (!isMobile || !isEditable) return; // Only apply on mobile AND if editable
+    if (!isMobile || !isEditable) return; // Added isEditable check
 
     e.stopPropagation(); 
     clearTimeout(touchDragTimer.current);
@@ -1004,14 +940,14 @@ const GlobalRankings = ({ seasonListRef }) => {
       }
       originalBodyOverflow.current = document.body.style.overflow; 
       document.body.style.overflow = 'hidden';
-      console.log('[TouchDrag - Global] Drag started after delay. Initial Touch Y:', initialTouchY.current);
-    }, 150); // Use 150ms delay
+      console.log('[TouchDrag - Global] Drag started after delay.');
+    }, 150);
   };
 
   const handleTouchMove = (e) => {
-    if (!isTouchDragging.current || !isMobile || !isEditable || draggedItemIndex.current === null) return;
+    if (!isMobile || !isEditable || !isTouchDragging.current || draggedItemIndex.current === null) return; // Added isEditable check & isTouchDragging check
     
-    e.preventDefault(); 
+    // e.preventDefault(); // REMOVED: Default is now prevented in touchstart capture listener
 
     const touch = e.touches[0];
     const listContainer = listRef.current; 
@@ -1023,11 +959,11 @@ const GlobalRankings = ({ seasonListRef }) => {
     const deltaY = touch.clientY - initialTouchY.current;
     draggedElement.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(1.03)`;
 
-    // Target Index Calculation using offsetTop
+    // Target Index Calculation using offsetTop (Copied logic)
     const touchY = touch.clientY;
     const listRect = listContainer.getBoundingClientRect();
     const touchRelativeToContainer = touchY - listRect.top;
-    const listItems = Array.from(listContainer.querySelectorAll('.ranking-item')); // Make sure selector is correct for this component
+    const listItems = Array.from(listContainer.querySelectorAll('.ranking-item')); 
     
     let targetIndex = -1;
     let closestItemOriginalIndex = -1;
@@ -1044,171 +980,222 @@ const GlobalRankings = ({ seasonListRef }) => {
 
         if (distance < minDistance) {
             minDistance = distance;
-            const itemIndexAttr = item.dataset.index; // Ensure items have data-index attribute
-            closestItemOriginalIndex = itemIndexAttr !== undefined ? parseInt(itemIndexAttr, 10) : i;
+            // Store the actual index from the data-index attribute if available, otherwise fall back to loop index
+            const itemIndexAttr = item.dataset.index;
+            closestItemOriginalIndex = itemIndexAttr !== undefined ? parseInt(itemIndexAttr, 10) : i; 
         }
     }
     
     if (closestItemOriginalIndex !== -1 && closestItemOriginalIndex < listItems.length) {
-        const closestItem = listItems.find(item => parseInt(item.dataset.index, 10) === closestItemOriginalIndex);
+        const closestItem = listItems.find(item => (parseInt(item.dataset.index, 10) === closestItemOriginalIndex));
         if (closestItem) {
             const closestItemOriginalOffsetTop = closestItem.offsetTop;
             const closestItemHeight = closestItem.offsetHeight;
             const closestItemOriginalCenterY = closestItemOriginalOffsetTop + closestItemHeight / 2;
             targetIndex = (touchRelativeToContainer < closestItemOriginalCenterY) ? closestItemOriginalIndex : closestItemOriginalIndex + 1;
         } else { 
-             const draggedHeight = draggedItemHeight.current;
-             targetIndex = (draggedHeight > 0) 
-                 ? Math.max(0, Math.min(Math.floor(touchRelativeToContainer / draggedHeight), currentRanking?.contestants?.length ?? 0))
-                 : 0;
+             // Fallback if closest item by index wasn't found (unlikely but safe)
+             const tempHeight = draggedItemHeight.current > 0 ? draggedItemHeight.current : 50;
+             targetIndex = Math.max(0, Math.min(Math.floor(touchRelativeToContainer / tempHeight), currentRanking?.contestants?.length ?? 0));
+        }
+    } else if (listItems.length > 0) { 
+        // If no closest found but list isn't empty, likely near top/bottom
+        const firstItem = listItems.find(item => parseInt(item.dataset.index, 10) === 0);
+        const lastItem = listItems.find(item => parseInt(item.dataset.index, 10) === (currentRanking?.contestants?.length ?? 1) -1);
+        if (firstItem && touchRelativeToContainer < firstItem.offsetTop + firstItem.offsetHeight / 2) {
+            targetIndex = 0; // Hovering above the first item
+        } else if (lastItem && touchRelativeToContainer > lastItem.offsetTop + lastItem.offsetHeight / 2) {
+            targetIndex = listItems.length; // Hovering below the last item
+        } else {
+            // Fallback (middle of list, but somehow no closest found?)
+            const tempHeight = draggedItemHeight.current > 0 ? draggedItemHeight.current : 50;
+            targetIndex = Math.max(0, Math.min(Math.floor(touchRelativeToContainer / tempHeight), currentRanking?.contestants?.length ?? 0));
         }
     } else {
-        const draggedHeight = draggedItemHeight.current;
-        targetIndex = (draggedHeight > 0) 
-             ? Math.max(0, Math.min(Math.floor(touchRelativeToContainer / draggedHeight), currentRanking?.contestants?.length ?? 0))
-             : 0;
+        targetIndex = 0; // List was empty, insert at start
     }
+    
+    // Clamp target index
     targetIndex = Math.max(0, Math.min(targetIndex, currentRanking?.contestants?.length ?? 0));
 
-    // Apply Transforms to Create Gap AND Fill Origin
+    // Apply Transforms to Create Gap
     const draggedHeight = draggedItemHeight.current;
     const startIndex = draggedItemIndex.current; 
+    const gap = 10; // Assumed gap
+
     if (draggedHeight > 0 && startIndex !== null) {
         listItems.forEach((item) => {
-            if (item === draggedElement) return;             
+            if (item === draggedElement) {
+                 item.style.transition = 'none'; // Ensure dragged item moves instantly
+                 return;
+            }             
             const itemIndex = parseInt(item.dataset.index, 10);
             let transformY = 0; 
-            if (targetIndex > startIndex) {
+            
+            if (targetIndex > startIndex) { // Moving Down
+                // Item is between old spot and target spot
                 if (itemIndex > startIndex && itemIndex < targetIndex) {
-                    transformY = -draggedHeight;
+                    transformY = -(draggedHeight + gap);
                 }
-            } else if (targetIndex < startIndex) {
+            } else if (targetIndex < startIndex) { // Moving Up
+                // Item is between target spot and old spot
                 if (itemIndex >= targetIndex && itemIndex < startIndex) {
-                    transformY = draggedHeight;
+                    transformY = draggedHeight + gap;
                 }
             }
+            item.style.transition = 'transform 0.2s ease-in-out'; // Smooth transition for others
             item.style.transform = `translateY(${transformY}px)`;
         });
     }
   };
 
   const handleTouchEnd = (e) => {
-    if (!isEditable) return; // Check editability
+    // --- Combined Start Checks ---
+    if (!isMobile || !isEditable || !isTouchDragging.current) { 
+      clearTimeout(touchDragTimer.current); 
+      touchDragTimer.current = null;
+      // If not dragging, reset flags anyway
+      isTouchDragging.current = false; 
+      draggedItemIndex.current = null;
+      draggedItemElement.current = null; 
+      return; 
+    }
     
-    clearTimeout(touchDragTimer.current); 
-    const wasDragging = isTouchDragging.current;
-    const draggedElement = draggedItemElement.current;
+    // --- Proceed with End Logic ---
+    clearTimeout(touchDragTimer.current);
+    touchDragTimer.current = null;
+    e.stopPropagation(); // Important if nested touch handlers exist
 
-    // Clear Transforms and Styles
+    const draggedElement = draggedItemElement.current;
+    const startIndex = draggedItemIndex.current;
+
+    // Reset visual styles FIRST
     const listContainer = listRef.current; 
     if(listContainer) {
-        const allItems = listContainer.querySelectorAll('.ranking-item'); // Use correct selector
+        const allItems = listContainer.querySelectorAll('.ranking-item'); 
         allItems.forEach(item => {
           item.style.transform = ''; 
+          item.style.transition = ''; // Clear transition override
         });
     }
     if (draggedElement) {
         draggedElement.classList.remove('touch-dragging-item');
         draggedElement.style.transform = ''; 
+        draggedElement.style.transition = ''; 
     }
-    if (document.body.style.overflow === 'hidden') {
+    // Restore body scroll
+    if (document.body.style.overflow === 'hidden') { // Only restore if we hid it
         document.body.style.overflow = originalBodyOverflow.current;
     }
 
-    // Reset refs immediately after clearing styles
-    const startIndex = draggedItemIndex.current; // Store before resetting
-    isTouchDragging.current = false;
-    draggedItemIndex.current = null;
-    draggedItemElement.current = null;
-    draggedItemHeight.current = 0;
-    initialTouchX.current = 0;
-    initialTouchY.current = 0;
-
-    // Exit if not actually dragging
-    if (!wasDragging || !isMobile) {
-      return;
-    }
-    
-    e.preventDefault();
-    e.stopPropagation();
-
-    const touch = e.changedTouches[0]; 
-    let targetIndex = -1; 
-    
-    // Target Index Calculation using offsetTop
-    if (touch && listContainer && currentRanking?.contestants) { 
+    // --- Determine Final Drop Target Index --- 
+    let targetIndex = -1;
+    if (listContainer && startIndex !== null && currentRanking?.contestants) { // Add check for currentRanking
         const listRect = listContainer.getBoundingClientRect();
-        const touchY = touch.clientY;
-        const touchRelativeToContainer = touchY - listRect.top;
-        const listItems = Array.from(listContainer.querySelectorAll('.ranking-item')); // Correct selector
-        
-        let closestItemOriginalIndex = -1;
-        let minDistance = Infinity;
+        const lastTouch = e.changedTouches?.[0]; 
+      
+        if (lastTouch) {
+            const finalTouchY = lastTouch.clientY;
+            const touchRelativeToContainer = finalTouchY - listRect.top;
+            const listItems = Array.from(listContainer.querySelectorAll('.ranking-item'));
+            
+            let closestItemOriginalIndex = -1;
+            let minDistance = Infinity;
 
-        for (let i = 0; i < listItems.length; i++) {
-            const item = listItems[i];
-            const itemOriginalOffsetTop = item.offsetTop;
-            const itemHeight = item.offsetHeight;
-            const itemOriginalCenterY = itemOriginalOffsetTop + itemHeight / 2;
-            const distance = Math.abs(touchRelativeToContainer - itemOriginalCenterY);
+            // Find closest item center logic (same as move)
+            for (let i = 0; i < listItems.length; i++) {
+                const item = listItems[i];
+                // Use static offsetTop, not potentially transformed position
+                const itemOriginalOffsetTop = item.offsetTop; 
+                const itemHeight = item.offsetHeight;
+                const itemOriginalCenterY = itemOriginalOffsetTop + itemHeight / 2;
+                const distance = Math.abs(touchRelativeToContainer - itemOriginalCenterY);
+                
+                // Check distance AND make sure we're not comparing the dragged item to itself visually
+                if (distance < minDistance && item !== draggedElement) { 
+                    minDistance = distance;
+                    const itemIndexAttr = item.dataset.index;
+                    closestItemOriginalIndex = itemIndexAttr !== undefined ? parseInt(itemIndexAttr, 10) : i; 
+                }
+            }
+          
+            // Determine target index based on closest item
+            if (closestItemOriginalIndex !== -1) {
+                const closestItem = listItems.find(item => parseInt(item.dataset.index, 10) === closestItemOriginalIndex);
+                if (closestItem) {
+                    const closestItemOriginalOffsetTop = closestItem.offsetTop;
+                    const closestItemHeight = closestItem.offsetHeight;
+                    const closestItemOriginalCenterY = closestItemOriginalOffsetTop + closestItemHeight / 2;
+                    targetIndex = (touchRelativeToContainer < closestItemOriginalCenterY) ? closestItemOriginalIndex : closestItemOriginalIndex + 1;
+                } else { 
+                   // Fallback if item not found
+                    const tempHeight = draggedItemHeight.current > 0 ? draggedItemHeight.current : 50;
+                    targetIndex = Math.max(0, Math.min(Math.floor(touchRelativeToContainer / tempHeight), currentRanking.contestants.length));
+                }
+            } else if (listItems.length > 0) { // No specific closest, check edges
+                const firstItem = listItems.find(item => parseInt(item.dataset.index, 10) === 0);
+                const lastItem = listItems.find(item => parseInt(item.dataset.index, 10) === (currentRanking.contestants.length) -1);
+                 if (firstItem && touchRelativeToContainer < firstItem.offsetTop + firstItem.offsetHeight / 2) {
+                   targetIndex = 0;
+                 } else if (lastItem && touchRelativeToContainer > lastItem.offsetTop + lastItem.offsetHeight / 2){
+                   targetIndex = listItems.length; // Drop after last
+                 } else {
+                    // Fallback if edges check fails
+                    const tempHeight = draggedItemHeight.current > 0 ? draggedItemHeight.current : 50;
+                    targetIndex = Math.max(0, Math.min(Math.floor(touchRelativeToContainer / tempHeight), currentRanking.contestants.length));
+                 }
+            } else {
+                targetIndex = 0; // Dropping into empty list
+            }
 
-            if (distance < minDistance) {
-                minDistance = distance;
-                const itemIndexAttr = item.dataset.index;
-                closestItemOriginalIndex = itemIndexAttr !== undefined ? parseInt(itemIndexAttr, 10) : i;
-            }
-        }
-        
-        if (closestItemOriginalIndex !== -1 && closestItemOriginalIndex < listItems.length) {
-            const closestItem = listItems.find(item => parseInt(item.dataset.index, 10) === closestItemOriginalIndex);
-            if (closestItem) {
-                const closestItemOriginalOffsetTop = closestItem.offsetTop;
-                const closestItemHeight = closestItem.offsetHeight;
-                const closestItemOriginalCenterY = closestItemOriginalOffsetTop + closestItemHeight / 2;
-                targetIndex = (touchRelativeToContainer < closestItemOriginalCenterY) ? closestItemOriginalIndex : closestItemOriginalIndex + 1;
-            } else { 
-                 // Fallback
-                 const tempHeight = draggedItemHeight.current > 0 ? draggedItemHeight.current : 50;
-                 targetIndex = Math.max(0, Math.min(Math.floor(touchRelativeToContainer / tempHeight), currentRanking.contestants.length));
-            }
+            // Clamp final index
+            targetIndex = Math.max(0, Math.min(targetIndex, currentRanking.contestants.length));
+            
         } else {
-            // Fallback
-             const tempHeight = draggedItemHeight.current > 0 ? draggedItemHeight.current : 50;
-             targetIndex = Math.max(0, Math.min(Math.floor(touchRelativeToContainer / tempHeight), currentRanking.contestants.length));
+            console.log("[TouchDrag - Global End] No touch data found on touchend.");
+            targetIndex = startIndex; // Fallback: No move
         }
-        targetIndex = Math.max(0, Math.min(targetIndex, currentRanking.contestants.length));
-        console.log(`[TouchDrag - Global End] TargetIndex: ${targetIndex}`);
-
-    } else if (listContainer && currentRanking?.contestants?.length === 0) {
-        targetIndex = 0; 
-    } else {
-        console.warn("[TouchDrag - Global End] Could not calculate target index.");
-        targetIndex = startIndex !== null ? startIndex : 0; // Fallback
-    }
-
-    // Perform Reordering
-    if (startIndex !== null && targetIndex !== -1 && currentRanking && currentRanking.contestants) {
+      
+        // --- Perform State Update --- 
         let insertIndex = targetIndex;
         if (startIndex < targetIndex) { 
             insertIndex = targetIndex - 1; 
         }
-        
-        // No need to check for same index, splice handles it.
-        console.log(`[TouchDrag - Global End] Reordering from ${startIndex} to insert ${insertIndex} (Target: ${targetIndex})`);
-        const newList = [...currentRanking.contestants];
-        const [movedItem] = newList.splice(startIndex, 1);
-        insertIndex = Math.min(insertIndex, newList.length); 
-        newList.splice(insertIndex, 0, movedItem);
-        
-        // <<< UPDATE State using setCurrentRanking >>>
-        setCurrentRanking(prevRanking => ({
-            ...prevRanking,
-            contestants: newList
-        }));
+        insertIndex = Math.max(0, Math.min(insertIndex, currentRanking.contestants.length -1)); // Clamp insert index
+
+        if (startIndex !== insertIndex) { // Only update if index actually changed
+            console.log(`[TouchDrag - Global End] Reordering: Item from index ${startIndex} to insert at ${insertIndex} (target: ${targetIndex})`);
+            
+            // <<< Adapt to use currentRanking and setCurrentRanking >>>
+            const itemToMove = currentRanking.contestants[startIndex]; 
+            const remainingItems = currentRanking.contestants.filter((_, i) => i !== startIndex);
+            const newList = [
+                ...remainingItems.slice(0, insertIndex), // Use insertIndex for slicing
+                itemToMove,
+                ...remainingItems.slice(insertIndex) // Use insertIndex for slicing
+            ];
+            // <<< Update state using setCurrentRanking >>>
+            setCurrentRanking(prevRanking => ({
+                ...prevRanking,
+                contestants: newList
+            }));
+            
+        } else {
+            console.log(`[TouchDrag - Global End] Drop occurred but insert index (${insertIndex}) is same as start (${startIndex}). No reorder.`);
+        }
     } else {
-      console.log(`[TouchDrag - Global End] Invalid drop (Target: ${targetIndex}, Start: ${startIndex})`);
+        console.log("[TouchDrag - Global End] List element, start index, or currentRanking missing.");
     }
+
+    // Final state reset (MUST run AFTER state update logic)
+    isTouchDragging.current = false;
+    draggedItemIndex.current = null;
+    draggedItemElement.current = null; 
+    draggedItemHeight.current = 0;
+    initialTouchX.current = 0;
+    initialTouchY.current = 0;
   };
+  // --- End REPLACED Handlers --- 
 
   // --- Comment Functions --- 
 
@@ -1782,13 +1769,11 @@ const GlobalRankings = ({ seasonListRef }) => {
       
       <div className="global-rankings-description">
         <p>
-          Who is the Greatest Of All Time? Cast your votes in the ultimate Survivor showdown! 
-          Rank your top 10 strategic masterminds, social players, and challenge beasts. 
-          Once you submit your list for a category, you'll see the community's global ranking!
+          Welcome to the Global Rankings! This page features special ranking categories that change periodically. Submit your votes for the current category to see how your choices compare to the community's overall ranking. Check back often for new ranking challenges!
         </p>
       </div>
       
-      <h2 className="section-title">Vote for the GOATs</h2>
+      <h2 className="section-title">Current Global Ranking</h2> {/* Updated title */}
       <div className="global-lists-container">
         {sampleLists.map(list => renderRankingListCard(list))}
       </div>

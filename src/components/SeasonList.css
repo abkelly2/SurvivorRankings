@@ -607,7 +607,8 @@ body.tribal-mode .back-button::after {
 
 @media (max-width: 768px) {
   .seasons-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px 5px;
   }
   
   .contestants-grid {
@@ -1094,7 +1095,7 @@ body.tribal-mode .back-button::after {
 /* Add styles for the swipe handle at the top of the mobile menu */
 .menu-tab-handle {
   position: absolute;
-  top: 0;
+  top: -11px;
   left: 0;
   width: 100%;
   height: 30px;

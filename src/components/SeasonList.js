@@ -581,7 +581,9 @@ const SeasonList = forwardRef(({
 
     try {
       const jsonData = JSON.stringify(data);
+      // Set both text/plain and application/json for broader compatibility
       e.dataTransfer.setData('text/plain', jsonData);
+      e.dataTransfer.setData('application/json', jsonData);
       e.dataTransfer.effectAllowed = 'move';
       if (e.currentTarget) {
         e.currentTarget.classList.add('dragging-item');
@@ -742,18 +744,14 @@ const SeasonList = forwardRef(({
                     key={`${contestant.id}-${contestant.seasonId}`}
                     className="contestant-item"
                     onClick={() => {
-                      if (isLoggedIn && createMode) {
+                      if (createMode) {
                         handleContestantClick(contestant);
-                        
-                        // Hide the menu on mobile after selecting a contestant from search
                         hideMenuOnMobile();
-                      } else {
-                        handleSearchContestantClick(contestant.seasonId);
                       }
                     }}
-                    draggable={isLoggedIn && createMode}
-                    onDragStart={isLoggedIn && createMode ? (e) => handleDragStart(e, contestant) : undefined}
-                    onDragEnd={isLoggedIn && createMode ? handleDragEnd : undefined}
+                    draggable={createMode}
+                    onDragStart={createMode ? (e) => handleDragStart(e, contestant) : undefined}
+                    onDragEnd={createMode ? handleDragEnd : undefined}
                   >
                     <img
                       className="contestant-image"
@@ -780,9 +778,9 @@ const SeasonList = forwardRef(({
                   key={season.id}
                   className="season-card"
                   onClick={() => handleSeasonCardClick(season)}
-                  draggable={isLoggedIn && createMode}
-                  onDragStart={isLoggedIn && createMode ? (e) => handleSeasonDragStart(e, season) : undefined}
-                  onDragEnd={isLoggedIn && createMode ? handleDragEnd : undefined}
+                  draggable={createMode}
+                  onDragStart={createMode ? (e) => handleSeasonDragStart(e, season) : undefined}
+                  onDragEnd={createMode ? handleDragEnd : undefined}
                 >
                   <img
                     className="season-logo"
@@ -828,25 +826,23 @@ const SeasonList = forwardRef(({
                 key={contestant.id} 
                 className="contestant-card"
                 onClick={() => {
-                  if (isLoggedIn && createMode) {
+                  if (createMode) {
                     handleContestantClick({
                       ...contestant,
                       seasonId: selectedSeason,
                       seasonName: survivorSeasons.find(s => s.id === selectedSeason)?.name || ''
                     });
-                    
-                    // Hide the menu on mobile after selecting a contestant
                     hideMenuOnMobile();
                   }
                 }}
-                draggable={isLoggedIn && createMode}
-                onDragStart={isLoggedIn && createMode ? 
+                draggable={createMode}
+                onDragStart={createMode ? 
                   (e) => handleDragStart(e, {
                     ...contestant,
                     seasonId: selectedSeason,
                     seasonName: survivorSeasons.find(s => s.id === selectedSeason)?.name || ''
                   }) : undefined}
-                onDragEnd={isLoggedIn && createMode ? handleDragEnd : undefined}
+                onDragEnd={createMode ? handleDragEnd : undefined}
               >
                 <img
                   className="contestant-image"

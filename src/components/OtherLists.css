@@ -3610,7 +3610,7 @@
   .full-list-header {
     margin-top: 45px;
     margin-left: -40px;
-    margin-right: -20px;
+    margin-right: -40px;
   }
 }
 
@@ -4670,7 +4670,7 @@
   .full-list-view .ranking-list-container {
     margin-top: 0px; /* Set to 0px */
     margin-left: -40px !important;  /* Keep existing mobile adjustment */
-    margin-right: -20px !important; /* Keep existing mobile adjustment */
+    margin-right: -40px !important; /* Keep existing mobile adjustment */
     max-width: none !important;      /* Keep existing mobile adjustment */
     width: auto !important;         /* Keep existing mobile adjustment */
     padding-top: 0px; /* Set to 0px */

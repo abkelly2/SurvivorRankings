@@ -3,7 +3,7 @@ import { db } from '../firebase';
 import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { survivorSeasons } from '../data/survivorData';
 import './UserListCreator.css';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { getCachedImageUrl } from '../utils/imageCache';
 
 const UserListCreator = ({ 
@@ -28,6 +28,7 @@ const UserListCreator = ({
   const listRef = useRef(null);
   const [currentListId, setCurrentListId] = useState(editingListId || null);
   const navigate = useNavigate();
+  const location = useLocation();
   
   // --- State/Refs for Mobile Touch Drag Reordering --- 
   const touchDragTimer = useRef(null);
@@ -56,10 +57,28 @@ const UserListCreator = ({
     { id: 'spoiler', label: 'Spoiler' }
   ];
   
+  // <<< ADDED: Effect to load pending list data from navigation state >>>
+  useEffect(() => {
+    if (location.state?.pendingListData) {
+      console.log('[UserListCreator] Loading pending list data from location state');
+      const { name, description, tags, contestants } = location.state.pendingListData;
+      setListName(name || '');
+      setListDescription(description || '');
+      setListTags(tags || []);
+      setUserList(contestants || []);
+      
+      // Clear the location state after loading to prevent reload on refresh/revisit
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+    // Run only once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array
+  
   // Load any existing draft from local storage if not editing an existing list
   useEffect(() => {
     const loadExistingDraft = async () => {
-      if (user && !listName && !editingListId && userList.length === 0) {
+      // Only load draft if we haven't already loaded pending data or are editing
+      if (!location.state?.pendingListData && user && !listName && !editingListId && userList.length === 0) {
         try {
           const userDocRef = doc(db, "userLists", user.uid);
           const userDoc = await getDoc(userDocRef);
@@ -79,7 +98,7 @@ const UserListCreator = ({
     };
     
     loadExistingDraft();
-  }, [user, setListName, setListDescription, setListTags, setUserList, listName, editingListId, userList.length]);
+  }, [user, setListName, setListDescription, setListTags, setUserList, listName, editingListId, userList.length, location.state?.pendingListData]);
   
   // Auto-save draft to Firestore when user makes changes
   useEffect(() => {
@@ -1121,45 +1140,44 @@ const UserListCreator = ({
       </div>
       
       <div className="list-actions">
-        {error && <div className="error-message">{error}</div>}
-        {saveSuccess && <div className="success-message">List saved successfully!</div>}
-        
-        <div className="action-buttons">
-          <button 
-            className="save-list-button" 
-            onClick={handleSaveList}
-            disabled={saving || userList.length === 0}
-          >
-            {saving ? 'Saving...' : editingListId ? 'Update List' : 'Save List'}
-          </button>
-          
-          <button 
-            className="clear-button" 
-            onClick={clearList}
-            title="Clear the entire list and its details"
-          >
-            Clear
-          </button>
-          
-          <button 
-            className="cancel-button" 
-            onClick={handleCancel}
-          >
-            Cancel
-          </button>
-        </div>
+        <button onClick={clearList} className="clear-button" disabled={saving}>
+          Clear List
+        </button>
+        {user ? ( // Check if user is logged in
+           <button onClick={handleSaveList} className="save-button" disabled={saving}>
+             {saving ? 'Saving...' : (currentListId ? 'Update List' : 'Save List')}
+           </button>
+        ) : (
+           <button 
+             onClick={() => {
+               // Save current list state to localStorage
+               const pendingList = {
+                 name: listName,
+                 description: listDescription,
+                 tags: listTags,
+                 contestants: userList
+               };
+               try {
+                 localStorage.setItem('pendingList', JSON.stringify(pendingList));
+                 console.log('Saved pending list to localStorage');
+               } catch (error) {
+                 console.error('Error saving pending list to localStorage:', error);
+               }
+               // Navigate to login page
+               navigate('/login');
+             }}
+             className="login-to-save-button"
+           >
+             Sign in to Save
+           </button>
+        )}
+        <button onClick={handleCancel} className="cancel-button" disabled={saving}>
+          Cancel
+        </button>
       </div>
 
-      {/* --- REVERTED: Back to Mobile Only --- */}
-      {isMobile && ( 
-          <button 
-             className="edit-my-list-button mobile-only-button" // Restore class
-             onClick={toggleSeasonsMenuMobile} 
-             title="Edit Contestants"
-          >
-             Edit My List
-          </button>
-      )} 
+      {error && <div className="error-message">{error}</div>}
+      {saveSuccess && <div className="success-message">List saved successfully!</div>}
     </div>
   );
 };
