@@ -432,7 +432,7 @@
     height: 60px;
     /* Keep object-fit: contain for logos if needed */
     object-fit: contain; 
-    margin-top: 0px !important;
+    margin-top: 3px !important;
   }
 }
 
@@ -2613,6 +2613,2186 @@
 
 /* If needed, specific adjustments for when only Close button is visible */
 /* (justify-content: center already handles this, but could add specific rules if layout breaks) */
+ 
+/* Style for the desktop edit button */
+.edit-my-list-button-desktop {
+  background-color: rgba(255, 204, 0, 0.15); /* Subtle yellow */
+  border: 1px solid rgba(255, 204, 0, 0.3);
+  color: #ffcc00;
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+  margin-left: 8px; /* Add space from share button */
+}
+
+.edit-my-list-button-desktop:hover {
+  background-color: rgba(255, 204, 0, 0.3);
+  border-color: #ffcc00;
+}
+
+/* --- Desktop Specific Edit Button Positioning --- */
+@media (min-width: 769px) {
+  .full-list-header .edit-my-list-button {
+    position: absolute;
+    bottom: 15px; /* Adjust as needed */
+    left: 15px;   /* Adjust as needed */
+    display: inline-block; /* Ensure visibility if needed */
+    /* Reset any margin that might affect positioning */
+    margin: 0;
+    /* Ensure it appears above other header content if necessary */
+    z-index: 5;
+  }
+
+  /* Hide the mobile-specific container on desktop */
+  .mobile-list-actions-container {
+    display: none;
+  }
+}
+
+/* --- Mobile Specific Edit Button Positioning (within its container) --- */
+@media (max-width: 768px) {
+   /* Keep mobile styles for .edit-my-list-button if they exist */
+   /* ... */
+
+   /* Hide the desktop button (now sharing the same class) when it's directly in header actions */
+   /* This might not be strictly necessary if the parent container is hidden, but good practice */
+   .full-list-header > .header-actions-container > .edit-my-list-button {
+       display: none;
+   }
+}
+
+
+.full-list-header h2 {
+  color: #ffcc00;
+  text-align: center;
+  font-size: 3.5rem;
+
+  margin-bottom: 0px;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.full-list-header .list-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  margin-bottom: 5px !important;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.full-list-header .created-by,
+.full-list-header .created-date {
+  color: #ddd;
+  font-size: 0.9rem;
+  padding-bottom: 10px;
+}
+
+.full-list-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 15px;
+}
+
+/* Add styles to match the home page list styling */
+.full-list-view .ranking-list-container {
+  background: #ffffff;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin: 20px auto;
+  padding: 20px;
+  overflow: hidden;
+  position: relative;
+  max-width: 1050px !important;
+  width: 100%;
+}
+
+.full-list-view .ranking-list {
+  width: 100%;
+  max-width: 100%;
+  min-height: 150px;
+  background-color: white;
+  border-radius: 4px;
+  padding: 8px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 2px dashed #ccc;
+  transition: all 0.2s ease;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+}
+
+.full-list-view .ranking-item {
+  display: grid;
+  grid-template-columns: 60px auto 1fr;
+  grid-template-areas: "number image name";
+  align-items: center;
+  padding: 12px 20px;
+  margin-bottom: 15px !important;
+  background-color: #fff;
+  border: 2px solid #e0e0e0;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  position: relative;
+  min-height: 140px;
+}
+
+.full-list-view .ranking-item:hover {
+  background-color: #f9f9f9;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.full-list-view .ranking-number {
+  grid-area: number;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 28px !important;
+  font-weight: 800;
+  color: #000000;
+  font-family: 'Survivant', sans-serif;
+  width: 40px;
+  line-height: 1;
+  background-color: transparent;
+  border: none;
+  text-align: center;
+  padding-left: 10px;
+}
+
+.full-list-view .contestant-image {
+  grid-area: image;
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  border-radius: 0;
+  justify-self: start;
+  max-width: none !important;
+
+}
+
+.full-list-view .contestant-name,
+.full-list-view .season-name {
+  grid-area: name;
+  font-size: 35px !important;
+  font-weight: 700 !important;
+  color: #000000 !important;
+  font-family: 'Survivant', sans-serif;
+  text-align: center;
+  padding: 0;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  display: block;
+  justify-self: center;
+  margin-left: 100px; /* Adjusted to center properly */
+}
+
+/* Also adjust the season name with the same styling */
+.full-list-view .season-name {
+   grid-area: name;
+  font-size: 26px !important;
+  font-weight: 700 !important;
+  color: #000000 !important;
+  font-family: 'Survivant', sans-serif;
+  text-align: left !important;
+  padding: 0;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  display: block;
+  justify-self: center;
+  margin-left: -300px; /* Adjusted to center properly */
+}
+
+/* Responsive styles for the full list view */
+@media (max-width: 1100px) {
+  .full-list-view .contestant-image {
+    width: 75px;
+    height: 75px;
+    margin-right: 6px;
+  }
+  
+  .full-list-view .ranking-item {
+    min-height: 85px;
+    padding: 6px;
+    /* Adjust grid columns for smaller screens */
+    grid-template-columns: 40px auto 1fr; 
+  }
+  
+  .full-list-view .ranking-number {
+    width: 22px;
+    height: 22px;
+    font-size: 14px;
+    margin-right: 6px;
+    background-color: transparent;
+    border: none;
+  }
+  
+  .full-list-view .contestant-name {
+    font-size: clamp(10px, 1vw, 14px);
+    line-height: 1.1;
+    margin-left: 15px !important; /* Add margin for contestant name */
+    justify-self: start; /* Align left */
+  }
+
+  /* <<< ADD rule for season name on mobile >>> */
+  .full-list-view .season-name {
+    font-size: clamp(10px, 1.5vw, 14px) !important; /* Adjust font size */
+    margin-left: 15px !important; /* Remove negative margin, add positive */
+    justify-self: start !important; /* Align to start of grid area */
+    text-align: left !important; /* Align text left */
+  }
+}
+
+@media (max-width: 880px) {
+  .full-list-view .contestant-image {
+    width: 65px;
+    height: 65px;
+    margin-right: 4px;
+  }
+  
+  .full-list-view .ranking-item {
+    min-height: 75px;
+    padding: 4px;
+    grid-template-columns: 35px auto 1fr; /* Adjust grid */
+  }
+  
+  .full-list-view .ranking-number {
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+  }
+
+  /* <<< ADD rule for contestant name >>> */
+  .full-list-view .contestant-name,
+  .full-list-view .season-name { /* Apply to both */
+    font-size: clamp(20px, 1vw, 12px) !important;
+    margin-left: 10px !important;
+    justify-self: start !important;
+  }
+}
+
+
+
+@media (max-width: 700px) {
+  .full-list-view .contestant-image {
+    width: 45px ; /* Reduced size */
+    height: 45px ; /* Reduced size */
+  }
+  
+  .full-list-view .ranking-item {
+    min-height: 55px; /* Reduced min-height further */
+    grid-template-columns: 30px auto 1fr; /* Adjust grid */
+  }
+
+  /* Remove align-self from number */
+  .full-list-view .ranking-number {
+     /* align-self: center; */
+     /* Inherit other styles like width/height/font-size from previous breakpoints */
+  }
+
+  /* <<< ADD rule for contestant name >>> */
+  .full-list-view .contestant-name,
+  .full-list-view .season-name { /* Apply to both */
+    font-size: clamp(24px, 0.9vw, 11px) !important;
+    margin-left: 80px !important;
+    justify-self: start !important;
+  }
+}
+
+
+@media (max-width: 600px) {
+  .full-list-view .contestant-image {
+    width: 45px ; /* Reduced size */
+    height: 45px ; /* Reduced size */
+  }
+  
+  .full-list-view .ranking-item {
+    min-height: 65px; /* Adjust min-height */
+    grid-template-columns: 30px auto 1fr; /* Adjust grid */
+  }
+
+  /* <<< ADD rule for contestant name >>> */
+  .full-list-view .contestant-name,
+  .full-list-view .season-name { /* Apply to both */
+    font-size: clamp(20px, 0.9vw, 11px) !important;
+    margin-left: 40px !important;
+    justify-self: start !important;
+  }
+}
+
+@media (max-width: 500px) {
+  .full-list-view .contestant-image {
+    width: 45px ; /* Reduced size */
+    height: 45px ; /* Reduced size */
+  }
+  
+  .full-list-view .ranking-item {
+    min-height: 65px; /* Adjust min-height */
+    grid-template-columns: 30px auto 1fr; /* Adjust grid */
+  }
+
+  /* <<< ADD rule for contestant name >>> */
+  .full-list-view .contestant-name,
+  .full-list-view .season-name { /* Apply to both */
+    font-size: clamp(15px, 0.9vw, 11px) !important;
+    margin-left: 10px !important;
+    justify-self: start !important;
+  }
+}
+
+/* Make list cards clickable */
+.public-list-card {
+  cursor: pointer;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.public-list-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.view-full-list-prompt {
+  color: #ffcc00;
+  margin-top: 10px;
+  font-style: italic;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+/* Adjust container for description and tags */
+.list-description-container {
+  background-color: rgba(0, 0, 0, 0.2);
+  padding: 15px;
+  border-radius: 8px;
+  margin-top: 15px;
+  border-left: 3px solid #ffcc00;
+}
+
+.list-description-container p.list-description {
+  color: #ddd;
+  margin: 0 0 15px 0; /* Add margin below description */
+  font-style: italic;
+  line-height: 1.5;
+  text-align: left; /* Align description left */
+}
+
+.list-description-container .full-list-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 0; /* Remove default margin if any */
+  justify-content: center; /* Center tags using flexbox */
+  text-align: center; /* Center text within tags (fallback) */
+}
+
+.list-preview-description {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.list-preview-description p {
+  color: #cccccc;
+  font-style: italic;
+  font-size: 0.85rem;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.user-lists-view {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  position: relative;
+}
+
+.user-lists-header {
+  margin-top: 0;
+  margin-bottom: 30px;
+  background-color: rgba(255, 255, 255, 0.205);
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.user-lists-header h2 {
+  color: #ffcc00;
+  text-align: center;
+  font-size: 1.8rem;
+  margin: 0;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.clickable {
+  cursor: pointer;
+  color: #ffcc00;
+  transition: all 0.2s ease;
+  position: relative;
+  display: inline-block;
+  z-index: 5;
+  overflow: visible;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.clickable:hover {
+  color: #ffd633;
+  text-decoration: underline;
+}
+
+/* Adjust the span containing username in the list meta */
+.public-list-card .list-meta .created-by {
+  display: inline-block;
+  width: auto;
+  margin: 2px 0;
+  text-align: center;
+}
+
+/* Add specific style for the username inside created-by span */
+.public-list-card .list-meta .created-by .username {
+  cursor: pointer;
+  color: #ffcc00;
+  transition: all 0.2s ease;
+  position: relative;
+  display: inline;
+  z-index: 5;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.public-list-card .list-meta .created-by .username:hover {
+  color: #ffd633;
+  text-decoration: underline;
+}
+
+/* Type filters */
+.type-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.type-filters span {
+  color: #ffcc00;
+  margin-right: 10px;
+}
+
+.type-filters button {
+  background-color: rgba(0, 0, 0, 0.3);
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #fff;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.type-filters button.active {
+  background-color: #ffcc00;
+  color: #000;
+  border-color: #ffcc00;
+}
+
+/* List type indicators */
+.list-type-indicator {
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-right: 5px;
+  color: #fff;
+  display: inline-block;
+}
+
+.list-type-indicator.season {
+  background-color: #0066cc;
+  border: 1px solid #004d99;
+}
+
+.list-type-indicator.survivor {
+  background-color: #ff6b00;
+  color: #ffffff;
+  border: 1px solid #cc5500;
+}
+
+/* Ensure the indicator is positioned correctly */
+.full-list-tags {
+  margin-top: 15px;
+}
+
+/* Spoiler blur effect */
+.spoiler-blur {
+  filter: blur(5px);
+  transition: filter 0.3s ease;
+  user-select: none;
+}
+
+.spoiler-blur:hover {
+  filter: blur(5px);
+}
+
+.spoiler-tag {
+  background-color: rgba(255, 0, 0, 0.2) !important;
+  color: #ff5555 !important;
+  font-weight: bold;
+}
+
+.list-tag[key="spoiler"] {
+  background-color: rgba(255, 0, 0, 0.2);
+  color: #ff5555;
+}
+
+/* Comments Section */
+.comments-section {
+  margin-top: 30px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 40px;
+  position: relative;
+  overflow: visible;
+}
+
+.comments-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(to right, #ff6b00, #ffcc00);
+  border-radius: 12px 12px 0 0;
+}
+
+.comments-title {
+  font-size: 1.4rem;
+  margin-bottom: 25px;
+  border-bottom: 1px solid #e8e8e8;
+  padding-bottom: 12px;
+  color: #333;
+  font-weight: 600;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.comments-title::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 60px;
+  height: 3px;
+  background-color: #ff6b00;
+  border-radius: 3px;
+}
+
+/* Comment form */
+.add-comment-form {
+  margin-bottom: 30px;
+  background-color: #f8f9fa;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.3s ease;
+  flex-shrink: 0;
+}
+
+.add-comment-form:focus-within {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.add-comment-form textarea {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 0.95rem;
+  background-color: #ffffff;
+  transition: all 0.3s ease;
+  line-height: 1.5;
+  min-height: 100px;
+}
+
+.add-comment-form textarea:focus {
+  border-color: #ff6b00;
+  box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.15);
+  outline: none;
+}
+
+.comment-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 15px;
+}
+
+.add-comment-button {
+  padding: 10px 20px;
+  background: linear-gradient(to right, #ff6b00, #ff9900);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 6px rgba(255, 107, 0, 0.3);
+  font-size: 0.95rem;
+}
+
+.add-comment-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 107, 0, 0.4);
+}
+
+.add-comment-button:active {
+  transform: translateY(1px);
+}
+
+.add-comment-button:disabled {
+  background: linear-gradient(to right, #cccccc, #dddddd);
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.login-to-comment {
+  background-color: #f8f9fa;
+  padding: 20px;
+  border-radius: 10px;
+  color: #666;
+  text-align: center;
+  margin-bottom: 25px;
+  font-size: 0.95rem;
+  border: 1px dashed #ccc;
+  flex-shrink: 0;
+}
+
+/* Comments list container with fixed height */
+.comments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  height: 500px; /* Fixed height */
+  max-height: 500px;
+  overflow-y: auto;
+  padding-right: 12px;
+  scroll-behavior: smooth;
+  margin-bottom: 20px;
+}
+
+/* Ensure comment items don't shrink */
+.comment-item {
+  background-color: #ffffff;
+  border-radius: 10px;
+  padding: 18px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+  border-left: 4px solid #e5e5e5;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0; /* Prevent shrinking */
+  min-height: min-content; /* Ensures the item is at least as tall as its content */
+}
+
+.comment-item:hover {
+  border-left-color: #ff6b00;
+}
+
+/* Ensure the comment replies maintain their size */
+.comment-replies {
+  margin-top: 15px;
+  margin-left: 20px;
+  border-left: 2px solid #f0f0f0;
+  padding-left: 15px;
+  width: calc(100% - 35px); /* Account for margins and paddings */
+}
+
+.reply-item {
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 10px;
+  position: relative;
+  border-left: 3px solid transparent;
+  transition: all 0.2s ease;
+  flex-shrink: 0; /* Prevent shrinking */
+  min-height: min-content; /* Ensures the reply is at least as tall as its content */
+}
+
+.reply-item:hover {
+  border-left-color: #ff6b00;
+}
+
+/* Scrollbar styling */
+.comments-list::-webkit-scrollbar {
+  width: 10px; /* Wider scrollbar for better visibility */
+  background-color: #f5f5f5;
+}
+
+.comments-list::-webkit-scrollbar-track {
+  background: #f5f5f5;
+  border-radius: 10px;
+}
+
+.comments-list::-webkit-scrollbar-thumb {
+  background: #cccccc;
+  border-radius: 10px;
+  border: 2px solid #f5f5f5;
+}
+
+.comments-list::-webkit-scrollbar-thumb:hover {
+  background: #bbbbbb;
+}
+
+/* Firefox scrollbar */
+@supports (scrollbar-width: thin) {
+  .comments-list {
+    scrollbar-width: thin;
+    scrollbar-color: #cccccc #f5f5f5;
+  }
+}
+
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 10px;
+}
+
+.comment-author {
+  font-weight: 600;
+  color: #333;
+  position: relative;
+  padding-left: 2px;
+}
+
+.comment-author .username {
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.comment-author .username:hover {
+  color: #ff6b00;
+}
+
+.comment-author .username::before {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 2px;
+  bottom: -2px;
+  left: 0;
+  background-color: #ff6b00;
+  transition: width 0.3s ease;
+}
+
+.comment-item:hover .comment-author .username::before {
+  width: 100%;
+}
+
+.comment-date {
+  color: #888;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+}
+
+.comment-date::before {
+  content: '•';
+  margin-right: 5px;
+  color: #ddd;
+}
+
+.comment-content {
+  margin-bottom: 15px;
+  line-height: 1.6;
+  color: #444;
+  word-break: break-word;
+  white-space: pre-line;
+  font-size: 0.95rem;
+  text-align: left;
+}
+
+.comment-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 10px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.comment-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.comment-votes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f9f9f9;
+  padding: 5px 10px;
+  border-radius: 20px;
+  transition: background-color 0.3s ease;
+}
+
+.comment-votes:hover {
+  background: #f5f5f5;
+}
+
+.comment-vote {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  color: #999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.comment-vote:hover {
+  background-color: #f0f0f0;
+}
+
+.comment-vote.upvote.voted {
+  color: #4caf50;
+  font-weight: bold;
+}
+
+.comment-vote.downvote.voted {
+  color: #f44336;
+  font-weight: bold;
+}
+
+.comment-vote:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.vote-count {
+  min-width: 25px;
+  text-align: center;
+  font-weight: 600;
+  color: #555;
+  font-size: 0.95rem;
+}
+
+/* Delete comment button */
+.delete-comment-button {
+  font-size: 0.85rem;
+  color: #ff6b6b;
+  background: none;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  opacity: 0.6;
+}
+
+.delete-comment-button::before {
+  content: '×';
+  font-size: 1.2rem;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.delete-comment-button:hover {
+  background-color: rgba(255, 107, 107, 0.1);
+  color: #ff4040;
+  opacity: 1;
+}
+
+.loading-comments, .no-comments {
+  text-align: center;
+  padding: 30px;
+  color: #888;
+  font-style: italic;
+  background: #f9f9f9;
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+
+.loading-comments::before {
+  content: '';
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #ddd;
+  border-radius: 50%;
+  border-top-color: #ff6b00;
+  animation: spin 1s linear infinite;
+  vertical-align: text-bottom;
+  margin-right: 10px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Reply button */
+.reply-button {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 0.85rem;
+  padding: 5px 10px;
+  cursor: pointer;
+  border-radius: 15px;
+  transition: all 0.2s ease;
+}
+
+.reply-button:hover {
+  background-color: #f0f0f0;
+  color: #ff6b00;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .comments-section {
+    padding: 20px;
+    margin-top: 20px;
+    margin-left: -40px;
+    margin-right: -20px;
+  }
+  
+  .comment-header {
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .comment-date::before {
+    display: none;
+  }
+  
+  .comment-item {
+    padding: 15px;
+  }
+  
+  .add-comment-form {
+    padding: 15px;
+  }
+  
+  .add-comment-button {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+  }
+  
+  .back-to-lists-button {
+    padding: 6px 12px;
+    font-size: 0.9rem;
+  }
+  
+  .full-list-header {
+    margin-top: 45px;
+    margin-left: -40px;
+    margin-right: -20px;
+  }
+}
+
+/* Reply form */
+.reply-form {
+  margin-top: 15px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border-left: 3px solid #ff6b00;
+}
+
+.reply-form textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 0.9rem;
+  min-height: 60px;
+}
+
+.reply-form textarea:focus {
+  border-color: #ff6b00;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.1);
+}
+
+.reply-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.cancel-reply-button {
+  padding: 6px 12px;
+  background: none;
+  border: 1px solid #ddd;
+  color: #666;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancel-reply-button:hover {
+  background-color: #f0f0f0;
+}
+
+.post-reply-button {
+  padding: 6px 12px;
+  background-color: #ff6b00;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.post-reply-button:hover {
+  background-color: #e05c00;
+}
+
+.post-reply-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.reply-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.reply-author {
+  font-weight: 600;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.reply-author .username {
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.reply-author .username:hover {
+  color: #ff6b00;
+}
+
+.reply-date {
+  color: #888;
+  font-size: 0.8rem;
+}
+
+.reply-content {
+  margin-bottom: 10px;
+  line-height: 1.5;
+  font-size: 0.9rem;
+  color: #444;
+  text-align: left;
+}
+
+.reply-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.reply-votes {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #f0f0f0;
+  padding: 3px 8px;
+  border-radius: 15px;
+  font-size: 0.85rem;
+}
+
+.reply-vote {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #888;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
+
+.reply-vote:hover {
+  background-color: #e5e5e5;
+}
+
+.reply-vote.upvote.voted {
+  color: #4caf50;
+  font-weight: bold;
+}
+
+.reply-vote.downvote.voted {
+  color: #f44336;
+  font-weight: bold;
+}
+
+.delete-reply-button {
+  font-size: 0.8rem;
+  color: #ff6b6b;
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  opacity: 0.7;
+}
+
+.delete-reply-button:hover {
+  background-color: rgba(255, 107, 107, 0.1);
+  color: #ff4040;
+  opacity: 1;
+}
+
+/* Favorite button styles */
+.top-left-favorite {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  z-index: 10;
+}
+
+.favorite-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: white;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  margin-top:-7px;
+}
+
+.favorite-button:hover:not(:disabled) {
+  background-color: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
+}
+
+.favorite-button:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.favorite-button.favorited {
+  background-color: #fffbeb;
+  box-shadow: 0 2px 8px rgba(255, 180, 0, 0.3);
+}
+
+.favorite-icon {
+  display: block;
+  font-size: 22px;
+  transition: color 0.2s ease;
+  color: #cccccc;
+  line-height: 1;
+  font-weight: bold;
+}
+
+.favorited .favorite-icon {
+  color: #FFD700;
+  text-shadow: 0 0 2px rgba(0,0,0,0.3);
+}
+
+.favorite-button:hover .favorite-icon {
+  color: #FFD700;
+}
+
+.favorite-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Adjust full list view */
+.full-list-view .top-left-favorite {
+  top: 15px;
+  left: 15px;
+}
+
+/* Add centering styles for list card headers */
+.public-list-card .list-header h3 {
+  text-align: center;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.public-list-card .list-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 5px;
+}
+
+.public-list-card .list-meta span {
+  text-align: center;
+  margin: 2px 0;
+}
+
+.centered-title {
+  text-align: center;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-left: -1px; /* Shift entire title container slightly left */
+}
+
+.top-right-upvote {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  z-index: 10;
+}
+
+.upvote-button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background-color: #f0f0f0;
+  border: 1px solid #ccc;
+  border-radius: 20px;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.upvote-button:hover {
+  background-color: #e0e0e0;
+}
+
+.upvote-button.upvoted {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.upvote-button.upvoted:hover {
+  background-color: #45a049;
+}
+
+/* Improved Feedback Popup Styles */
+.feedback-popup {
+  position: fixed;
+  background-color: transparent;
+  z-index: 9999;
+  pointer-events: none;
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.07));
+}
+
+.popup-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: white;
+  border-radius: 16px;
+  padding: 6px 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.08);
+  animation: popupScale 0.25s cubic-bezier(0.18, 1.25, 0.4, 1) forwards, popupFadeOut 1.75s ease-in-out forwards;
+  white-space: nowrap;
+  overflow: hidden;
+  min-width: 100px;
+  font-weight: 500;
+}
+
+.popup-content:after {
+  content: "";
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid white;
+}
+
+.popup-icon {
+  font-size: 15px;
+  margin-right: 6px;
+  animation: spinStar 0.4s cubic-bezier(0.18, 1.25, 0.4, 1);
+}
+
+.add-favorite .popup-content {
+  border: 1px solid rgba(255, 215, 0, 0.15);
+}
+
+.add-favorite .popup-icon {
+  color: gold;
+  text-shadow: 0 0 4px rgba(255, 215, 0, 0.3);
+}
+
+.remove-favorite .popup-content {
+  border: 1px solid rgba(128, 128, 128, 0.15);
+}
+
+.remove-favorite .popup-icon {
+  color: #aaa;
+}
+
+.popup-text {
+  font-size: 13px;
+  color: #444;
+  font-weight: 400;
+  letter-spacing: 0.2px;
+}
+
+@keyframes popupScale {
+  0% { transform: scale(0.7) translateY(5px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+@keyframes popupFadeOut {
+  0%, 80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes spinStar {
+  0% { transform: rotate(-25deg) scale(0.6); }
+  45% { transform: rotate(10deg) scale(1.15); }
+  65% { transform: rotate(-5deg) scale(1.05); }
+  100% { transform: rotate(0) scale(1); }
+}
+
+.search-container {
+  background-color: rgba(0, 0, 0, 0.35);
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 25px;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.filter-container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.search-input {
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background-color: rgba(0, 0, 0, 0.2);
+  color: #fff;
+  width: 100%;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+.search-input:focus {
+  border-color: #ffcc00;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(255, 204, 0, 0.2);
+}
+
+.type-filters, .sort-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  align-items: center;
+}
+
+.tag-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.user-rankings-header {
+  margin: 0 auto 40px;
+  padding: 25px 30px;
+  position: relative;
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.5), rgba(40, 40, 40, 0.5));
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  text-align: left;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  max-width: 900px;
+}
+
+.user-rankings-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 5px;
+  height: 100%;
+  background: linear-gradient(to bottom, #ffcc00, #ff6b00);
+  border-radius: 5px 0 0 5px;
+}
+
+.user-rankings-header h2 {
+  font-size: 2.4rem;
+  color: #ffffff;
+  font-weight: 700;
+  margin-bottom: 12px;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.user-rankings-header h2 span {
+  color: #ffcc00;
+  font-style: normal;
+  position: relative;
+  display: inline-block;
+}
+
+.user-rankings-header h2 span::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background-color: #ffcc00;
+  border-radius: 1.5px;
+}
+
+.user-list-count {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1.1rem;
+  font-weight: 400;
+  margin-bottom: 0;
+  display: block;
+  position: relative;
+  z-index: 1;
+}
+
+.user-rankings-header::after {
+  content: '★';
+  position: absolute;
+  top: 20px;
+  right: 25px;
+  font-size: 80px;
+  color: rgba(255, 255, 255, 0.03);
+  transform: rotate(10deg);
+  z-index: 0;
+}
+
+@media (max-width: 768px) {
+  .user-rankings-header {
+    padding: 20px 25px;
+    margin-bottom: 30px;
+  }
+  
+  .user-rankings-header h2 {
+    font-size: 2rem;
+  }
+}
+
+.ranking-item:hover .contestant-name,
+.ranking-item:hover .season-name {
+  text-decoration: none;
+}
+
+/* Ensure no underlining happens when hovering over list items */
+.full-list-view .ranking-item:hover * {
+  text-decoration: none;
+}
+
+/* Specific styles for Other Rankings page to make cards smaller */
+.other-rankings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 15px;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 10px;
+  box-sizing: border-box;
+}
+
+.other-lists .ranking-list-container {
+  position: relative;
+  transform-origin: center;
+  scale: 0.95;
+  margin: 0 auto;
+  max-width: 250px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  padding: 10px 5px 5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.other-lists .ranking-list-container:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.other-lists .search-and-filters {
+  margin-bottom: 20px;
+}
+
+/* Make spacing more even in the grid */
+.other-rankings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+  width: 100%;
+  max-width: 1200px;
+  
+  padding: 0 10px;
+  box-sizing: border-box;
+}
+
+/* Mobile adjustments */
+@media (max-width: 480px) {
+  .other-lists .search-and-filters {
+    padding: 0;
+  }
+  
+  .other-lists .type-filters, 
+  .other-lists .sort-options,
+  .other-lists .tag-filters {
+    padding: 0;
+    margin: 0;
+  }
+  
+  .other-lists .type-filters button,
+  .other-lists .sort-options button,
+  .other-lists .tag-filters button {
+    padding: 3px 8px;
+    font-size: 0.8rem;
+  }
+}
+
+/* Make empty list message more readable */
+.other-lists .ranking-list-container .empty-list-message {
+  font-size: 0.8rem;
+  padding: 10px 5px;
+}
+
+.other-lists .ranking-list-container h2.list-title {
+  font-size: 1rem;
+  margin-top: 5px;
+  margin-bottom: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.other-lists .ranking-list-container .list-creator {
+  font-size: 0.8rem;
+  margin: 2px 0 4px;
+  text-align: center;
+}
+
+.other-lists .ranking-list-container .ranking-list {
+  min-height: 140px;
+  padding: 5px;
+}
+
+.other-lists .ranking-list-container .ranking-item {
+  padding: 5px 2px;
+  margin-bottom: 2px;
+  align-items: center;
+}
+
+.other-lists .ranking-list-container .ranking-number {
+  font-size: 0.8rem;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+}
+
+.other-lists .ranking-list-container .contestant-image {
+  width: 120px;
+  height: 60px;
+  min-width: 35px;
+}
+
+.other-lists .ranking-list-container .contestant-name,
+.other-lists .ranking-list-container .season-name {
+  font-size: 1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 225px;
+}
+
+/* Media queries for responsiveness */
+@media (max-width: 1200px) {
+  .other-rankings-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 992px) {
+  .other-rankings-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 576px) {
+  .other-rankings-grid {
+    grid-template-columns: repeat(1, 1fr);
+  }
+  
+  .other-rankings-grid .ranking-list-container {
+    scale: 1;
+    max-width: 100%;
+  }
+  
+  .other-rankings-grid .ranking-list-container h2.list-title {
+    font-size: 1.5rem;
+  }
+  
+  .other-rankings-grid .contestant-image {
+    width: 45px;
+    height: 45px;
+  }
+  
+  .other-rankings-grid .contestant-name,
+  .other-rankings-grid .season-name {
+    font-size: 0.9rem;
+  }
+}
+
+.ranking-item .contestant-image {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 5px;
+  margin-right: 10px;
+}
+
+.ranking-item .contestant-image.season-logo {
+  width: 100px;
+  height: 60px;
+  object-fit: contain;
+  border-radius: 5px;
+  margin-right: 10px;
+  background-color: #f0f0f0;
+}
+
+/* Adjust image sizes for mobile */
+@media (max-width: 768px) {
+  .ranking-item .contestant-image,
+  .ranking-item .contestant-image.season-logo {
+    width: 50px;
+    height: 50px;
+  }
+}
+
+@media (max-width: 480px) {
+  .ranking-item .contestant-image,
+  .ranking-item .contestant-image.season-logo{
+    width: 100px;
+    height: 60px;
+    font-size: 205px !important;
+    margin-top: 4px;
+
+  }
+}
+
+.spoiler-warning {
+  color: #ff5555;
+  font-size: 0.8rem;
+  font-weight: 500;
+  background-color: rgba(255, 85, 85, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: inline-block;
+  margin: -2px 0 6px;
+  text-align: center;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Adjust spacing for mobile */
+@media (max-width: 576px) {
+  .spoiler-warning {
+    font-size: 0.75rem;
+    padding: 1px 6px;
+    margin: -1px 0 5px;
+  }
+}
+
+/* Basic styles for Share Button (Temporary for Debugging) */
+.share-list-button {
+  /* Base Button Style */
+  padding: 8px 18px; /* Adjusted padding */
+  border-radius: 6px; 
+  font-size: 0.9rem;   
+  font-weight: 600;  
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  border: none; 
+  min-width: auto; 
+  text-align: center;
+  box-sizing: border-box;
+  line-height: 1.4;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15), 
+              inset 0 -1px 0 rgba(0,0,0,0.1);
+  
+  /* Specific Styling & Positioning */
+  background: linear-gradient(to bottom, #3498db, #2980b9); /* Blue gradient */
+  color: white !important; 
+  position: absolute; /* Position within header */
+  bottom: 15px;       /* Align to bottom */
+  right: 15px;        /* Align to right */
+  z-index: 10;       /* Ensure it's above other elements if needed */
+}
+
+.share-list-button:hover {
+  background: linear-gradient(to bottom, #4aa3df, #3498db);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2), 
+              inset 0 -1px 0 rgba(0,0,0,0.1);
+  transform: translateY(-1px); 
+}
+
+.share-list-button:active {
+  background: linear-gradient(to bottom, #2980b9, #206191);
+  transform: translateY(0px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15), 
+              inset 0 -1px 0 rgba(0,0,0,0.1);
+}
+
+.share-list-button:disabled {
+  background: #bdc3c7; /* Clouds */
+  color: #7f8c8d; /* Asbestos */
+  cursor: not-allowed;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1), 
+              inset 0 -1px 0 rgba(0,0,0,0.1);
+  transform: none;
+}
+
+/* Styling for the share modal (add more later) */
+.share-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.share-modal-content {
+  /* Improved Styling */
+  background-color: rgba(40, 40, 40, 0.98); /* Dark background */
+  padding: 30px 40px; /* Increase padding */
+  border-radius: 12px; /* Softer corners */
+  max-width: 600px;    /* Limit max width */
+  max-height: 90vh;   /* Limit max height */
+  overflow-y: auto;   /* Allow scrolling if content overflows */
+  text-align: center;
+  border: 1px solid rgba(255, 204, 0, 0.2); /* Subtle gold border */
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4); /* Deeper shadow */
+  color: #eee; /* Light text color */
+}
+
+/* Style the modal title */
+.share-modal-content h3 {
+  color: #ffcc00; /* Gold title */
+  margin-top: 0;
+  margin-bottom: 25px;
+  font-size: 1.6rem;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.share-preview-image {
+  display: block;
+    max-width: 100%;
+  max-height: 60vh; /* Limit preview height */
+  margin: 0 auto 25px; /* Center and add bottom margin */
+  border: 2px solid rgba(255, 255, 255, 0.1); /* Subtle border */
+  border-radius: 4px;
+}
+
+.share-modal-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+/* Base Button Style (borrowed from global buttons) */
+.download-image-button, .close-modal-button {
+  padding: 10px 25px; /* Adjusted padding */
+  border-radius: 6px;  /* Slightly less round */
+  font-size: 0.9rem;   /* Adjusted font size */
+  font-weight: 600;  /* Bold */
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  border: none;
+  min-width: 120px; /* Ensure minimum width */
+  text-align: center;
+  box-sizing: border-box;
+  line-height: 1.4;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15), 
+              inset 0 -2px 0 rgba(0,0,0,0.1);
+}
+
+/* Primary Button: Download (Green) */
+.download-image-button {
+  background-color: #2ecc71; /* Emerald */
+  color: white;
+}
+
+.download-image-button:hover {
+  background-color: #27ae60; /* Nephritis */
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.2), 
+              inset 0 -2px 0 rgba(0,0,0,0.1);
+  transform: translateY(-2px); 
+}
+
+.download-image-button:active {
+  background-color: #1e8449; /* Darker Green */
+  transform: translateY(1px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 
+              inset 0 -1px 0 rgba(0,0,0,0.1);
+}
+
+/* Secondary Button: Close (Dark/Contrast) */
+.close-modal-button {
+  background-color: #555; /* Dark Grey */
+  color: #ecf0f1; /* Clouds */
+}
+
+.close-modal-button:hover {
+  background-color: #444; /* Darker Grey */
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.2), 
+              inset 0 -2px 0 rgba(0,0,0,0.1);
+  transform: translateY(-2px); 
+}
+
+.close-modal-button:active {
+  background-color: #333; /* Even Darker Grey */
+  transform: translateY(1px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 
+              inset 0 -1px 0 rgba(0,0,0,0.1);
+}
+
+/* Pagination Controls Styling */
+.pagination-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 25px;
+  margin-bottom: 20px;
+  gap: 15px;
+}
+
+.pagination-button {
+  padding: 8px 16px;
+  border: 1px solid #ccc;
+  background-color: #fff;
+  color: #333;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.pagination-button:hover:not(:disabled) {
+  background-color: #eee;
+}
+
+.pagination-button:disabled {
+  background-color: #f9f9f9;
+  color: #aaa;
+  cursor: not-allowed;
+  border-color: #eee;
+}
+
+.page-info {
+  font-size: 0.9rem;
+  color: #555;
+}
+
+/* Edit My List Button Styling (Matches Global Toggle Button) */
+.edit-my-list-button {
+  /* Base Styles (Assuming common button defaults) */
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.15),
+              inset 0 -2px 0 rgba(0,0,0,0.15);
+
+  /* Specific Styles */
+  background-color: #34495e; /* Wet Asphalt */
+  color: #ecf0f1; /* Clouds */
+}
+
+.edit-my-list-button:hover {
+  background-color: #2c3e50; /* Midnight Blue */
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.25),
+              inset 0 -3px 0 rgba(0,0,0,0.2);
+  transform: translateY(-3px);
+}
+
+.edit-my-list-button:active {
+  background-color: #1a2530; /* Darker Blue/Black */
+  transform: translateY(1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15),
+              inset 0 -1px 0 rgba(0,0,0,0.2);
+}
+
+/* Style for the username */
+.public-list-card .list-meta .created-by .username {
+  cursor: pointer;
+  color: #ffcc00;
+  transition: all 0.2s ease;
+  position: relative;
+  display: inline;
+  z-index: 5;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.public-list-card .list-meta .created-by .username:hover {
+  color: #ffd633;
+  text-decoration: underline;
+}
+
+/* Container for the Edit My List button (Remove old centering, add positioning) */
+.full-list-header .edit-list-button-container {
+  /* Remove old flex centering */
+  /* display: flex; */
+  /* justify-content: center; */
+  /* align-items: center; */
+  /* margin-top: 20px; */
+  /* margin-bottom: 20px; */
+
+  /* Add absolute positioning */
+  position: absolute;
+  bottom: 15px; /* Adjust as needed */
+  left: 15px;   /* Adjust as needed */
+  z-index: 10; /* Ensure it's above other elements if needed */
+}
+
+/* Ensure the button itself doesn't have conflicting styles */
+.full-list-header .edit-list-button-container .edit-my-list-button {
+  /* Reset margins if they existed */
+  margin: 0;
+}
+
+/* Reset height constraints specifically for mobile breakpoint */
+@media (max-width: 768px) {
+  .ranking-list-container {
+    height: unset !important;
+    min-height: unset !important;
+  }
+  .ranking-list {
+    height: unset !important;
+    min-height: unset !important;
+  }
+
+  /* Style the new container for mobile buttons */
+  .mobile-list-actions-container {
+    display: flex;
+    justify-content: center; /* Center buttons horizontally */
+    align-items: center;
+    gap: 15px; /* Space between buttons */
+    margin-top: 10px; /* Further reduced */
+    margin-bottom: 0px; /* Space below the container (above the ranking list) */
+    padding: 0 10px; /* Add some horizontal padding */
+    padding-right: 20px;
+  }
+
+  /* Ensure buttons within the container have consistent styling */
+  .mobile-list-actions-container .mobile-share-list-button,
+  .mobile-list-actions-container .edit-my-list-button {
+     /* Example: Make buttons take up available space equally */
+     /* flex-grow: 1; */
+     /* max-width: 200px; /* Optional max width */
+  }
+
+  /* Hide the desktop edit button container as well */
+  .full-list-header > .edit-list-button-container {
+      display: none;
+  }
+
+  /* Reduce top margin for ranking list container on mobile */
+  .full-list-view .ranking-list-container {
+    margin-top: 0px; /* Set to 0px */
+    margin-left: -40px !important;  /* Keep existing mobile adjustment */
+    margin-right: -20px !important; /* Keep existing mobile adjustment */
+    max-width: none !important;      /* Keep existing mobile adjustment */
+    width: auto !important;         /* Keep existing mobile adjustment */
+    padding-top: 0px; /* Set to 0px */
+    padding-bottom: 10px; /* Keep bottom padding */
+    /* Keep horizontal padding if needed, e.g., padding-left: 10px; padding-right: 10px; */
+    /* Or adjust the existing padding rule: padding: 10px; */
+  }
+}
+
+/* Existing styles */
+
+/* Add styles for mobile share button */
+.mobile-share-button-container {
+  /* Default: Centered */
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: 10px;
+  margin-bottom: 15px;
+  /* Ensure position is relative or static by default */
+  position: relative; 
+}
+
+/* Styles when user is owner (for bottom-right positioning) */
+.mobile-share-button-container.owner-view {
+  /* Override centering styles */
+  display: block; /* Or inline-block if needed */
+  justify-content: initial;
+  width: auto; 
+  margin: 0;
+
+  /* Add absolute positioning relative to header */
+  position: absolute;
+  bottom: 15px; /* Match edit button */
+  right: 15px;  /* Match desktop share button */
+  z-index: 10;
+}
+
+.mobile-share-list-button {
+  padding: 8px 15px;
+  font-size: 0.9rem;
+  background-color: #3498db; /* Changed to blue */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  /* Add matching font styles from desktop button */
+  font-weight: 600; 
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.mobile-share-list-button:hover {
+  background-color: #2980b9; /* Darker blue on hover */
+}
+
+.mobile-share-list-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+/* Ensure it only shows on mobile if not handled by JS already */
+@media (min-width: 769px) {
+  .mobile-share-button-container {
+    display: none;
+  }
+}
+
+/* Make sure the desktop one is hidden on mobile */
+@media (max-width: 768px) {
+  .share-list-button { /* Assuming this is the desktop button class */
+    display: none;
+  }
+  /* Hide the desktop edit button container as well */
+  .full-list-header > .edit-list-button-container {
+      display: none;
+  }
+}
+
+/* Add any other necessary styles */
+ 
+/* Style for mobile instruction text */
+.mobile-save-instruction {
+  color: #ccc; /* Light grey text */
+  font-size: 0.9rem;
+  margin-top: -10px; /* Adjust spacing relative to image */
+  margin-bottom: 20px;
+  font-style: italic;
+}
+
+.share-modal-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center; /* Center button(s) by default */
+  gap: 15px;
+}
+
+/* If needed, specific adjustments for when only Close button is visible */
+/* (justify-content: center already handles this, but could add specific rules if layout breaks) */
+ 
+/* Style for the desktop edit button */
+.edit-my-list-button-desktop {
+  background-color: rgba(255, 204, 0, 0.15); /* Subtle yellow */
+  border: 1px solid rgba(255, 204, 0, 0.3);
+  color: #ffcc00;
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+  margin-left: 8px; /* Add space from share button */
+}
+
+.edit-my-list-button-desktop:hover {
+  background-color: rgba(255, 204, 0, 0.3);
+  border-color: #ffcc00;
+}
+
+
+/* ============================ */
+/* == Mobile Specific Styles == */
  
  
  

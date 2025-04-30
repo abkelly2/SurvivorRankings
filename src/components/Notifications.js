@@ -78,6 +78,8 @@ const Notifications = () => {
     });
   };
 
+  const newNotificationsCount = notifications.filter(n => n.isNew).length;
+
   const handleNotificationClick = async (notification) => {
     // Mark the notification as read
     const notificationRef = doc(db, 'notifications', notification.id);
@@ -88,21 +90,33 @@ const Notifications = () => {
       switch (notification.type) {
         case 'list_like':
         case 'comment':
-        case 'comment_reply':
-          // Navigate to the list
+          // Navigate to the list (Assuming notification.userId is list creator for these types)
           navigate(`/list/${notification.userId}/${notification.listId}`);
+          break;
+        case 'comment_reply': // Fetch comment data to get correct list info
+          const replyCommentRef = doc(db, 'comments', notification.commentId);
+          const replyCommentDoc = await getDoc(replyCommentRef);
+          
+          if (replyCommentDoc.exists()) {
+            const replyCommentData = replyCommentDoc.data();
+            // Navigate to the list that contains the comment reply
+            navigate(`/list/${replyCommentData.listUserId}/${replyCommentData.listId}`);
+          } else {
+            console.error('Comment (reply) not found:', notification.commentId);
+            // Optionally navigate somewhere else or show an error
+          }
           break;
         case 'comment_like':
           // First get the comment to find the list it belongs to
-          const commentRef = doc(db, 'comments', notification.commentId);
-          const commentDoc = await getDoc(commentRef);
+          const likedCommentRef = doc(db, 'comments', notification.commentId);
+          const likedCommentDoc = await getDoc(likedCommentRef);
           
-          if (commentDoc.exists()) {
-            const commentData = commentDoc.data();
+          if (likedCommentDoc.exists()) {
+            const likedCommentData = likedCommentDoc.data();
             // Navigate to the list that contains the comment
-            navigate(`/list/${commentData.listUserId}/${commentData.listId}`);
+            navigate(`/list/${likedCommentData.listUserId}/${likedCommentData.listId}`);
           } else {
-            console.error('Comment not found:', notification.commentId);
+            console.error('Comment (liked) not found:', notification.commentId);
           }
           break;
         default:
@@ -119,23 +133,36 @@ const Notifications = () => {
   const renderNotification = (notification) => {
     console.log('Rendering notification:', notification);
     let content;
+    let iconSrc = null; // Initialize icon source
+
     switch (notification.type) {
       case 'list_like':
         content = `${notification.createdByName || 'Someone'} liked your list!`;
+        iconSrc = '/images/like.png'; // Path relative to public folder
         break;
       case 'comment_like':
         content = `${notification.createdByName || 'Someone'} liked your comment!`;
+        iconSrc = '/images/like.png'; // Path relative to public folder
         break;
       case 'comment':
-        content = `${notification.createdByName || 'Someone'} commented "${notification.content}"`;
+        const truncatedComment = notification.content && notification.content.length > 10 
+          ? notification.content.substring(0, 10) + '...' 
+          : notification.content;
+        content = `${notification.createdByName || 'Someone'} commented "${truncatedComment}"`;
+        iconSrc = '/images/comment.png'; // Path relative to public folder
         break;
       case 'comment_reply':
-        content = `${notification.createdByName || 'Someone'} replied to your comment: "${notification.content}"`;
+        const truncatedReply = notification.content && notification.content.length > 10 
+          ? notification.content.substring(0, 10) + '...' 
+          : notification.content;
+        content = `${notification.createdByName || 'Someone'} replied to your comment: "${truncatedReply}"`;
+        iconSrc = '/images/comment.png'; // Path relative to public folder
         break;
       default:
         content = 'New notification';
     }
     console.log('Notification content:', content);
+    console.log('Notification icon:', iconSrc);
 
     return (
       <div 
@@ -143,7 +170,8 @@ const Notifications = () => {
         className={`notification-item ${notification.isNew ? 'new' : 'read'}`}
         onClick={() => handleNotificationClick(notification)}
       >
-        {content}
+        {iconSrc && <img src={iconSrc} alt="Notification icon" className="notification-icon" />} {/* Render icon first */}
+        <span className="notification-text">{content}</span> {/* Render text second, add class */}
       </div>
     );
   };
@@ -156,8 +184,10 @@ const Notifications = () => {
       ref={dropdownRef}
     >
       <button className="notifications-button">
-        Notifications
-        {notifications.some(n => n.isNew) && <span className="notification-badge" />}
+        <span className="notifications-button-text">Inbox</span>
+        {newNotificationsCount > 0 && (
+          <span className="notification-badge">{newNotificationsCount}</span>
+        )}
       </button>
       
       {isOpen && (

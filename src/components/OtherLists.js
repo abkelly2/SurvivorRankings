@@ -1170,10 +1170,19 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
 
   const closeShareModal = () => {
     setShowShareModal(false);
-    setShareImageDataUrl(null); 
+    setShareImageDataUrl(null);
   };
-  // ---------------------------
+
+  // <<< ADDED: Function to handle clicking the edit button >>>
+  const handleEditListClick = () => {
+    if (!selectedList || !user || selectedList.userId !== user.uid) return;
+    // Navigate to the UserListCreator page, passing the list ID for editing
+    // Note: The UserListCreator needs to be set up to receive this state
+    navigate('/create', { state: { editingListId: selectedList.id } });
+  };
   
+  // -------------------------
+
   if (loading) return <div className="other-lists loading">Loading rankings...</div>;
   if (error) return <div className="other-lists error">{error}</div>;
   
@@ -1258,6 +1267,16 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
           )} */}
           {/* --- End Edit Button --- */}
 
+          {/* --- ADDED Desktop Edit Button --- */}
+          {!isMobile && user && selectedList.userId === user.uid && (
+             <button 
+                className="edit-my-list-button"
+                onClick={handleEditListClick}
+                title="Edit My List"
+             >
+                Edit List
+             </button>
+          )}
           </div>
           
         {/* Meta Info (Desc and Tags combined) */}
@@ -1289,7 +1308,7 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
             {/* Mobile Edit Button (Conditional) */} 
             {user && selectedList && user.uid === selectedList.userId && (
               <button
-                onClick={() => navigate('/create', { state: { userId: selectedList.userId, listId: selectedList.id } })}
+                onClick={handleEditListClick}
                 className="edit-my-list-button"
                 title="Edit this list"
               >
@@ -1524,16 +1543,30 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
             <div className="share-modal-content" onClick={(e) => e.stopPropagation()}> 
               <h3>Share List Image</h3>
               {shareImageDataUrl ? (
-                <img src={shareImageDataUrl} alt={`${selectedList.name} Ranking`} className="share-preview-image" />
+                <img src={shareImageDataUrl} alt="List Ranking Preview" className="share-preview-image" />
               ) : (
-                <p>Loading image preview...</p> 
+                <p>Loading preview...</p>
               )}
+
+              {/* --- ADDED Mobile Instruction Text --- */}
+              {isMobile && (
+                <p className="mobile-save-instruction">
+                  Long-press or tap and hold the image above to save it to your device.
+                </p>
+              )}
+
               <div className="share-modal-actions">
-                <button onClick={handleDownloadImage} className="download-image-button">Download Image</button>
+                {/* --- HIDE Download Button on Mobile --- */}
+                {!isMobile && shareImageDataUrl && (
+                  <button onClick={handleDownloadImage} className="download-image-button">
+                    Download Image
+                  </button>
+                )}
                 <button onClick={closeShareModal} className="close-modal-button">Close</button>
+              </div>
+            </div>
           </div>
-          </div>
-        </div>
+        )}
       )}
     
                   </div>

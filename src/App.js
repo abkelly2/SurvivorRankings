@@ -225,6 +225,24 @@ function App() {
     preloadImages();
   }, []); // Empty dependency array ensures this runs only once on mount
 
+  // Effect to update editingListId ONLY when navigating to /create with state
+  useEffect(() => {
+    // Check if we are on the /create page AND state with editingListId exists
+    if (location.pathname === '/create' && location.state?.editingListId) {
+        const newEditingId = location.state.editingListId;
+        // Only update if the ID is different from the current state
+        if (newEditingId !== editingListId) {
+            console.log("[App.js] Setting editingListId from navigation state:", newEditingId);
+            setEditingListId(newEditingId);
+        }
+    } else if (location.pathname !== '/create' && editingListId !== null) {
+        // If we navigate AWAY from /create, clear the editing state
+        console.log("[App.js] Navigated away from /create, clearing editingListId.");
+        setEditingListId(null);
+    }
+    // Dependency only on pathname and the state value itself
+  }, [location.pathname, location.state?.editingListId, editingListId]);
+
   return (
     <div className="App">
       <UserProvider user={user}>

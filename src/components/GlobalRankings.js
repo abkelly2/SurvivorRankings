@@ -171,31 +171,30 @@ const GlobalRankings = ({ seasonListRef }) => {
         setCurrentRanking({ ...baseList, contestants: initialUserRanking });
         setUserHasSubmitted(submitted);
 
-        // If user has submitted, fetch global data and set initial view
-        if (submitted) {
-          setShowingGlobalRanking(true); // Default to global view if submitted
-          setLoadingGlobalRanking(true);
-          const globalRankingRef = doc(db, 'globalRankingsData', listId);
-          try {
-            const globalSnap = await getDoc(globalRankingRef);
-            if (globalSnap.exists()) {
-              const globalData = globalSnap.data();
-              setGlobalTop10(globalData.top10 || []);
-              setCurrentListTotalVotes(globalData.totalVotes || 0);
-              console.log(`Loaded global top 10 and total votes (${globalData.totalVotes || 0}) for:`, listId);
-            } else {
-              console.log("No global ranking data found for:", listId);
-              setGlobalTop10([]);
-              setCurrentListTotalVotes(0);
-            }
-          } catch (error) {
-            console.error("Error loading global ranking:", error);
-            setErrorGlobalRanking('Failed to load global ranking.');
+        // --- MODIFIED: Fetch global ranking regardless of submission status --- 
+        // Default to showing global view if user HAS submitted OR if user is NOT logged in
+        setShowingGlobalRanking(submitted || !user); 
+        setLoadingGlobalRanking(true);
+        const globalRankingRef = doc(db, 'globalRankingsData', listId);
+        try {
+          const globalSnap = await getDoc(globalRankingRef);
+          if (globalSnap.exists()) {
+            const globalData = globalSnap.data();
+            setGlobalTop10(globalData.top10 || []);
+            setCurrentListTotalVotes(globalData.totalVotes || 0);
+            console.log(`Loaded global top 10 and total votes (${globalData.totalVotes || 0}) for:`, listId);
+          } else {
+            console.log("No global ranking data found for:", listId);
             setGlobalTop10([]);
             setCurrentListTotalVotes(0);
-          } finally {
-            setLoadingGlobalRanking(false);
           }
+        } catch (error) {
+          console.error("Error loading global ranking:", error);
+          setErrorGlobalRanking('Failed to load global ranking.');
+          setGlobalTop10([]);
+          setCurrentListTotalVotes(0);
+        } finally {
+          setLoadingGlobalRanking(false);
         }
 
         setCheckingSubmissionStatus(false);
@@ -215,70 +214,106 @@ const GlobalRankings = ({ seasonListRef }) => {
   // New effect to load global rankings for all lists
   useEffect(() => {
     const loadGlobalRankings = async () => {
-      if (!user) return; // Only load if user is logged in
+      // Removed: if (!user) return; // Load even if user is not logged in
       
-      // Check which lists the user has submitted
-      const userRankingRef = doc(db, 'userGlobalRankings', user.uid);
-      try {
-        const userRankingSnap = await getDoc(userRankingRef);
-        if (!userRankingSnap.exists()) return;
-        
-        const userData = userRankingSnap.data();
-        const submittedListIds = Object.keys(userData);
-        
-        if (submittedListIds.length === 0) return;
-        
-        // Set loading state for all submitted lists at once
-        const newLoadingState = {};
-        submittedListIds.forEach(id => {
-          newLoadingState[id] = true;
-        });
-        setLoadingGlobalRankings(newLoadingState);
-        
-        // Load global rankings for each submitted list
-        const newGlobalRankings = { ...globalRankings };
-        
-        for (const listId of submittedListIds) {
-          try {
-            const globalRankingRef = doc(db, 'globalRankingsData', listId);
-            const globalSnap = await getDoc(globalRankingRef);
-            
-            if (globalSnap.exists()) {
-              const globalData = globalSnap.data();
-              // Store both top10 and totalVotes
-              newGlobalRankings[listId] = {
-                top10: globalData.top10 || [],
-                totalVotes: globalData.totalVotes || 0 
-              };
-              console.log(`Loaded global ranking for list: ${listId} (Total Votes: ${globalData.totalVotes || 0})`);
-            } else {
-              // Set default structure if not found
-              newGlobalRankings[listId] = { top10: [], totalVotes: 0 };
-              console.log(`No global ranking found for list: ${listId}`);
-            }
-          } catch (error) {
-            console.error(`Error loading global ranking for list ${listId}:`, error);
-            // Set default structure on error
+      // Set loading state for all lists initially
+      const initialLoadingState = {};
+      sampleLists.forEach(list => {
+        initialLoadingState[list.id] = true;
+      });
+      setLoadingGlobalRankings(initialLoadingState);
+
+      // Load global rankings for each list defined in sampleLists
+      const newGlobalRankings = {};
+
+      for (const list of sampleLists) {
+        const listId = list.id;
+        try {
+          const globalRankingRef = doc(db, 'globalRankingsData', listId);
+          const globalSnap = await getDoc(globalRankingRef);
+          
+          if (globalSnap.exists()) {
+            const globalData = globalSnap.data();
+            newGlobalRankings[listId] = {
+              top10: globalData.top10 || [],
+              totalVotes: globalData.totalVotes || 0
+            };
+          } else {
+            // If no data, store empty structure
             newGlobalRankings[listId] = { top10: [], totalVotes: 0 };
           }
+        } catch (error) {
+          console.error(`Error loading global ranking for ${listId}:`, error);
+          newGlobalRankings[listId] = { top10: [], totalVotes: 0, error: 'Failed to load' }; // Indicate error
+        } finally {
+          // Update loading state for this specific list
+          setLoadingGlobalRankings(prev => ({ ...prev, [listId]: false }));
         }
-        
-        setGlobalRankings(newGlobalRankings);
-        
-        // Clear loading state for all lists at once
-        const clearedLoadingState = {};
-        submittedListIds.forEach(id => {
-          clearedLoadingState[id] = false;
-        });
-        setLoadingGlobalRankings(clearedLoadingState);
-        
-      } catch (error) {
-        console.error("Error checking user submissions:", error);
       }
+      
+      setGlobalRankings(newGlobalRankings);
+      console.log("Finished loading all global rankings overview:", newGlobalRankings);
+
+      /* --- OLD LOGIC --- 
+      // Check which lists the user has submitted
+      // const userRankingRef = doc(db, 'userGlobalRankings', user.uid);
+      // try {
+      //   const userRankingSnap = await getDoc(userRankingRef);
+      //   if (!userRankingSnap.exists()) return;
+      //   
+      //   const userData = userRankingSnap.data();
+      //   const submittedListIds = Object.keys(userData);
+      //   
+      //   if (submittedListIds.length === 0) return;
+      //   
+      //   // Set loading state for all submitted lists at once
+      //   const newLoadingState = {};
+      //   submittedListIds.forEach(id => {
+      //     newLoadingState[id] = true;
+      //   });
+      //   setLoadingGlobalRankings(newLoadingState);
+      //   
+      //   // Load global rankings for each submitted list
+      //   const newGlobalRankings = { ...globalRankings };
+      //   
+      //   for (const listId of submittedListIds) {
+      //     try {
+      //       const globalRankingRef = doc(db, 'globalRankingsData', listId);
+      //       const globalSnap = await getDoc(globalRankingRef);
+      //       
+      //       if (globalSnap.exists()) {
+      //         const globalData = globalSnap.data();
+      //         // Store both top10 and totalVotes
+      //         newGlobalRankings[listId] = {
+      //           top10: globalData.top10 || [],
+      //           totalVotes: globalData.totalVotes || 0
+      //         };
+      //       } else {
+      //         newGlobalRankings[listId] = { top10: [], totalVotes: 0 }; // Default if no data
+      //       }
+      //     } catch (error) {
+      //       console.error(`Error loading global ranking for ${listId}:`, error);
+      //       newGlobalRankings[listId] = { top10: [], totalVotes: 0, error: 'Failed to load' };
+      //     }
+      //   }
+      //   setGlobalRankings(newGlobalRankings);
+      // }
+      // catch (error) {
+      //   console.error("Error fetching user submissions for global overview:", error);
+      // }
+      // finally {
+      //    // Ensure loading state is false for all lists after attempting fetch
+      //   setLoadingGlobalRankings(prev => {
+      //       const finalLoadingState = {};
+      //       Object.keys(prev).forEach(id => { finalLoadingState[id] = false; });
+      //       return finalLoadingState;
+      //   });
+      // }
+      */
     };
-    
+
     loadGlobalRankings();
-  }, [user]); // Only run when user changes
+  }, []); // Run only once on mount
 
   // --- Effect to Fetch Comments --- 
   useEffect(() => {
@@ -809,14 +844,21 @@ const GlobalRankings = ({ seasonListRef }) => {
     if (!list || !list.contestants) return null;
     
     const globalDataForList = globalRankings[list.id];
-    const hasUserSubmitted = user && globalDataForList !== undefined;
-    const listTotalVotes = globalDataForList?.totalVotes || 0;
-    let displayContestants = list.contestants; 
-    if (hasUserSubmitted && globalDataForList?.top10 && globalDataForList.top10.length > 0) {
-      displayContestants = globalDataForList.top10;
-    }
     const isLoading = loadingGlobalRankings[list.id] === true;
+    const listTotalVotes = globalDataForList?.totalVotes || 0;
     
+    // --- MODIFIED: Determine contestants to display --- 
+    let displayContestants = list.contestants; // Default to empty slots
+    let isDisplayingGlobal = false;
+    if (!isLoading && globalDataForList?.top10 && globalDataForList.top10.length > 0) {
+      // If global data is loaded and has entries, display it
+      displayContestants = globalDataForList.top10;
+      isDisplayingGlobal = true;
+    } // Otherwise, keep the default empty slots
+    
+    // Check if the user *specifically* has submitted for this list (used for points calc maybe)
+    const userHasSubmittedForThisList = user && globalDataForList !== undefined; 
+
     return (
       <div 
         className="ranking-list-container" 
@@ -851,20 +893,21 @@ const GlobalRankings = ({ seasonListRef }) => {
             </div>
           ) : (
             displayContestants.map((contestant, index) => {
-              const averagePoints = (hasUserSubmitted && typeof contestant.totalScore === 'number' && listTotalVotes > 0)
+              const averagePoints = (userHasSubmittedForThisList && typeof contestant.totalScore === 'number' && listTotalVotes > 0)
                 ? contestant.totalScore / listTotalVotes 
                 : null;
               const averagePosition = (averagePoints !== null)
                 ? (11 - averagePoints).toFixed(1)
                 : null;
-              const isFirstEmptySlot = !hasUserSubmitted && index === 0 && contestant.isEmpty;
+              // Only show "Submit your votes!" if NOT displaying global ranking AND it's the first empty slot
+              const isFirstEmptySlot = !isDisplayingGlobal && index === 0 && contestant.isEmpty; 
 
               return (
                 <div
                   key={`${contestant.id}-${index}`}
                   className={`ranking-item ${contestant.isEmpty ? 'empty-slot' : ''}`}
                 >
-                  <div className={`ranking-number ${!hasUserSubmitted ? 'number-hidden' : ''}`}>
+                  <div className={`ranking-number ${!isDisplayingGlobal ? 'number-hidden' : ''}`}> {/* Show number if displaying global */}
                     {index + 1}
                   </div>
                   <img

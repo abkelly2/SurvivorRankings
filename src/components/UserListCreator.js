@@ -1149,6 +1149,17 @@ const UserListCreator = ({
           </button>
         </div>
       </div>
+
+      {/* --- REVERTED: Back to Mobile Only --- */}
+      {isMobile && ( 
+          <button 
+             className="edit-my-list-button mobile-only-button" // Restore class
+             onClick={toggleSeasonsMenuMobile} 
+             title="Edit Contestants"
+          >
+             Edit My List
+          </button>
+      )} 
     </div>
   );
 };
