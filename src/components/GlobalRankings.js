@@ -54,7 +54,7 @@ const GlobalRankings = ({ seasonListRef }) => {
   const draggedItemIndex = useRef(null);
   const draggedItemElement = useRef(null);
   const originalBodyOverflow = useRef(document.body.style.overflow);
-  const draggedItemHeight = useRef(0);
+  const draggedItemHeight = useRef(0); 
   const listItemRefs = useRef({}); // Copied, though might not be used heavily here
   const initialTouchX = useRef(0);
   const initialTouchY = useRef(0);
@@ -982,7 +982,7 @@ const GlobalRankings = ({ seasonListRef }) => {
             minDistance = distance;
             // Store the actual index from the data-index attribute if available, otherwise fall back to loop index
             const itemIndexAttr = item.dataset.index;
-            closestItemOriginalIndex = itemIndexAttr !== undefined ? parseInt(itemIndexAttr, 10) : i; 
+            closestItemOriginalIndex = itemIndexAttr !== undefined ? parseInt(itemIndexAttr, 10) : i;
         }
     }
     
@@ -1006,7 +1006,7 @@ const GlobalRankings = ({ seasonListRef }) => {
             targetIndex = 0; // Hovering above the first item
         } else if (lastItem && touchRelativeToContainer > lastItem.offsetTop + lastItem.offsetHeight / 2) {
             targetIndex = listItems.length; // Hovering below the last item
-        } else {
+    } else {
             // Fallback (middle of list, but somehow no closest found?)
             const tempHeight = draggedItemHeight.current > 0 ? draggedItemHeight.current : 50;
             targetIndex = Math.max(0, Math.min(Math.floor(touchRelativeToContainer / tempHeight), currentRanking?.contestants?.length ?? 0));
@@ -1062,7 +1062,7 @@ const GlobalRankings = ({ seasonListRef }) => {
     }
     
     // --- Proceed with End Logic ---
-    clearTimeout(touchDragTimer.current);
+    clearTimeout(touchDragTimer.current); 
     touchDragTimer.current = null;
     e.stopPropagation(); // Important if nested touch handlers exist
 
@@ -1089,7 +1089,7 @@ const GlobalRankings = ({ seasonListRef }) => {
     }
 
     // --- Determine Final Drop Target Index --- 
-    let targetIndex = -1;
+    let targetIndex = -1; 
     if (listContainer && startIndex !== null && currentRanking?.contestants) { // Add check for currentRanking
         const listRect = listContainer.getBoundingClientRect();
         const lastTouch = e.changedTouches?.[0]; 
@@ -1098,40 +1098,40 @@ const GlobalRankings = ({ seasonListRef }) => {
             const finalTouchY = lastTouch.clientY;
             const touchRelativeToContainer = finalTouchY - listRect.top;
             const listItems = Array.from(listContainer.querySelectorAll('.ranking-item'));
-            
-            let closestItemOriginalIndex = -1;
-            let minDistance = Infinity;
+        
+        let closestItemOriginalIndex = -1;
+        let minDistance = Infinity;
 
             // Find closest item center logic (same as move)
-            for (let i = 0; i < listItems.length; i++) {
-                const item = listItems[i];
+        for (let i = 0; i < listItems.length; i++) {
+            const item = listItems[i];
                 // Use static offsetTop, not potentially transformed position
-                const itemOriginalOffsetTop = item.offsetTop; 
-                const itemHeight = item.offsetHeight;
-                const itemOriginalCenterY = itemOriginalOffsetTop + itemHeight / 2;
-                const distance = Math.abs(touchRelativeToContainer - itemOriginalCenterY);
-                
+            const itemOriginalOffsetTop = item.offsetTop;
+            const itemHeight = item.offsetHeight;
+            const itemOriginalCenterY = itemOriginalOffsetTop + itemHeight / 2;
+            const distance = Math.abs(touchRelativeToContainer - itemOriginalCenterY);
+
                 // Check distance AND make sure we're not comparing the dragged item to itself visually
                 if (distance < minDistance && item !== draggedElement) { 
-                    minDistance = distance;
-                    const itemIndexAttr = item.dataset.index;
-                    closestItemOriginalIndex = itemIndexAttr !== undefined ? parseInt(itemIndexAttr, 10) : i; 
-                }
+                minDistance = distance;
+                const itemIndexAttr = item.dataset.index;
+                closestItemOriginalIndex = itemIndexAttr !== undefined ? parseInt(itemIndexAttr, 10) : i;
             }
-          
+        }
+        
             // Determine target index based on closest item
             if (closestItemOriginalIndex !== -1) {
-                const closestItem = listItems.find(item => parseInt(item.dataset.index, 10) === closestItemOriginalIndex);
-                if (closestItem) {
-                    const closestItemOriginalOffsetTop = closestItem.offsetTop;
-                    const closestItemHeight = closestItem.offsetHeight;
-                    const closestItemOriginalCenterY = closestItemOriginalOffsetTop + closestItemHeight / 2;
-                    targetIndex = (touchRelativeToContainer < closestItemOriginalCenterY) ? closestItemOriginalIndex : closestItemOriginalIndex + 1;
-                } else { 
+            const closestItem = listItems.find(item => parseInt(item.dataset.index, 10) === closestItemOriginalIndex);
+            if (closestItem) {
+                const closestItemOriginalOffsetTop = closestItem.offsetTop;
+                const closestItemHeight = closestItem.offsetHeight;
+                const closestItemOriginalCenterY = closestItemOriginalOffsetTop + closestItemHeight / 2;
+                targetIndex = (touchRelativeToContainer < closestItemOriginalCenterY) ? closestItemOriginalIndex : closestItemOriginalIndex + 1;
+            } else { 
                    // Fallback if item not found
-                    const tempHeight = draggedItemHeight.current > 0 ? draggedItemHeight.current : 50;
-                    targetIndex = Math.max(0, Math.min(Math.floor(touchRelativeToContainer / tempHeight), currentRanking.contestants.length));
-                }
+                 const tempHeight = draggedItemHeight.current > 0 ? draggedItemHeight.current : 50;
+                 targetIndex = Math.max(0, Math.min(Math.floor(touchRelativeToContainer / tempHeight), currentRanking.contestants.length));
+            }
             } else if (listItems.length > 0) { // No specific closest, check edges
                 const firstItem = listItems.find(item => parseInt(item.dataset.index, 10) === 0);
                 const lastItem = listItems.find(item => parseInt(item.dataset.index, 10) === (currentRanking.contestants.length) -1);
@@ -1139,23 +1139,23 @@ const GlobalRankings = ({ seasonListRef }) => {
                    targetIndex = 0;
                  } else if (lastItem && touchRelativeToContainer > lastItem.offsetTop + lastItem.offsetHeight / 2){
                    targetIndex = listItems.length; // Drop after last
-                 } else {
+        } else {
                     // Fallback if edges check fails
-                    const tempHeight = draggedItemHeight.current > 0 ? draggedItemHeight.current : 50;
-                    targetIndex = Math.max(0, Math.min(Math.floor(touchRelativeToContainer / tempHeight), currentRanking.contestants.length));
-                 }
+             const tempHeight = draggedItemHeight.current > 0 ? draggedItemHeight.current : 50;
+             targetIndex = Math.max(0, Math.min(Math.floor(touchRelativeToContainer / tempHeight), currentRanking.contestants.length));
+        }
             } else {
                 targetIndex = 0; // Dropping into empty list
             }
 
             // Clamp final index
-            targetIndex = Math.max(0, Math.min(targetIndex, currentRanking.contestants.length));
-            
-        } else {
+        targetIndex = Math.max(0, Math.min(targetIndex, currentRanking.contestants.length));
+
+    } else {
             console.log("[TouchDrag - Global End] No touch data found on touchend.");
             targetIndex = startIndex; // Fallback: No move
-        }
-      
+    }
+
         // --- Perform State Update --- 
         let insertIndex = targetIndex;
         if (startIndex < targetIndex) { 
@@ -1175,14 +1175,14 @@ const GlobalRankings = ({ seasonListRef }) => {
                 ...remainingItems.slice(insertIndex) // Use insertIndex for slicing
             ];
             // <<< Update state using setCurrentRanking >>>
-            setCurrentRanking(prevRanking => ({
-                ...prevRanking,
-                contestants: newList
-            }));
+        setCurrentRanking(prevRanking => ({
+            ...prevRanking,
+            contestants: newList
+        }));
             
-        } else {
+    } else {
             console.log(`[TouchDrag - Global End] Drop occurred but insert index (${insertIndex}) is same as start (${startIndex}). No reorder.`);
-        }
+    }
     } else {
         console.log("[TouchDrag - Global End] List element, start index, or currentRanking missing.");
     }

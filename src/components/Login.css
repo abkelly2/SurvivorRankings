@@ -231,7 +231,7 @@
 @media (max-width: 768px) {
   .login-box {
     padding: 25px;
-    max-width: 90%;
+    max-width: 100%;
   }
   
   .login-box h2 {

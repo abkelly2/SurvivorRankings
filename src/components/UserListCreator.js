@@ -1142,13 +1142,13 @@ const UserListCreator = ({
       <div className="list-actions">
         <button onClick={clearList} className="clear-button" disabled={saving}>
           Clear List
-        </button>
+          </button>
         {user ? ( // Check if user is logged in
            <button onClick={handleSaveList} className="save-button" disabled={saving}>
              {saving ? 'Saving...' : (currentListId ? 'Update List' : 'Save List')}
-           </button>
+          </button>
         ) : (
-           <button 
+          <button 
              onClick={() => {
                // Save current list state to localStorage
                const pendingList = {
@@ -1172,8 +1172,8 @@ const UserListCreator = ({
            </button>
         )}
         <button onClick={handleCancel} className="cancel-button" disabled={saving}>
-          Cancel
-        </button>
+            Cancel
+          </button>
       </div>
 
       {error && <div className="error-message">{error}</div>}

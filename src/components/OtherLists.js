@@ -54,6 +54,8 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
   const [shareImageDataUrl, setShareImageDataUrl] = useState(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [shareImageDataUrl2, setShareImageDataUrl2] = useState(null); // Keep second URL state
+  const [currentImageIndex, setCurrentImageIndex] = useState(0); // <<< NEW STATE for carousel
+  const [touchStartX, setTouchStartX] = useState(null); // <<< NEW STATE for touch swipe
   // -------------------------
   
   // --- Pagination State ---
@@ -830,171 +832,172 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
 
   // --- Refactored Canvas Drawing Function ---
   const generateShareCanvas = async (bgImage, listData) => {
-    const canvas = document.createElement('canvas');
+      const canvas = document.createElement('canvas');
     canvas.width = bgImage.naturalWidth;
     canvas.height = bgImage.naturalHeight;
-    const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d');
 
-    // Draw the background image
+      // Draw the background image
     ctx.drawImage(bgImage, 0, 0);
 
-    // --- Load Wood Texture for Title --- 
-    let woodPattern = null;
-    try {
+      // --- Load Wood Texture for Title ---
+      let woodPattern = null;
+      try {
       const woodTextureImg = await loadImage('/images/wood_texture.png');
       const scaleFactor = 1;
-      const patternCanvas = document.createElement('canvas');
-      const patternCtx = patternCanvas.getContext('2d');
-      patternCanvas.width = woodTextureImg.width * scaleFactor;
-      patternCanvas.height = woodTextureImg.height * scaleFactor;
-      patternCtx.drawImage(woodTextureImg, 0, 0, patternCanvas.width, patternCanvas.height);
-      woodPattern = ctx.createPattern(patternCanvas, 'repeat');
-    } catch (error) {
+          const patternCanvas = document.createElement('canvas');
+          const patternCtx = patternCanvas.getContext('2d');
+          patternCanvas.width = woodTextureImg.width * scaleFactor;
+          patternCanvas.height = woodTextureImg.height * scaleFactor;
+          patternCtx.drawImage(woodTextureImg, 0, 0, patternCanvas.width, patternCanvas.height);
+          woodPattern = ctx.createPattern(patternCanvas, 'repeat'); 
+      } catch (error) {
       console.error("[generateShareCanvas] Failed to load/scale wood texture:", error);
-    }
+      }
 
     // --- Text Wrapping Helper (Internal) ---
-    const wrapText = (context, text, maxWidth, initialFontSize, minFontSize, lineHeight) => {
-        let words = text.split(' ');
-        let lines = [];
+      const wrapText = (context, text, maxWidth, initialFontSize, minFontSize, lineHeight) => {
+          let words = text.split(' ');
+          let lines = [];
         let currentLine = words[0] || ''; // Handle empty text
-        let fontSize = initialFontSize;
-        const attemptWrap = (size) => {
-            context.font = `${size}px Survivant`;
-            lines = [];
+          let fontSize = initialFontSize;
+          const attemptWrap = (size) => {
+              context.font = `${size}px Survivant`;
+              lines = [];
             currentLine = words[0] || '';
-            for (let i = 1; i < words.length; i++) {
-                let word = words[i];
-                let width = context.measureText(currentLine + " " + word).width;
-                if (width < maxWidth) {
-                    currentLine += " " + word;
-                } else {
-                    lines.push(currentLine);
-                    currentLine = word;
-                }
-            }
-            lines.push(currentLine);
-            return lines;
-        };
-        attemptWrap(fontSize);
+              for (let i = 1; i < words.length; i++) {
+                  let word = words[i];
+                  let width = context.measureText(currentLine + " " + word).width;
+                  if (width < maxWidth) {
+                      currentLine += " " + word;
+                  } else {
+                      lines.push(currentLine);
+                      currentLine = word;
+                  }
+              }
+              lines.push(currentLine);
+              return lines;
+          };
+          attemptWrap(fontSize);
         const titleBox = { x: 210, y: 150, width: 624, height: 290 }; // Define needed box dimensions
-        let totalHeight = lines.length * lineHeight;
-        let anyLineTooWide = lines.some(line => context.measureText(line).width > maxWidth);
-        while ((anyLineTooWide || totalHeight > titleBox.height) && fontSize > minFontSize) {
-            fontSize--;
-            attemptWrap(fontSize);
-            totalHeight = lines.length * lineHeight;
-            anyLineTooWide = lines.some(line => context.measureText(line).width > maxWidth);
-            if (lines.length > 1 && fontSize >= minFontSize) {
+          let totalHeight = lines.length * lineHeight;
+          let anyLineTooWide = lines.some(line => context.measureText(line).width > maxWidth);
+          while ((anyLineTooWide || totalHeight > titleBox.height) && fontSize > minFontSize) {
+              fontSize--;
+              attemptWrap(fontSize);
+              totalHeight = lines.length * lineHeight;
+              anyLineTooWide = lines.some(line => context.measureText(line).width > maxWidth);
+              if (lines.length > 1 && fontSize >= minFontSize) { 
                 let singleLineAttempt = attemptWrap(fontSize);
                 if (singleLineAttempt.length === 1 && context.measureText(singleLineAttempt[0]).width <= maxWidth) {
-                    lines = singleLineAttempt;
-                    totalHeight = lines.length * lineHeight;
-                    anyLineTooWide = false;
-                }
-            }
-        }
-        return { lines, fontSize };
-    };
-    
+                      lines = singleLineAttempt;
+                      totalHeight = lines.length * lineHeight;
+                      anyLineTooWide = false;
+                  }
+              } 
+          }
+          return { lines, fontSize };
+      };
+
     // --- Draw Title --- 
     const titleBox = { x: 210, y: 150, width: 624, height: 290 };
+
     const title = listData.name || "Untitled List";
     const initialTitleFontSize = 130;
     const minTitleFontSize = 20;
     const titleLineHeight = 97;
-    const { lines: titleLines, fontSize: finalTitleFontSize } = wrapText(
+      const { lines: titleLines, fontSize: finalTitleFontSize } = wrapText(
         ctx, title, titleBox.width, initialTitleFontSize, minTitleFontSize, titleLineHeight
-    );
-    ctx.font = `${finalTitleFontSize}px Survivant`;
-    ctx.fillStyle = woodPattern || 'rgb(29, 21, 4)';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    const totalTextHeight = titleLines.length * titleLineHeight;
-    let startY = titleBox.y + (titleBox.height - totalTextHeight) / 2 + titleLineHeight / 2;
+      );
+      ctx.font = `${finalTitleFontSize}px Survivant`;
+      ctx.fillStyle = woodPattern || 'rgb(29, 21, 4)'; 
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const totalTextHeight = titleLines.length * titleLineHeight;
+      let startY = titleBox.y + (titleBox.height - totalTextHeight) / 2 + titleLineHeight / 2;
     if (titleLines.length === 1) startY += 10;
-    const titleX = titleBox.x + titleBox.width / 2;
-    titleLines.forEach((line, index) => {
-        const lineY = startY + index * titleLineHeight;
-        ctx.fillText(line, titleX, lineY);
-    });
+      const titleX = titleBox.x + titleBox.width / 2;
+      titleLines.forEach((line, index) => {
+          const lineY = startY + index * titleLineHeight;
+          ctx.fillText(line, titleX, lineY);
+      });
 
     // --- Draw Entries --- 
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = 'rgb(38, 20, 3)';
+      ctx.textAlign = 'left'; 
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = 'rgb(38, 20, 3)'; 
     const topContestants = listData.contestants.slice(0, 5);
     const imageWidth = 110;
     const imageHeight = 110;
     const seasonImageWidth = 160;
     const seasonImageHeight = 160;
     const namePadding = 35;
-    const isSeasonList = topContestants.length > 0 && topContestants[0].isSeason;
+      const isSeasonList = topContestants.length > 0 && topContestants[0].isSeason;
 
-    for (let i = 0; i < topContestants.length; i++) {
-      const contestant = topContestants[i];
-      const name = contestant.isSeason ? contestant.name.replace('Survivor: ', '') : contestant.name;
+        for (let i = 0; i < topContestants.length; i++) {
+          const contestant = topContestants[i];
+          const name = contestant.isSeason ? contestant.name.replace('Survivor: ', '') : contestant.name;
       let entryX = 210;
       let entryY = 0;
-      let nameX = entryX + (contestant.isSeason ? seasonImageWidth : imageWidth) + namePadding;
+          let nameX = entryX + (contestant.isSeason ? seasonImageWidth : imageWidth) + namePadding;
       let nameY = 0;
-      if (isSeasonList) {
-        switch (i) {
+          if (isSeasonList) {
+            switch (i) {
           case 0: entryY = 403; break; case 1: entryY = 558; break; case 2: entryY = 713; break; case 3: entryY = 873; break; case 4: entryY = 1032; break; default: entryY = 0;
-        }
-      } else {
-        switch (i) {
+            }
+          } else {
+            switch (i) {
           case 0: entryY = 433; break; case 1: entryY = 588; break; case 2: entryY = 743; break; case 3: entryY = 903; break; case 4: entryY = 1062; break; default: entryY = 0;
-        }
-      }
-      nameY = entryY + (contestant.isSeason ? seasonImageHeight : imageHeight) / 2;
-      const defaultFontSize = 64;
-      let currentFontSize = defaultFontSize;
+            }
+          }
+          nameY = entryY + (contestant.isSeason ? seasonImageHeight : imageHeight) / 2;
+          const defaultFontSize = 64; 
+          let currentFontSize = defaultFontSize;
       ctx.font = `${currentFontSize}px Survivant`;
       const horizontalLimit = 835;
       let fontWasAdjusted = false;
       const minFontSize = 10;
       let measuredWidth = ctx.measureText(name).width;
-      let endX = nameX + measuredWidth;
-      while (endX > horizontalLimit && currentFontSize > minFontSize) {
+          let endX = nameX + measuredWidth;
+          while (endX > horizontalLimit && currentFontSize > minFontSize) {
         currentFontSize--;
         ctx.font = `${currentFontSize}px Survivant`;
-        measuredWidth = ctx.measureText(name).width;
-        endX = nameX + measuredWidth;
-        fontWasAdjusted = true;
-      }
-      ctx.fillText(name, nameX, nameY);
-      if (fontWasAdjusted) {
+            measuredWidth = ctx.measureText(name).width;
+            endX = nameX + measuredWidth;
+            fontWasAdjusted = true;
+          }
+          ctx.fillText(name, nameX, nameY); 
+          if (fontWasAdjusted) {
         ctx.font = `${defaultFontSize}px Survivant`;
-      }
-      const imageUrl = getCachedImageUrl(contestant.id);
-      if (imageUrl) {
-        try {
-          const img = await loadImage(imageUrl);
-          if (contestant.isSeason) {
+          }
+          const imageUrl = getCachedImageUrl(contestant.id);
+          if (imageUrl) {
+            try {
+              const img = await loadImage(imageUrl); 
+              if (contestant.isSeason) {
             const maxHeight = seasonImageHeight; const maxWidth = seasonImageWidth;
             const scale = Math.min(maxWidth / img.width, maxHeight / img.height);
             const scaledWidth = img.width * scale; const scaledHeight = img.height * scale;
-            const xOffset = entryX + (maxWidth - scaledWidth) / 2;
-            const yOffset = entryY + (maxHeight - scaledHeight) / 2;
-            ctx.drawImage(img, xOffset, yOffset, scaledWidth, scaledHeight);
-          } else {
-            ctx.drawImage(img, entryX, entryY, imageWidth, imageHeight);
-          }
-        } catch (error) {
+                const xOffset = entryX + (maxWidth - scaledWidth) / 2;
+                const yOffset = entryY + (maxHeight - scaledHeight) / 2;
+                ctx.drawImage(img, xOffset, yOffset, scaledWidth, scaledHeight);
+              } else {
+                ctx.drawImage(img, entryX, entryY, imageWidth, imageHeight);
+              }
+            } catch (error) {
           ctx.fillStyle = '#eee'; ctx.fillRect(entryX, entryY, imageWidth, imageHeight);
           ctx.fillStyle = 'black'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          ctx.fillText('?', entryX + imageWidth / 2, entryY + imageHeight / 2);
+              ctx.fillText('?', entryX + imageWidth / 2, entryY + imageHeight / 2); 
           ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-        }
-      } else {
+            }
+          } else {
         ctx.fillStyle = '#eee'; ctx.fillRect(entryX, entryY, imageWidth, imageHeight);
         ctx.fillStyle = 'black'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText('?', entryX + imageWidth / 2, entryY + imageHeight / 2);
+            ctx.fillText('?', entryX + imageWidth / 2, entryY + imageHeight / 2);
         ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-      }
-    }
-    
+          }
+        }
+
     // Return the completed canvas
     return canvas;
   };
@@ -1028,27 +1031,28 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
         while ((anyLineTooWide || totalHeight > titleBox.height) && fontSize > minFontSize) { fontSize--; attemptWrap(fontSize); totalHeight = lines.length * lineHeight; anyLineTooWide = lines.some(line => context.measureText(line).width > maxWidth); if (lines.length > 1 && fontSize >= minFontSize) { let singleLineAttempt = attemptWrap(fontSize); if (singleLineAttempt.length === 1 && context.measureText(singleLineAttempt[0]).width <= maxWidth) { lines = singleLineAttempt; totalHeight = lines.length * lineHeight; anyLineTooWide = false; } } }
         return { lines, fontSize };
     };
-    const titleBox = { x: 210, y: 150, width: 624, height: 290 }; const title = listData.name || "Untitled List"; const initialTitleFontSize = 130; const minTitleFontSize = 20; const titleLineHeight = 97;
+    const titleBox = { x: 100, y: 0, width: 814, height: 320 }; const title = listData.name || "Untitled List"; const initialTitleFontSize = 170; const minTitleFontSize = 20; const titleLineHeight = 125;
     const { lines: titleLines, fontSize: finalTitleFontSize } = wrapText(ctx, title, titleBox.width, initialTitleFontSize, minTitleFontSize, titleLineHeight);
+
     ctx.font = `${finalTitleFontSize}px Survivant`; ctx.fillStyle = woodPattern || 'rgb(29, 21, 4)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const totalTextHeight = titleLines.length * titleLineHeight; let startY = titleBox.y + (titleBox.height - totalTextHeight) / 2 + titleLineHeight / 2; if (titleLines.length === 1) startY += 10; const titleX = titleBox.x + titleBox.width / 2;
     titleLines.forEach((line, index) => { const lineY = startY + index * titleLineHeight; ctx.fillText(line, titleX, lineY); });
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = 'rgb(38, 20, 3)';
-    const topContestants = listData.contestants.slice(0, 5); const imageWidth = 110; const imageHeight = 110; const seasonImageWidth = 160; const seasonImageHeight = 160; const namePadding = 35;
+    const topContestants = listData.contestants.slice(0, 5); const imageWidth = 130; const imageHeight = 130; const seasonImageWidth = 160; const seasonImageHeight = 160; const namePadding = 35;
     const isSeasonList = topContestants.length > 0 && topContestants[0].isSeason;
     for (let i = 0; i < topContestants.length; i++) {
         const contestant = topContestants[i]; const name = contestant.isSeason ? contestant.name.replace('Survivor: ', '') : contestant.name;
         
         // ***** EDIT POSITIONING FOR BEACH LAYOUT HERE *****
-        let entryX = 210; // X coordinate for image/logo
+        let entryX = 280; // X coordinate for image/logo
         let entryY = 0;   // Y coordinate for image/logo (Calculated below)
         let nameX = entryX + (contestant.isSeason ? seasonImageWidth : imageWidth) + namePadding; // X for name
         let nameY = 0;   // Y coordinate for name (Calculated below)
-        if (isSeasonList) { /* season Y positions */ switch (i) { case 0: entryY = 403; break; case 1: entryY = 558; break; case 2: entryY = 713; break; case 3: entryY = 873; break; case 4: entryY = 1032; break; default: entryY = 0; } } else { /* contestant Y positions */ switch (i) { case 0: entryY = 433; break; case 1: entryY = 588; break; case 2: entryY = 743; break; case 3: entryY = 903; break; case 4: entryY = 1062; break; default: entryY = 0; } }
+        if (isSeasonList) { /* season Y positions */ switch (i) { case 0: entryY = 305; break; case 1: entryY = 508; break; case 2: entryY = 698; break; case 3: entryY = 897; break; case 4: entryY = 1092; break; default: entryY = 0; } } else { /* contestant Y positions */ switch (i) { case 0: entryY = 322; break; case 1: entryY = 518; break; case 2: entryY = 713; break; case 3: entryY = 910; break; case 4: entryY = 1110; break; default: entryY = 0; } }
         nameY = entryY + (contestant.isSeason ? seasonImageHeight : imageHeight) / 2; 
         // ***** END OF POSITIONING TO EDIT *****
         
-        const defaultFontSize = 64; let currentFontSize = defaultFontSize; ctx.font = `${currentFontSize}px Survivant`; const horizontalLimit = 835; let fontWasAdjusted = false; const minFontSize = 10; let measuredWidth = ctx.measureText(name).width; let endX = nameX + measuredWidth;
+        const defaultFontSize = 64; let currentFontSize = defaultFontSize; ctx.font = `${currentFontSize}px Survivant`; const horizontalLimit = 875; let fontWasAdjusted = false; const minFontSize = 10; let measuredWidth = ctx.measureText(name).width; let endX = nameX + measuredWidth;
         while (endX > horizontalLimit && currentFontSize > minFontSize) { /* shrink font */ currentFontSize--; ctx.font = `${currentFontSize}px Survivant`; measuredWidth = ctx.measureText(name).width; endX = nameX + measuredWidth; fontWasAdjusted = true; }
         ctx.fillText(name, nameX, nameY); if (fontWasAdjusted) { ctx.font = `${defaultFontSize}px Survivant`; }
         const imageUrl = getCachedImageUrl(contestant.id);
@@ -1067,6 +1071,7 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
     setIsGeneratingImage(true);
     setShareImageDataUrl(null); 
     setShareImageDataUrl2(null);
+    setCurrentImageIndex(0); // <<< RESET index when opening
 
     // Load both background images
     const bgImage1 = new Image();
@@ -1110,38 +1115,31 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
       console.log("Second share image generated.");
 
       if (dataUrl1 || dataUrl2) { 
-        setShowShareModal(true);
+          setShowShareModal(true);
       }
 
-    } catch (error) { 
+        } catch (error) {
       console.error("Error during share image generation process:", error);
       alert(`Sorry, couldn't generate the shareable images. Error: ${error.message}`);
       setShareImageDataUrl(null);
       setShareImageDataUrl2(null);
-    } finally {
-      setIsGeneratingImage(false);
-    }
-  };
+        } finally {
+          setIsGeneratingImage(false);
+        }
+      };
   // --- End Updated Share ---
 
   // --- Download and Close Handlers ---
   const handleDownloadImage = () => {
-    if (!shareImageDataUrl) return;
+    // This now downloads the currently visible image
+    const urlToDownload = currentImageIndex === 0 ? shareImageDataUrl : shareImageDataUrl2;
+    if (!urlToDownload) return;
+    
     const link = document.createElement('a');
-    link.href = shareImageDataUrl;
-    const filename = selectedList?.name ? `${selectedList.name.replace(/\s+/g, '_')}_ranking.png` : 'survivor_ranking.png';
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-  
-  const handleDownloadImage2 = () => { // Keep separate download for second image
-    if (!shareImageDataUrl2) return;
-    const link = document.createElement('a');
-    link.href = shareImageDataUrl2; 
-    const filename = selectedList?.name ? `${selectedList.name.replace(/\s+/g, '_')}_ranking_alt.png` : 'survivor_ranking_alt.png'; 
-    link.download = filename;
+    link.href = urlToDownload;
+    const baseFilename = selectedList?.name ? `${selectedList.name.replace(/\s+/g, '_')}_ranking` : 'survivor_ranking';
+    const filenameSuffix = currentImageIndex === 0 ? '.png' : '_beach.png';
+    link.download = `${baseFilename}${filenameSuffix}`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1151,6 +1149,7 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
     setShowShareModal(false);
     setShareImageDataUrl(null);
     setShareImageDataUrl2(null); // Clear both image URLs
+    setCurrentImageIndex(0); // <<< RESET index when closing
   };
   // --- End Download and Close Handlers ---
 
@@ -1162,7 +1161,40 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
     navigate('/create', { state: { editingListId: selectedList.id } });
   };
   
-  // -------------------------
+  // --- Carousel Swipe Handlers ---
+  const handleTouchStart = (e) => {
+    // Only track single touch
+    if (e.touches.length === 1) {
+        setTouchStartX(e.touches[0].clientX);
+    }
+  };
+
+  const handleTouchEnd = (e) => {
+    if (touchStartX === null || e.changedTouches.length === 0) {
+        return; // No start data or end data
+    }
+
+    const touchEndX = e.changedTouches[0].clientX;
+    const deltaX = touchStartX - touchEndX;
+    const minSwipeDistance = 50; // Minimum pixels for a swipe
+
+    // Reset touch start for the next swipe
+    setTouchStartX(null); 
+
+    // Determine swipe direction and change image if applicable
+    if (deltaX > minSwipeDistance) {
+        // Swipe Left (Next Image)
+        if (currentImageIndex === 0 && shareImageDataUrl2) {
+            setCurrentImageIndex(1);
+        }
+    } else if (deltaX < -minSwipeDistance) {
+        // Swipe Right (Previous Image)
+        if (currentImageIndex === 1) {
+            setCurrentImageIndex(0);
+        }
+    }
+  };
+  // --- End Carousel Swipe Handlers ---
 
   if (loading) return <div className="other-lists loading">Loading rankings...</div>;
   if (error) return <div className="other-lists error">{error}</div>;
@@ -1222,7 +1254,7 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
             </button>
           </div>
           
-          {/* --- SINGLE Share Button (Desktop Only) --- */} 
+          {/* --- SINGLE Share Button (Desktop Only) --- */ }
           {!isMobile && (
             <button 
               onClick={handleShareClick} // Calls the combined handler
@@ -1234,7 +1266,7 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
             </button>
           )}
           {/* --- Removed Duplicate Desktop Button --- */}
-          
+
           {/* --- ADDED Desktop Edit Button --- */}
           {!isMobile && user && selectedList.userId === user.uid && (
              <button 
@@ -1304,7 +1336,14 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
                   />
                   <div className={contestant.isSeason ? "season-name" : "contestant-name"} style={{ color: '#000000' }}>
                     {contestant.isSeason 
-                      ? contestant.name.replace('Survivor: ', '').replace('Survivor ', '') 
+                      ? (() => {
+                          const name = contestant.name.replace('Survivor: ', '').replace('Survivor ', '');
+                          const seasonNum = parseInt(name);
+                          if (!isNaN(seasonNum) && seasonNum >= 41 && seasonNum <= 48) {
+                            return `Season ${name}`;
+                          }
+                          return name;
+                        })()
                       : contestant.name}
                   </div>
                 </div>
@@ -1507,44 +1546,98 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
           )}
         </div>
 
-        {/* SINGLE Share Modal (Displays Both Images) */} 
+        {/* SINGLE Share Modal (Displays Both Images) */}
         {showShareModal && (shareImageDataUrl || shareImageDataUrl2) && (
           <div className="share-modal-overlay" onClick={closeShareModal}>
-            <div className="share-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="share-modal-content" onClick={(e) => e.stopPropagation()}> 
               <h3>Share Your Ranking</h3>
               
-              {/* Display First Image */} 
-              {shareImageDataUrl && (
-                <img 
-                   src={shareImageDataUrl} 
-                   alt="Generated ranking list" 
-                   className="share-preview-image" 
-                />
+              {/* --- Carousel Container --- */ }
+              <div 
+                className="share-image-carousel"
+                onTouchStart={handleTouchStart} // <<< Add touch start handler
+                onTouchEnd={handleTouchEnd}     // <<< Add touch end handler
+              >
+                {/* Previous Arrow */} 
+                {currentImageIndex > 0 && (
+                  <button 
+                    className="carousel-arrow prev-arrow"
+                    onClick={() => setCurrentImageIndex(0)}
+                    title="Previous Image"
+                  >
+                    &#x276E; {/* Left Arrow */} 
+                  </button>
+                )}
+                
+                {/* Conditionally Rendered Image */} 
+                {currentImageIndex === 0 && shareImageDataUrl && (
+                  <img 
+                     src={shareImageDataUrl} 
+                     alt="Generated ranking list - Layout 1" 
+                     className="share-preview-image" 
+                     draggable="false" 
+                  />
+                )}
+                {currentImageIndex === 1 && shareImageDataUrl2 && (
+                  <img 
+                     src={shareImageDataUrl2} 
+                     alt="Generated ranking list - Layout 2 (Beach)" 
+                     className="share-preview-image" // Keep same class for sizing
+                     draggable="false" 
+                  />
               )}
-              
-              {/* Display Second Image (if generated) */} 
-              {shareImageDataUrl2 && (
-                <img 
-                   src={shareImageDataUrl2} 
-                   alt="Generated alt ranking list" 
-                   className="share-preview-image share-preview-image-alt" 
-                />
+
+                {/* Next Arrow */} 
+                {currentImageIndex === 0 && shareImageDataUrl2 && (
+                   <button 
+                    className="carousel-arrow next-arrow"
+                    onClick={() => setCurrentImageIndex(1)}
+                    title="Next Image"
+                  >
+                    &#x276F; {/* Right Arrow */} 
+                  </button>
+                )}
+              </div>
+              {/* --- End Carousel Container --- */} 
+
+              {/* --- Carousel Dots --- */} 
+              <div className="carousel-dots">
+                {shareImageDataUrl && (
+                   <span 
+                    className={`carousel-dot ${currentImageIndex === 0 ? 'active' : ''}`}
+                    onClick={() => setCurrentImageIndex(0)}
+                  ></span>
+                )}
+                {shareImageDataUrl2 && (
+                  <span 
+                    className={`carousel-dot ${currentImageIndex === 1 ? 'active' : ''}`}
+                    onClick={() => setCurrentImageIndex(1)}
+                  ></span>
               )}
+              </div>
+              {/* --- End Carousel Dots --- */} 
               
               {/* Buttons Container */} 
               <div className="share-modal-actions">
-                {/* Download Button 1 */} 
-                {shareImageDataUrl && (
+                 {/* SINGLE Download Button for current image - DESKTOP ONLY */} 
+                {!isMobile && shareImageDataUrl && currentImageIndex === 0 && (
                   <button onClick={handleDownloadImage} className="download-image-button">
-                    Download Image 1 
+                    Download Image
                   </button>
                 )}
-                {/* Download Button 2 */} 
-                {shareImageDataUrl2 && (
-                  <button onClick={handleDownloadImage2} className="download-image-button alt-download">
-                    Download Image 2
+                {!isMobile && shareImageDataUrl2 && currentImageIndex === 1 && (
+                   <button onClick={handleDownloadImage} className="download-image-button">
+                    Download Image
                   </button>
                 )}
+
+                {/* Mobile Instruction Text */} 
+                {isMobile && (
+                  <p className="mobile-save-instruction">
+                    Tip: Long press the image to save it to your camera roll.
+                  </p>
+                )}
+
                 {/* Close Button */} 
                 <button onClick={closeShareModal} className="close-modal-button">
                   Close
@@ -1552,8 +1645,8 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
               </div>
             </div>
           </div>
-        )}
-        
+      )}
+    
       </div> // End of full-list-view
     );
   }
@@ -1730,7 +1823,14 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
                       />
                           <div className={contestant.isSeason ? "season-name" : "contestant-name"} style={{ color: '#000000' }}>
                           {contestant.isSeason 
-                            ? contestant.name.replace('Survivor: ', '').replace('Survivor ', '') 
+                            ? (() => {
+                                const name = contestant.name.replace('Survivor: ', '').replace('Survivor ', '');
+                                const seasonNum = parseInt(name);
+                                if (!isNaN(seasonNum) && seasonNum >= 41 && seasonNum <= 48) {
+                                  return `Season ${name}`;
+                                }
+                                return name;
+                              })()
                             : contestant.name}
                       </div>
                     </div>

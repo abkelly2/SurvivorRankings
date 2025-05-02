@@ -71,6 +71,7 @@
   position: relative;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
 }
 
 .list-card:hover {
@@ -128,6 +129,12 @@
   border: 1px solid rgba(255, 204, 0, 0.5);
 }
 
+.list-card-actions {
+  display: flex;
+  border-top: 1px solid #eee;
+}
+
+.edit-my-list-button,
 .delete-list-button {
   background-color: #f5f5f5;
   border: none;
@@ -135,12 +142,17 @@
   font-size: 1.2rem;
   height: 40px;
   display: flex;
+  flex: 1;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  border-top: 1px solid #eee;
-  width: 100%;
+  position: relative;
+}
+
+.edit-my-list-button:hover {
+  background-color: #e0f0ff;
+  color: #007bff;
 }
 
 .delete-list-button:hover {
@@ -162,6 +174,12 @@
   
   .list-title {
     font-size: 1rem;
+  }
+  
+  .edit-my-list-button,
+  .delete-list-button {
+    height: 35px;
+    font-size: 1.1rem;
   }
 }
 
@@ -193,6 +211,11 @@
   }
   
   .delete-list-button {
+    height: 30px;
+    font-size: 1rem;
+  }
+  
+  .edit-my-list-button {
     height: 30px;
     font-size: 1rem;
   }
@@ -357,6 +380,10 @@
   .username-actions {
     flex-direction: column;
   }
+}
+
+.edit-my-list-button {
+  border-right: 1px solid #eee;
 } 
  
  

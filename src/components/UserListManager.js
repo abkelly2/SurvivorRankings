@@ -247,49 +247,49 @@ const UserListManager = ({ user, onSelectList, onCreateNew }) => {
       
       {/* Only show profile section if user is logged in */}
       {user && (
-        <div className="user-profile-section">
-          {isEditingUsername ? (
-            <div className="username-editor">
-              <input
-                type="text"
-                value={newUsername}
-                onChange={(e) => setNewUsername(e.target.value)}
-                placeholder="Enter new username"
-                className="username-input"
-                maxLength={30}
-              />
-              <div className="username-actions">
-                <button onClick={handleUsernameChange} className="save-username-button">
-                  Save
-                </button>
-                <button onClick={() => {
-                  setIsEditingUsername(false);
-                  setNewUsername(user.displayName);
-                  setUsernameError('');
-                }} className="cancel-username-button">
-                  Cancel
-                </button>
-              </div>
-              {usernameError && <div className="username-error">{usernameError}</div>}
-            </div>
-          ) : (
-            <div className="username-display">
-              <div className="current-username">
-                <span className="username-label">Your Username:</span>
-                <span className="username-value">{user.displayName}</span>
-              </div>
-              <button 
-                onClick={() => setIsEditingUsername(true)} 
-                className="edit-username-button"
-              >
-                Change Username
+      <div className="user-profile-section">
+        {isEditingUsername ? (
+          <div className="username-editor">
+            <input
+              type="text"
+              value={newUsername}
+              onChange={(e) => setNewUsername(e.target.value)}
+              placeholder="Enter new username"
+              className="username-input"
+              maxLength={30}
+            />
+            <div className="username-actions">
+              <button onClick={handleUsernameChange} className="save-username-button">
+                Save
               </button>
-              {usernameChangeSuccess && (
-                <div className="username-success">Username updated successfully!</div>
-              )}
+              <button onClick={() => {
+                setIsEditingUsername(false);
+                setNewUsername(user.displayName);
+                setUsernameError('');
+              }} className="cancel-username-button">
+                Cancel
+              </button>
             </div>
-          )}
-        </div>
+            {usernameError && <div className="username-error">{usernameError}</div>}
+          </div>
+        ) : (
+          <div className="username-display">
+            <div className="current-username">
+              <span className="username-label">Your Username:</span>
+              <span className="username-value">{user.displayName}</span>
+            </div>
+            <button 
+              onClick={() => setIsEditingUsername(true)} 
+              className="edit-username-button"
+            >
+              Change Username
+            </button>
+            {usernameChangeSuccess && (
+              <div className="username-success">Username updated successfully!</div>
+            )}
+          </div>
+        )}
+      </div>
       )}
       {/* End of user profile section conditional */}
       
