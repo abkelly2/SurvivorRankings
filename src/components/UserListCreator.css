@@ -1096,6 +1096,7 @@
   .drag-handle {
     min-height: 44px; /* Apple's recommended minimum size for touch targets */
   }
+<<<<<<< HEAD
 }
 
 /* Add styles for the new login-to-save button */
@@ -1132,6 +1133,10 @@
   transform: translateY(0px);
 }
 
+=======
+} 
+ 
+>>>>>>> 00932d92ed6bfe73d5d113db31f52c5dc1ee58cd
 /* Keep existing mobile styles for the button if they exist */
 /* (Assuming mobile styles might be under .mobile-only-button or within a max-width query) */
  
