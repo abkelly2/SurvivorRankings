@@ -41,6 +41,10 @@ const UserListCreator = ({
   // <<< Add refs for initial touch position >>>
   const initialTouchX = useRef(0);
   const initialTouchY = useRef(0);
+  const initialScrollX = useRef(0); // For scroll compensation
+  const initialScrollY = useRef(0); // For scroll compensation
+  const scrollAnimationRef = useRef(null); // For requestAnimationFrame
+  const scrollDirectionRef = useRef(null); // For requestAnimationFrame ('up', 'down', null)
   // ----------------------------------------------
 
   // --- State for Desktop Drag Visual Feedback ---
@@ -57,8 +61,13 @@ const UserListCreator = ({
     { id: 'spoiler', label: 'Spoiler' }
   ];
   
+  // Desktop scroll parameters (user-defined)
+  const DESKTOP_SCROLL_THRESHOLD = 200;
+  const DESKTOP_SCROLL_SPEED = 15;
+  
   // <<< ADDED: Effect to load pending list data from navigation state >>>
   useEffect(() => {
+    // First try to get data from location state (primary method)
     if (location.state?.pendingListData) {
       console.log('[UserListCreator] Loading pending list data from location state');
       const { name, description, tags, contestants } = location.state.pendingListData;
@@ -69,10 +78,31 @@ const UserListCreator = ({
       
       // Clear the location state after loading to prevent reload on refresh/revisit
       navigate(location.pathname, { replace: true, state: {} });
+    } 
+    // FALLBACK: Check sessionStorage directly if location state wasn't passed
+    else {
+      const postLoginActionString = sessionStorage.getItem('postLoginAction');
+      if (postLoginActionString) {
+        try {
+          const action = JSON.parse(postLoginActionString);
+          if (action.path === '/create' && action.data) {
+            console.log('[UserListCreator] FALLBACK: Loading pending list data from sessionStorage');
+            const { name, description, tags, contestants } = action.data;
+            setListName(name || '');
+            setListDescription(description || '');
+            setListTags(tags || []);
+            setUserList(contestants || []);
+            
+            // Clear from storage after loading
+            sessionStorage.removeItem('postLoginAction');
+          }
+        } catch (error) {
+          console.error('Error loading from sessionStorage:', error);
+        }
+      }
     }
-    // Run only once on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty dependency array
+    // Run when location state or navigate changes
+  }, [location.state?.pendingListData, setListName, setListDescription, setListTags, setUserList, navigate, location.pathname]);
   
   // Load any existing draft from local storage if not editing an existing list
   useEffect(() => {
@@ -337,8 +367,9 @@ const UserListCreator = ({
   // Drag and drop handlers
   const handleDragOver = (e) => {
     if (isMobile) return;
-    e.preventDefault();
-    e.stopPropagation();
+    // Scrolling is now handled by a window event listener for desktop
+    // e.preventDefault(); // Prevent default is called by the window listener or is needed for drop target
+    // e.stopPropagation(); // Stop propagation might still be useful if nested
 
     const fromIndex = draggedItemFromIndexRef.current;
     const listContainer = listRef.current;
@@ -347,11 +378,18 @@ const UserListCreator = ({
     if (fromIndex === null || !listContainer || !draggedElement) {
         return; // Not a valid reorder drag
     }
+    // Ensure preventDefault is called if we are over a valid drop target area within listRef
+    // This is important for the drop event to fire on listRef.
+    e.preventDefault(); 
+    e.stopPropagation(); 
 
     setDragOver(true);
 
-    // --- Revised Target Index Calculation --- 
-    const mouseY = e.clientY;
+    // --- Auto-scroll logic for desktop (REMOVED FROM HERE) ---
+
+    // --- Revised Target Index Calculation (Restored DOM logic) --- 
+    const mouseY = e.clientY; 
+    
     const allListItems = Array.from(listContainer.querySelectorAll('.ranking-item'));
     
     let currentTargetIndex = userList.length; // Default to the end
@@ -365,30 +403,13 @@ const UserListCreator = ({
         
         // Find the first item whose top is below the cursor
         if (mouseY < itemRect.top + itemRect.height / 2) { // Use midpoint as threshold
-            // The cursor is above the midpoint of this item.
-            // The target index should be this item's index.
             currentTargetIndex = parseInt(item.dataset.index, 10);
-            
-            // If the target we just found is *after* the original item,
-            // but the original item itself is *before* this target, 
-            // the actual drop index needs adjustment because the original item isn't there.
-            // Let's adjust the *visual target* for transform application.
-            // The final drop calculation in handleDrop should handle the actual list index.
-            // No, let's keep it simple: target is this item's index.
-            break; // Found the first item below the cursor, stop searching
+            break; 
         }
-        // If the loop completes without finding an item below the cursor,
-        // currentTargetIndex remains userList.length (meaning drop at the end).
     }
     
-    // --- Debug Log --- 
-    // console.log(`[DragOver] MouseY: ${mouseY.toFixed(0)}, Target Index: ${currentTargetIndex}`);
-    
-    // --- Apply Transforms (Corrected logic) ---
     const draggedHeight = draggedElement.offsetHeight > 0 ? draggedElement.offsetHeight : 50;
     
-    // console.log(`Applying transforms: from=${fromIndex}, target=${currentTargetIndex}, height=${draggedHeight}`); // Debug log
-
     allListItems.forEach((item) => {
       if (item === draggedElement) return; // Skip the item being dragged
       
@@ -396,23 +417,14 @@ const UserListCreator = ({
       let transformY = 0;
 
       if (fromIndex < currentTargetIndex) { // Moving Down
-         // Item is between old and new position.
-         // Item needs to move UP if: itemIndex > fromIndex AND itemIndex < currentTargetIndex
          if (itemIndex > fromIndex && itemIndex < currentTargetIndex) {
             transformY = -draggedHeight;
-            // console.log(`  Item ${itemIndex}: Transform UP (${transformY}px)`); // Debug log
          }
       } else if (fromIndex > currentTargetIndex) { // Moving Up
-         // Item is between new and old position.
-         // Item needs to move DOWN if: itemIndex >= currentTargetIndex AND itemIndex < fromIndex
          if (itemIndex >= currentTargetIndex && itemIndex < fromIndex) {
             transformY = draggedHeight;
-            // console.log(`  Item ${itemIndex}: Transform DOWN (${transformY}px)`); // Debug log
          }
       }
-      // If fromIndex === currentTargetIndex, transformY remains 0, no shift needed.
-      
-      // Apply the calculated transform (or reset to none)
       item.style.transform = `translateY(${transformY}px)`;
     });
   };
@@ -445,6 +457,31 @@ const UserListCreator = ({
      }
   }
   
+  // <<< NEW: Handler for window dragover to manage scrolling the list >>>
+  const handleWindowDragOverForScroll = (e) => {
+    if (draggedItemFromIndexRef.current === null || !listRef.current || isMobile) {
+      return; // Not a desktop drag from our component, or list isn't ready
+    }
+    
+    e.preventDefault(); // Crucial to allow drop events on potential targets
+
+    const mouseY = e.clientY;
+
+    if (mouseY < DESKTOP_SCROLL_THRESHOLD) {
+      listRef.current.scrollTop -= DESKTOP_SCROLL_SPEED;
+    } else if (mouseY > window.innerHeight - DESKTOP_SCROLL_THRESHOLD) {
+      listRef.current.scrollTop += DESKTOP_SCROLL_SPEED;
+    }
+  };
+
+  // <<< NEW: Function to remove window listeners >>>
+  const removeDesktopWindowListeners = () => {
+    window.removeEventListener('dragover', handleWindowDragOverForScroll);
+    window.removeEventListener('drop', removeDesktopWindowListeners);
+    window.removeEventListener('dragend', removeDesktopWindowListeners);
+    console.log('[Desktop Drag] Removed window scroll listeners');
+  };
+
   // Make list items draggable for reordering
   const handleItemDragStart = (e, index) => {
     if (isMobile) return;
@@ -454,11 +491,21 @@ const UserListCreator = ({
     e.target.classList.add('dragging-item');
     draggedItemDesktopRef.current = e.target; 
     draggedItemFromIndexRef.current = index; // Store the starting index in the ref
+
+    // <<< ADDED: Attach window listeners for desktop scroll >>>
+    window.addEventListener('dragover', handleWindowDragOverForScroll);
+    window.addEventListener('drop', removeDesktopWindowListeners);
+    window.addEventListener('dragend', removeDesktopWindowListeners);
+    console.log('[Desktop Drag] Added window scroll listeners');
   };
   
   const handleItemDragEnd = (e) => {
     if (isMobile) return;
     console.log('Desktop drag ended');
+
+    // <<< ADDED: Ensure window listeners are removed >>>
+    removeDesktopWindowListeners();
+
     if(e.target && e.target.classList) {
     e.target.classList.remove('dragging-item');
     }
@@ -507,12 +554,12 @@ const UserListCreator = ({
              const distance = Math.abs(mouseY - itemCenterY);
              if (distance < minDistance) {
                minDistance = distance;
-               closestItemIndex = parseInt(item.dataset.index, 10);
+               closestItemIndex = i;
              }
           }
 
           if (closestItemIndex !== -1) {
-              const closestItem = allListItems.find(item => parseInt(item.dataset.index, 10) === closestItemIndex);
+              const closestItem = allListItems[closestItemIndex];
               if (closestItem) {
                   const closestItemRect = closestItem.getBoundingClientRect();
                   const closestItemCenterY = closestItemRect.top + closestItemRect.height / 2;
@@ -752,7 +799,7 @@ const UserListCreator = ({
       console.log('[TouchDrag - Create] Removed touchmove listener from container');
     };
     // Rerun effect if isMobile changes or listRef becomes available
-  }, [isMobile, listRef]); 
+  }, [isMobile, listRef.current]); 
 
   // <<< REPLACED Touch Handlers (Adapted from GlobalRankings.js) >>>
   const handleTouchStart = (e, index) => {
@@ -768,6 +815,8 @@ const UserListCreator = ({
     const touch = e.touches[0];
     initialTouchX.current = touch.clientX;
     initialTouchY.current = touch.clientY;
+    initialScrollX.current = window.scrollX; // Store initial scroll X
+    initialScrollY.current = window.scrollY; // Store initial scroll Y
 
     // Start timer to initiate drag
     touchDragTimer.current = setTimeout(() => {
@@ -778,11 +827,11 @@ const UserListCreator = ({
           // Apply dragging class
           currentTarget.classList.add('touch-dragging-item'); // Or a specific class for UserListCreator
       }
-      // Prevent body scroll
-      originalBodyOverflow.current = document.body.style.overflow; 
-      document.body.style.overflow = 'hidden';
+      // // Prevent body scroll (REMOVED - We want the page to scroll)
+      // originalBodyOverflow.current = document.body.style.overflow; 
+      // document.body.style.overflow = 'hidden';
       console.log('[TouchDrag - UserListCreator] Drag started after delay.');
-    }, 150); // Adjust delay if needed
+    }, 80); // Adjusted delay from 150ms to 80ms
   };
 
   const handleTouchMove = (e) => {
@@ -795,16 +844,73 @@ const UserListCreator = ({
     const draggedElement = draggedItemElement.current;
     if (!touch || !listContainer || !draggedElement) return;
 
-    // Apply transform to follow finger, maybe scale slightly
-    const deltaX = touch.clientX - initialTouchX.current;
-    const deltaY = touch.clientY - initialTouchY.current;
-    draggedElement.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(1.03)`;
+    // --- Auto-scroll logic for touch (using requestAnimationFrame) ---
+    const scrollThreshold = 100; // Pixels from viewport edge (Adjusted from user's 1000)
+    const continuousScrollSpeed = 7; // Pixels to scroll per frame (Adjusted from user's 30 for rAF)
+    const touchClientY = touch.clientY; // Viewport Y coordinate of the touch
+
+    const smoothScrollStep = () => {
+      if (!scrollDirectionRef.current) {
+        if (scrollAnimationRef.current) {
+          cancelAnimationFrame(scrollAnimationRef.current);
+          scrollAnimationRef.current = null;
+        }
+        return;
+      }
+
+      if (scrollDirectionRef.current === 'up') {
+        window.scrollBy(0, -continuousScrollSpeed);
+      } else if (scrollDirectionRef.current === 'down') {
+        window.scrollBy(0, continuousScrollSpeed);
+      }
+      
+      scrollAnimationRef.current = requestAnimationFrame(smoothScrollStep);
+    };
+
+    if (touchClientY < scrollThreshold) { // Near top of viewport
+      if (scrollDirectionRef.current !== 'up') {
+        scrollDirectionRef.current = 'up';
+        if (!scrollAnimationRef.current) { // Start animation loop if not already running
+          smoothScrollStep();
+        }
+      }
+    } else if (touchClientY > window.innerHeight - scrollThreshold) { // Near bottom of viewport
+      if (scrollDirectionRef.current !== 'down') {
+        scrollDirectionRef.current = 'down';
+        if (!scrollAnimationRef.current) { // Start animation loop if not already running
+          smoothScrollStep();
+        }
+      }
+    } else {
+      // Finger is not in a scroll zone
+      if (scrollDirectionRef.current) { // If it was scrolling
+        scrollDirectionRef.current = null; // Stop scrolling direction
+        // The animation loop will stop itself on the next frame when it sees direction is null
+      }
+    }
+    // --- End auto-scroll logic ---
+
+    // Apply transform to follow finger, compensating for page scroll
+    const fingerDeltaX = touch.clientX - initialTouchX.current;
+    const fingerDeltaY = touch.clientY - initialTouchY.current; 
+    
+    const currentScrollX = window.scrollX;
+    const currentScrollY = window.scrollY;
+    
+    const scrollCompensateX = currentScrollX - initialScrollX.current;
+    const scrollCompensateY = currentScrollY - initialScrollY.current;
+    
+    const transformX = fingerDeltaX + scrollCompensateX;
+    const transformY = fingerDeltaY + scrollCompensateY;
+    
+    draggedElement.style.transform = `translate(${transformX}px, ${transformY}px) scale(1.03)`;
 
     // Target Index Calculation based on finger position relative to other items
-    const touchY = touch.clientY;
-    const listRect = listContainer.getBoundingClientRect();
-    const touchRelativeToContainer = touchY - listRect.top;
-    const listItems = Array.from(listContainer.querySelectorAll('.ranking-item')); // Ensure this selector is correct
+    const containerRect = listContainer.getBoundingClientRect(); // Define containerRect here
+    // Correctly calculate touch position relative to the scrollable content
+    const touchYInContainerContent = touchClientY - containerRect.top + listContainer.scrollTop;
+    
+    const listItems = Array.from(listContainer.querySelectorAll('.ranking-item')); 
     
     let targetIndex = -1;
     let closestItemOriginalIndex = -1;
@@ -816,39 +922,36 @@ const UserListCreator = ({
         // Skip the element currently being dragged
         if (item === draggedElement) continue;
         
-        const itemOriginalOffsetTop = item.offsetTop; // Use offsetTop relative to parent
+        const itemOriginalOffsetTop = item.offsetTop; 
         const itemHeight = item.offsetHeight;
         const itemOriginalCenterY = itemOriginalOffsetTop + itemHeight / 2;
-        const distance = Math.abs(touchRelativeToContainer - itemOriginalCenterY);
+        // Use touchYInContainerContent for comparison
+        const distance = Math.abs(touchYInContainerContent - itemOriginalCenterY);
 
-        // Find the item whose center is closest to the touch point
         if (distance < minDistance) {
             minDistance = distance;
-            closestItemOriginalIndex = i; // Store index relative to CURRENT visible items
+            closestItemOriginalIndex = i; 
         }
     }
 
-    // Determine if we are hovering above or below the closest item
     if (closestItemOriginalIndex !== -1) {
         const closestItem = listItems[closestItemOriginalIndex];
         const itemOriginalOffsetTop = closestItem.offsetTop;
         const itemOriginalCenterY = itemOriginalOffsetTop + closestItem.offsetHeight / 2;
         
-        // targetIndex is where the dragged item should be inserted *before*
-        if (touchRelativeToContainer < itemOriginalCenterY) {
+        if (touchYInContainerContent < itemOriginalCenterY) {
             targetIndex = closestItemOriginalIndex;
         } else {
             targetIndex = closestItemOriginalIndex + 1;
         }
     } else if (listItems.length > 0) { 
-        // If no closest found but list isn't empty, likely near top/bottom
-        if (touchRelativeToContainer < listItems[0].offsetTop + listItems[0].offsetHeight / 2) {
-            targetIndex = 0; // Hovering above the first item
+        if (touchYInContainerContent < listItems[0].offsetTop + listItems[0].offsetHeight / 2) {
+            targetIndex = 0; 
              } else {
-            targetIndex = listItems.length; // Hovering below the last item
+            targetIndex = listItems.length; 
         }
     } else {
-        targetIndex = 0; // List was empty, insert at start
+        targetIndex = 0; 
     }
 
     // --- Shift items visually --- 
@@ -888,12 +991,25 @@ const UserListCreator = ({
     if (!isMobile || !isTouchDragging.current) { // Check isTouchDragging flag
     clearTimeout(touchDragTimer.current); 
       touchDragTimer.current = null;
+      // Clear scroll animation if touch ends prematurely or not dragging
+      if (scrollAnimationRef.current) {
+        cancelAnimationFrame(scrollAnimationRef.current);
+        scrollAnimationRef.current = null;
+      }
+      scrollDirectionRef.current = null;
       return; // Exit if not dragging
     }
     
     clearTimeout(touchDragTimer.current);
     touchDragTimer.current = null;
     e.stopPropagation();
+
+    // Clear any active scroll animation when touch ends
+    if (scrollAnimationRef.current) {
+      cancelAnimationFrame(scrollAnimationRef.current);
+      scrollAnimationRef.current = null;
+    }
+    scrollDirectionRef.current = null;
 
     const draggedElement = draggedItemElement.current;
     const startIndex = draggedItemIndex.current;
@@ -912,8 +1028,8 @@ const UserListCreator = ({
        }
      });
 
-    // Restore body scroll
-    document.body.style.overflow = originalBodyOverflow.current;
+    // // Restore body scroll (REMOVED)
+    // document.body.style.overflow = originalBodyOverflow.current;
 
     // --- Determine Final Drop Target Index --- 
     const listContainer = listRef.current;
@@ -925,7 +1041,9 @@ const UserListCreator = ({
       
       if (lastTouch) {
           const finalTouchY = lastTouch.clientY;
-          const touchRelativeToContainer = finalTouchY - listRect.top;
+          // Correctly calculate final touch position relative to scrollable content for targetIndex
+          const finalTouchYInContainerContent = finalTouchY - listRect.top + listContainer.scrollTop;
+
         const listItems = Array.from(listContainer.querySelectorAll('.ranking-item'));
         
         let closestItemOriginalIndex = -1;
@@ -939,7 +1057,8 @@ const UserListCreator = ({
             const itemOriginalOffsetTop = item.offsetTop;
             const itemHeight = item.offsetHeight;
             const itemOriginalCenterY = itemOriginalOffsetTop + itemHeight / 2;
-            const distance = Math.abs(touchRelativeToContainer - itemOriginalCenterY);
+            // Use finalTouchYInContainerContent for comparison
+            const distance = Math.abs(finalTouchYInContainerContent - itemOriginalCenterY);
             if (distance < minDistance) {
                 minDistance = distance;
                 closestItemOriginalIndex = i; 
@@ -951,13 +1070,15 @@ const UserListCreator = ({
             const closestItem = listItems[closestItemOriginalIndex];
             const itemOriginalOffsetTop = closestItem.offsetTop;
             const itemOriginalCenterY = itemOriginalOffsetTop + closestItem.offsetHeight / 2;
-            if (touchRelativeToContainer < itemOriginalCenterY) {
+            // Use finalTouchYInContainerContent for comparison
+            if (finalTouchYInContainerContent < itemOriginalCenterY) {
                 targetIndex = closestItemOriginalIndex;
             } else {
                 targetIndex = closestItemOriginalIndex + 1;
             }
           } else if (listItems.length > 0) {
-            if (touchRelativeToContainer < listItems[0].offsetTop + listItems[0].offsetHeight / 2) {
+            // Use finalTouchYInContainerContent for comparison
+            if (finalTouchYInContainerContent < listItems[0].offsetTop + listItems[0].offsetHeight / 2) {
               targetIndex = 0;
                  } else {
               targetIndex = listItems.length; 
@@ -1150,18 +1271,25 @@ const UserListCreator = ({
         ) : (
           <button 
              onClick={() => {
-               // Save current list state to localStorage
-               const pendingList = {
-                 name: listName,
-                 description: listDescription,
-                 tags: listTags,
-                 contestants: userList
+               // Create the action object with path and data
+               const postLoginAction = {
+                 action: 'loadPendingList', // Identify the action
+                 path: '/create',          // Target path
+                 data: {                  // The data needed on the target page
+                   name: listName,
+                   description: listDescription,
+                   tags: listTags,
+                   contestants: userList
+                 }
                };
                try {
-                 localStorage.setItem('pendingList', JSON.stringify(pendingList));
-                 console.log('Saved pending list to localStorage');
+                 // Store the entire action object in sessionStorage
+                 sessionStorage.setItem('postLoginAction', JSON.stringify(postLoginAction));
+                 console.log('Saved post-login action to sessionStorage:', postLoginAction);
                } catch (error) {
-                 console.error('Error saving pending list to localStorage:', error);
+                 console.error('Error saving post-login action:', error);
+                 // Optionally clear storage if saving failed partially
+                 sessionStorage.removeItem('postLoginAction'); 
                }
                // Navigate to login page
                navigate('/login');

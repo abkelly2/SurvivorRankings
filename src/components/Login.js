@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { signInWithGoogle, signInWithTwitter, signInWithEmail, signUpWithEmail, sendPasswordResetEmail } from '../firebase';
 import './Login.css';
+import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -11,11 +12,43 @@ const Login = () => {
   const [showEmailSection, setShowEmailSection] = useState(false);
   const [resetPasswordMessage, setResetPasswordMessage] = useState('');
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const navigate = useNavigate();
+
+  const handlePostLoginNavigation = () => {
+    const postLoginActionString = sessionStorage.getItem('postLoginAction');
+    if (postLoginActionString) {
+      try {
+        const action = JSON.parse(postLoginActionString);
+        
+        // Don't remove from storage yet - let App.js handle that as a backup
+        // sessionStorage.removeItem('postLoginAction');
+        
+        if (action.path && action.data) {
+          console.log('[Login] Handling post-login action:', action);
+          
+          // Use a timeout to ensure this happens after Firebase auth is settled
+          setTimeout(() => {
+            console.log('[Login] Executing delayed navigation to:', action.path);
+            navigate(action.path, { 
+              state: { pendingListData: action.data }, 
+              replace: true 
+            });
+          }, 500); // Short delay to let auth flow complete
+          
+          return true;
+        }
+      } catch (error) {
+        console.error('Error processing post-login action:', error);
+        sessionStorage.removeItem('postLoginAction');
+      }
+    }
+    return false;
+  };
 
   const handleGoogleSignIn = async () => {
     try {
       await signInWithGoogle();
-      // Auth state change will be handled by App.js
+      if (handlePostLoginNavigation()) return;
     } catch (error) {
       console.error('Google login failed:', error);
     }
@@ -24,7 +57,7 @@ const Login = () => {
   const handleTwitterSignIn = async () => {
     try {
       await signInWithTwitter();
-      // Auth state change will be handled by App.js
+      if (handlePostLoginNavigation()) return;
     } catch (error) {
       console.error('Twitter login failed:', error);
       if (error.code === 'auth/account-exists-with-different-credential') {
@@ -46,7 +79,7 @@ const Login = () => {
       }
       try {
         await signUpWithEmail(email, password);
-        // Auth state change will be handled by App.js
+        if (handlePostLoginNavigation()) return;
       } catch (error) {
         if (error.code === 'auth/email-already-in-use') {
           setErrorMessage('Email already in use. Please sign in instead.');
@@ -59,7 +92,7 @@ const Login = () => {
     } else {
       try {
         await signInWithEmail(email, password);
-        // Auth state change will be handled by App.js
+        if (handlePostLoginNavigation()) return;
       } catch (error) {
         if (error.code === 'auth/wrong-password') {
           setErrorMessage('Incorrect password. Please try again.');

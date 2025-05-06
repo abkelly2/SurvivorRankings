@@ -81,19 +81,50 @@ function App() {
     document.documentElement.style.setProperty('--tribal-background', tribalBackground);
   }, []);
 
+  // <<< ADD NEW EFFECT: Check for pending redirect on any page load >>>
+  useEffect(() => {
+    // Skip when not authenticated - we can't redirect to /create without a user
+    if (!user) return;
+    
+    // Check if we have a pending list action stored
+    const postLoginActionString = sessionStorage.getItem('postLoginAction');
+    if (postLoginActionString && location.pathname !== '/create') {
+      try {
+        console.log('Found pending list action, redirecting to /create page');
+        const action = JSON.parse(postLoginActionString);
+        // Clear immediately to avoid redirect loops
+        sessionStorage.removeItem('postLoginAction');
+        
+        if (action.path === '/create' && action.data) {
+          // Force the navigation to /create with state data
+          console.log('Redirecting to /create with pending list data');
+          navigate('/create', { 
+            state: { pendingListData: action.data },
+            replace: true // Replace current history entry
+          });
+        }
+      } catch (error) {
+        console.error('Error processing redirect:', error);
+        sessionStorage.removeItem('postLoginAction');
+      }
+    }
+  }, [user, location.pathname, navigate]); // Run when these dependencies change
+
   // Listen for authentication state changes
   useEffect(() => {
     const unsubscribe = subscribeToAuthChanges((user) => {
       setUser(user);
       if (user) {
         console.log('User is signed in:', user.displayName);
+        // DO NOT navigate anywhere after login - let Login.js handle it
       } else {
         console.log('User is signed out');
+        // Optional: Add navigation logic for sign-out if needed
       }
     });
 
     return () => unsubscribe();
-  }, [navigate, location.pathname]);
+  }, []); // Keep empty dependency array
 
   // Load initial data from Firestore
   useEffect(() => {
@@ -271,7 +302,7 @@ function App() {
                 
                 {/* My Lists Button */} 
                 <button 
-                  onClick={() => user ? navigateToMyLists() : navigate('/login')}
+                  onClick={navigateToMyLists}
                   className="create-list-button"
                 >
                   My Lists
@@ -314,18 +345,14 @@ function App() {
               <Route 
                 path="/mylists" 
                 element={
-                  !user ? (
-                    <Navigate to="/login" />
-                  ) : (
-                    <MyListsPage 
-                      user={user} 
-                      onSelectList={(list) => {
-                        console.log('[App.js onSelectList] Navigating with:', { userId: list.userId, listId: list.id });
-                        navigate(`/list/${list.userId}/${list.id}`);
-                      }} 
-                      onCreateNew={startNewList} 
-                    />
-                  )
+                  <MyListsPage 
+                    user={user} 
+                    onSelectList={(list) => {
+                      console.log('[App.js onSelectList] Navigating with:', { userId: list.userId, listId: list.id });
+                      navigate(`/list/${list.userId}/${list.id}`);
+                    }} 
+                    onCreateNew={startNewList} 
+                  />
                 } 
               />
               
@@ -353,24 +380,20 @@ function App() {
               <Route 
                 path="/create" 
                 element={
-                  !user ? (
-                    <Navigate to="/login" />
-                  ) : (
-                    <ListCreatorPage 
-                      userList={userList} 
-                      setUserList={setUserList}
-                      listName={listName}
-                      setListName={setListName}
-                      listDescription={listDescription}
-                      setListDescription={setListDescription}
-                      listTags={listTags}
-                      setListTags={setListTags}
-                      user={user}
-                      editingListId={editingListId}
-                      onCancel={navigateToMyLists}
-                      seasonListRef={seasonListRef}
-                    />
-                  )
+                  <ListCreatorPage 
+                    userList={userList} 
+                    setUserList={setUserList}
+                    listName={listName}
+                    setListName={setListName}
+                    listDescription={listDescription}
+                    setListDescription={setListDescription}
+                    listTags={listTags}
+                    setListTags={setListTags}
+                    user={user}
+                    editingListId={editingListId}
+                    onCancel={navigateToMyLists}
+                    seasonListRef={seasonListRef}
+                  />
                 } 
               />
               
