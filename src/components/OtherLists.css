@@ -498,12 +498,76 @@
   position: relative;  /* For absolute positioned buttons */
   margin-top: 0;
   margin-bottom: 10px !important;
-  padding-bottom: 0px !important;
+  padding-bottom: 0px !important; /* <<< Adjust padding to accommodate button */
   background-color: rgba(255, 255, 255, 0.205);
   border-radius: 12px;
-  padding: 2px;
+  padding: 2px 2px 50px 2px; /* Add bottom padding for button */
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
   text-align: center;
+}
+
+/* <<< ADD Desktop styles for edit-my-list-button >>> */
+/* Ensure this only applies when NOT inside mobile actions */
+.full-list-header > .edit-my-list-button {
+    /* Base styles - copied from mobile */
+    padding: 8px 15px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+    border: none;
+    min-width: auto;
+    text-align: center;
+    box-sizing: border-box;
+    line-height: 1.4;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15),
+              inset 0 -1px 0 rgba(0,0,0,0.1);
+
+    /* Specific color - copied from mobile */
+    background: linear-gradient(to bottom, #f39c12, #e67e22); /* Orange gradient */
+    color: white !important;
+
+    /* Positioning */
+    position: absolute;
+    bottom: 15px; /* Position from bottom */
+    left: 15px;   /* Position from left */
+    z-index: 10; /* Ensure it's above other elements if needed */
+    /* Remove flex properties inherited from mobile */
+    flex-grow: 0;
+    max-width: none;
+}
+
+.full-list-header > .edit-my-list-button:hover {
+    background: linear-gradient(to bottom, #f5b041, #f39c12);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2),
+              inset 0 -1px 0 rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+}
+
+.full-list-header > .edit-my-list-button:active {
+    background: linear-gradient(to bottom, #e67e22, #d35400);
+    transform: translateY(0px);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15),
+              inset 0 -1px 0 rgba(0,0,0,0.1);
+}
+
+.full-list-header > .edit-my-list-button:disabled {
+    background: #bdc3c7;
+    color: #7f8c8d;
+    cursor: not-allowed;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1),
+              inset 0 -1px 0 rgba(0,0,0,0.1);
+    transform: none;
+}
+
+/* <<< ADD media query to hide the desktop button on mobile >>> */
+@media (max-width: 768px) {
+  .full-list-header > .edit-my-list-button {
+    display: none;
+  }
 }
 
 .full-list-header h2 {
@@ -1600,6 +1664,7 @@
   font-weight: bold;
 }
 
+
 .delete-reply-button {
   font-size: 0.8rem;
   color: #ff6b6b;
@@ -2500,6 +2565,116 @@
   margin-bottom: -20px; /* Space below container */
   gap: 10px; /* Gap between buttons */
   width: 100%;
+}
+
+/* Style the mobile share button LIKE the desktop one */
+.mobile-share-list-button {
+  /* Base Button Style - Copied from .share-list-button */
+  padding: 8px 15px; /* Slightly smaller padding for mobile */
+  border-radius: 6px;
+  font-size: 0.85rem;   /* Slightly smaller font for mobile */
+  font-weight: 600;  
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  border: none; 
+  min-width: auto; 
+  text-align: center;
+  box-sizing: border-box;
+  line-height: 1.4;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15), 
+              inset 0 -1px 0 rgba(0,0,0,0.1);
+  
+  /* Specific Styling & Positioning - Copied from .share-list-button */
+  background: linear-gradient(to bottom, #3498db, #2980b9); /* Blue gradient */
+  color: white !important; 
+  /* Remove position: absolute; for mobile layout */
+  /* position: absolute; */ 
+  /* bottom: 15px; */
+  /* right: 15px; */
+  /* z-index: 10; */ 
+  flex-grow: 1; /* Allow button to grow */
+  max-width: 45%; /* Limit width */
+}
+
+.mobile-share-list-button:hover {
+  background: linear-gradient(to bottom, #4aa3df, #3498db);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2), 
+              inset 0 -1px 0 rgba(0,0,0,0.1);
+  transform: translateY(-1px); 
+}
+
+.mobile-share-list-button:active {
+  background: linear-gradient(to bottom, #2980b9, #206191);
+  transform: translateY(0px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15), 
+              inset 0 -1px 0 rgba(0,0,0,0.1);
+}
+
+.mobile-share-list-button:disabled {
+  background: #bdc3c7; 
+  color: #7f8c8d; 
+  cursor: not-allowed;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1), 
+              inset 0 -1px 0 rgba(0,0,0,0.1);
+  transform: none;
+}
+
+/* Style the Edit My List button similarly on mobile */
+.mobile-list-actions-container .edit-my-list-button {
+    /* Base styles - match share button base */
+    padding: 8px 15px; 
+    border-radius: 6px; 
+    font-size: 0.85rem;   
+    font-weight: 600;  
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  border: none;
+    min-width: auto; 
+  text-align: center;
+  box-sizing: border-box;
+  line-height: 1.4;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15), 
+              inset 0 -1px 0 rgba(0,0,0,0.1);
+
+    /* Specific color - e.g., Orange/Yellow */
+    background: linear-gradient(to bottom, #f39c12, #e67e22); /* Orange gradient */
+    color: white !important;
+    flex-grow: 1; 
+    max-width: 45%;
+}
+
+.mobile-list-actions-container .edit-my-list-button:hover {
+    background: linear-gradient(to bottom, #f5b041, #f39c12);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2), 
+              inset 0 -1px 0 rgba(0,0,0,0.1);
+    transform: translateY(-1px); 
+}
+
+.mobile-list-actions-container .edit-my-list-button:active {
+    background: linear-gradient(to bottom, #e67e22, #d35400);
+    transform: translateY(0px);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15), 
+              inset 0 -1px 0 rgba(0,0,0,0.1);
+}
+
+.mobile-list-actions-container .edit-my-list-button:disabled {
+    background: #bdc3c7; 
+    color: #7f8c8d; 
+  cursor: not-allowed;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1), 
+              inset 0 -1px 0 rgba(0,0,0,0.1);
+    transform: none;
+} 
+ 
+/* <<< ADD media query to show container only on mobile >>> */
+@media (max-width: 768px) {
+  .mobile-list-actions-container {
+    display: flex; /* Show on mobile */
+  }
 }
 
 /* Style the mobile share button LIKE the desktop one */
