@@ -1274,56 +1274,35 @@
   }
 }
 
-.comment-header {
+.comment-header,
+.reply-header {
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 10px;
-  border-bottom: 1px solid #f0f0f0;
-  padding-bottom: 10px;
+  align-items: center; /* Vertically aligns items in the middle */
+  margin-bottom: 8px; /* Or your preferred spacing */
+  padding-bottom: 10px; /* Restore padding */
+  border-bottom: 1px solid #f0f0f0; /* Restore grey separator bar */
 }
 
-.comment-author {
-  font-weight: 600;
-  color: #333;
-  position: relative;
-  padding-left: 2px;
+.comment-author-avatar {
+  width: 32px;  /* Increased width */
+  height: 32px; /* Increased height */
+  border-radius: 50%; /* Makes it circular */
+  margin-right: 8px; /* Reduced space between avatar and username */
+  object-fit: cover; /* Ensures the image covers the area without distortion */
 }
 
-.comment-author .username {
-  cursor: pointer;
-  transition: color 0.2s ease;
+.comment-author,
+.reply-author {
+  font-weight: bold;
+  margin-right: 10px; /* Space between username and date */
+  color: #333; /* Set text color to dark grey/black */
 }
 
-.comment-author .username:hover {
-  color: #ff6b00;
-}
-
-.comment-author .username::before {
-  content: '';
-  position: absolute;
-  width: 0;
-  height: 2px;
-  bottom: -2px;
-  left: 0;
-  background-color: #ff6b00;
-  transition: width 0.3s ease;
-}
-
-.comment-item:hover .comment-author .username::before {
-  width: 100%;
-}
-
-.comment-date {
-  color: #888;
-  font-size: 0.85rem;
-  display: flex;
-  align-items: center;
-}
-
-.comment-date::before {
-  content: '•';
-  margin-right: 5px;
-  color: #ddd;
+.comment-date,
+.reply-date {
+  font-size: 0.85em;
+  color: #666; /* Or your preferred date color */
+  margin-left: auto; /* Push date to the far right */
 }
 
 .comment-content {

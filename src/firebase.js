@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getStorage, ref, getDownloadURL } from "firebase/storage";
+import { getStorage, ref, getDownloadURL, listAll } from "firebase/storage";
 import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, getDocs, updateDoc, arrayUnion, arrayRemove, deleteDoc, query, where, orderBy, serverTimestamp, Timestamp } from "firebase/firestore";
 import { getAuth, signInWithPopup, GoogleAuthProvider, TwitterAuthProvider, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, fetchSignInMethodsForEmail, updateProfile, sendPasswordResetEmail as firebaseSendPasswordResetEmail } from "firebase/auth";
 // TODO: Add SDKs for Firebase products that you want to use
@@ -22,6 +22,9 @@ const app = initializeApp(firebaseConfig);
 const storage = getStorage(app);
 const db = getFirestore(app);
 const auth = getAuth(app);
+
+// Explicitly export db, auth, and storage
+export { db, auth, storage };
 
 // Function to get image URL from Firebase Storage
 export const getContestantImageUrl = async (contestant, seasonId) => {
@@ -404,5 +407,39 @@ export const sendPasswordResetEmail = async (email) => {
   }
 };
 
-export { db, auth };
+// NEW FUNCTION for random headshot
+const MAX_SUPPORTED_SEASON_FOR_HEADSHOTS = 46; // Adjust as per your available Headshots/Season X/ folders
+
+export const getRandomContestantHeadshotUrl = async (retryCount = 0) => {
+  try {
+    const randomSeasonNumber = Math.floor(Math.random() * MAX_SUPPORTED_SEASON_FOR_HEADSHOTS) + 1;
+    const seasonPath = `Headshots/Season ${randomSeasonNumber}/`;
+    const seasonRef = ref(storage, seasonPath);
+
+    const res = await listAll(seasonRef);
+    
+    if (res.items.length > 0) {
+      const randomIndex = Math.floor(Math.random() * res.items.length);
+      const randomImageRef = res.items[randomIndex];
+      const url = await getDownloadURL(randomImageRef);
+      console.log('[getRandomContestantHeadshotUrl] Found random headshot:', url);
+      return url;
+    } else {
+      console.warn(`[getRandomContestantHeadshotUrl] No items found in ${seasonPath}.`);
+      if (retryCount < 2) { // Retry up to 2 times if a season folder is empty
+        console.log(`Retrying... (Attempt ${retryCount + 1})`);
+        return getRandomContestantHeadshotUrl(retryCount + 1);
+      }
+      return null; // Or a specific placeholder URL after retries
+    }
+  } catch (error) {
+    console.error("[getRandomContestantHeadshotUrl] Error getting random headshot:", error);
+    if (retryCount < 2) { // Retry on other errors too, e.g., brief network issues
+        console.log(`Retrying due to error... (Attempt ${retryCount + 1})`);
+        return getRandomContestantHeadshotUrl(retryCount + 1);
+    }
+    return null; // Or a specific placeholder URL
+  }
+};
+
 export default app; 

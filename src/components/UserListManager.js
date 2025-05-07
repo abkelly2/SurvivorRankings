@@ -1,8 +1,32 @@
-import React, { useState, useEffect } from 'react';
-import { db, auth } from '../firebase';
+import React, { useState, useEffect, useRef } from 'react';
+import { db, auth, getRandomContestantHeadshotUrl } from '../firebase';
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, getDoc, deleteDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
 import './UserListManager.css';
+
+// Try to get storage via auth.app if direct import fails
+let storage;
+try {
+  // This assumes 'auth' is correctly initialized and exported from firebase.js
+  // and that storage was initialized with the same app instance in firebase.js
+  if (auth && auth.app) {
+    storage = getStorage(auth.app);
+  } else {
+    // Fallback if auth.app is not available, try to import directly (might still fail if not exported)
+    // This part is mostly to satisfy the linter if the direct import { storage } was used.
+    // We will rely on the getStorage(auth.app) above.
+    const firebaseExports = await import('../firebase');
+    if (firebaseExports.storage) {
+      storage = firebaseExports.storage;
+    } else {
+      console.warn("Firebase storage instance could not be obtained. Profile picture uploads will likely fail. Please ensure 'storage' is exported from firebase.js or the app instance is consistent.");
+    }
+  }
+} catch (e) {
+  console.error("Error trying to initialize storage for UserListManager:", e);
+  // If storage remains undefined, handleImageUpload will show an error.
+}
 
 const UserListManager = ({ user, onSelectList, onCreateNew }) => {
   const [userLists, setUserLists] = useState([]);
@@ -14,6 +38,17 @@ const UserListManager = ({ user, onSelectList, onCreateNew }) => {
   const [usernameChangeSuccess, setUsernameChangeSuccess] = useState(false);
   const [usernameError, setUsernameError] = useState('');
   const [userIdols, setUserIdols] = useState(0);
+  const [totalUserUpvotes, setTotalUserUpvotes] = useState(0);
+
+  // Profile Picture State
+  const [profileImageUrl, setProfileImageUrl] = useState('');
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const placeholderProfilePic = 'https://via.placeholder.com/150/CCCCCC/808080?Text=No+Image'; // Basic placeholder
+  const [isFetchingRandomPic, setIsFetchingRandomPic] = useState(false);
+  const [isReRollingPicture, setIsReRollingPicture] = useState(false); // New state for re-roll button
+  const savedProfileImageUrlRef = useRef(''); // To store the actual saved URL
 
   // Initialize new username from current display name when user object is available
   useEffect(() => {
@@ -22,30 +57,83 @@ const UserListManager = ({ user, onSelectList, onCreateNew }) => {
     }
   }, [user]);
 
+  // Fetch user's profile picture URL
+  useEffect(() => {
+    const fetchProfilePicture = async () => {
+      if (user && !isFetchingRandomPic) {
+        try {
+          const userProfileRef = doc(db, 'users', user.uid);
+          const userProfileDoc = await getDoc(userProfileRef);
+          if (userProfileDoc.exists() && userProfileDoc.data().profilePictureUrl) {
+            const url = userProfileDoc.data().profilePictureUrl;
+            setProfileImageUrl(url);
+            savedProfileImageUrlRef.current = url;
+          } else {
+            // No profile picture set, let's try to assign a random one and save it
+            console.log("No profile picture found, attempting to set a random one.");
+            setIsFetchingRandomPic(true);
+            const randomUrl = await getRandomContestantHeadshotUrl();
+            if (randomUrl) {
+              console.log("Assigning random profile picture:", randomUrl);
+              await updateDoc(userProfileRef, { profilePictureUrl: randomUrl });
+              setProfileImageUrl(randomUrl);
+              savedProfileImageUrlRef.current = randomUrl;
+            } else {
+              console.log("Could not get a random headshot URL. Using placeholder.");
+              setProfileImageUrl(''); // Fallback to placeholder if random fetch fails
+              savedProfileImageUrlRef.current = '';
+            }
+            setIsFetchingRandomPic(false);
+          }
+        } catch (err) {
+          console.error("Error fetching/setting profile picture:", err);
+          setProfileImageUrl(''); // Fallback
+          savedProfileImageUrlRef.current = '';
+          setIsFetchingRandomPic(false);
+        }
+      } else if (!user) {
+        setProfileImageUrl(''); // Clear if no user
+        savedProfileImageUrlRef.current = '';
+      }
+    };
+    fetchProfilePicture();
+  }, [user, isFetchingRandomPic]);
+
   // Load user's lists
   useEffect(() => {
     const loadUserLists = async () => {
       setLoading(true);
       setError('');
+      setTotalUserUpvotes(0);
       
       try {
-        if (!user) return;
+        if (!user) {
+          setUserLists([]);
+          return;
+        }
         
         const userDocRef = doc(db, "userLists", user.uid);
         const userDoc = await getDoc(userDocRef);
         
         if (userDoc.exists() && userDoc.data().lists) {
-          // Sort lists by last updated date, newest first
           const lists = userDoc.data().lists;
           lists.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
           
-          // Add userId to each list object
           const listsWithUserId = lists.map(list => ({
             ...list,
             userId: user.uid
           }));
           
           setUserLists(listsWithUserId);
+
+          let currentTotalUpvotes = 0;
+          lists.forEach(list => {
+            if (list.upvotes && Array.isArray(list.upvotes)) {
+              currentTotalUpvotes += list.upvotes.length;
+            }
+          });
+          setTotalUserUpvotes(currentTotalUpvotes);
+
         } else {
           setUserLists([]);
         }
@@ -207,6 +295,92 @@ const UserListManager = ({ user, onSelectList, onCreateNew }) => {
     }
   };
   
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file && file.type.startsWith('image/')) {
+      setSelectedFile(file);
+      setUploadError('');
+      // Create a preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfileImageUrl(reader.result); // Show preview
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setSelectedFile(null);
+      setUploadError(file ? 'Please select a valid image file.' : '');
+      // Revert to saved image or placeholder if selection is cleared or invalid
+      setProfileImageUrl(savedProfileImageUrlRef.current || placeholderProfilePic);
+    }
+  };
+
+  const handleImageUpload = async () => {
+    if (!user || !selectedFile) {
+      setUploadError('No file selected or user not logged in.');
+      return;
+    }
+    if (!storage) { // Check if storage was successfully initialized
+      setUploadError('Firebase Storage is not configured. Upload failed.');
+      setIsUploading(false);
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError('');
+
+    const fileExtension = selectedFile.name.split('.').pop();
+    const filePath = `profilePictures/${user.uid}/profileImage.${fileExtension}`;
+    const imageStorageRef = storageRef(storage, filePath);
+
+    try {
+      const snapshot = await uploadBytes(imageStorageRef, selectedFile);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+
+      const userProfileRef = doc(db, 'users', user.uid);
+      await updateDoc(userProfileRef, {
+        profilePictureUrl: downloadURL
+      });
+
+      setProfileImageUrl(downloadURL); // Display the newly uploaded image
+      savedProfileImageUrlRef.current = downloadURL; // Update the saved URL ref
+      setSelectedFile(null); 
+      // Clear the file input visually (this is tricky, often requires resetting the form or input key)
+      const fileInput = document.getElementById('profilePicInput');
+      if (fileInput) fileInput.value = null;
+
+      setIsUploading(false);
+    } catch (err) {
+      console.error("Error uploading profile picture:", err);
+      setUploadError(`Upload failed: ${err.message}. Check storage rules.`);
+      setIsUploading(false);
+      // Revert to last saved image on failed upload
+      setProfileImageUrl(savedProfileImageUrlRef.current || placeholderProfilePic);
+    }
+  };
+
+  const handleAssignNewRandomPicture = async () => {
+    if (!user) return;
+    setIsReRollingPicture(true);
+    setUploadError('');
+    try {
+      const randomUrl = await getRandomContestantHeadshotUrl();
+      if (randomUrl) {
+        const userProfileRef = doc(db, 'users', user.uid);
+        await updateDoc(userProfileRef, { profilePictureUrl: randomUrl });
+        setProfileImageUrl(randomUrl);
+        savedProfileImageUrlRef.current = randomUrl; // Update saved URL ref
+        console.log("Successfully re-rolled and assigned new random profile picture:", randomUrl);
+      } else {
+        setUploadError('Could not get a new random picture. Please try again.');
+      }
+    } catch (err) {
+      console.error("Error re-rolling random profile picture:", err);
+      setUploadError('Failed to re-roll picture. Please try again.');
+    } finally {
+      setIsReRollingPicture(false);
+    }
+  };
+  
   // Get tag label from tag ID
   const getTagLabel = (tagId) => {
     const tagMap = {
@@ -239,56 +413,113 @@ const UserListManager = ({ user, onSelectList, onCreateNew }) => {
     <div className="user-list-manager">
       <h2 className="section-title">My Survivor Rankings</h2>
       
-      {user && (
+      {/* {user && (
         <div className="user-idols" style={{ fontSize: '1.2rem', color: '#ffcc00', marginTop: '10px', fontWeight: 'bold' }}>
           Hidden Immunity Idols: {userIdols} 🏆
         </div>
-      )}
+      )} */}
       
       {/* Only show profile section if user is logged in */}
       {user && (
-      <div className="user-profile-section">
-        {isEditingUsername ? (
-          <div className="username-editor">
-            <input
-              type="text"
-              value={newUsername}
-              onChange={(e) => setNewUsername(e.target.value)}
-              placeholder="Enter new username"
-              className="username-input"
-              maxLength={30}
+      <div className="user-profile-section"> {/* This will be our flex container */}
+        {/* Profile Picture Display and Upload - As the first direct child */}
+        <div className="profile-picture-section">
+          <h4>Profile Picture</h4>
+          <div className="profile-image-container">
+            <img 
+              src={profileImageUrl || placeholderProfilePic} 
+              alt="Profile" 
+              className="profile-picture-img"
             />
-            <div className="username-actions">
-              <button onClick={handleUsernameChange} className="save-username-button">
-                Save
-              </button>
-              <button onClick={() => {
-                setIsEditingUsername(false);
-                setNewUsername(user.displayName);
-                setUsernameError('');
-              }} className="cancel-username-button">
-                Cancel
-              </button>
-            </div>
-            {usernameError && <div className="username-error">{usernameError}</div>}
           </div>
-        ) : (
-          <div className="username-display">
-            <div className="current-username">
-              <span className="username-label">Your Username:</span>
-              <span className="username-value">{user.displayName}</span>
-            </div>
-            <button 
-              onClick={() => setIsEditingUsername(true)} 
-              className="edit-username-button"
+          <input 
+            type="file" 
+            accept="image/*" 
+            onChange={handleFileChange} 
+            disabled={isUploading || isReRollingPicture}
+            id="profilePicInput"
+            style={{ margin: '10px 0' }}
+          />
+          <button 
+            onClick={handleImageUpload} 
+            disabled={!selectedFile || isUploading || isReRollingPicture}
+            className="upload-profile-pic-button"
+          >
+            {isUploading ? 'Uploading...' : 'Upload Picture'}
+          </button>
+          {/* Re-roll Button - Conditionally Rendered */}
+          {profileImageUrl && profileImageUrl !== placeholderProfilePic && (
+            <button
+              onClick={handleAssignNewRandomPicture}
+              disabled={isReRollingPicture || isUploading}
+              className="reroll-profile-pic-button"
+              style={{ marginTop: '8px' }} // Simple styling for now
             >
-              Change Username
+              {isReRollingPicture ? '🎲 Finding...' : '🎲 Re-roll Random'}
             </button>
-            {usernameChangeSuccess && (
-              <div className="username-success">Username updated successfully!</div>
-            )}
+          )}
+          {uploadError && <div className="error-message" style={{color: 'red', marginTop: '5px'}}>{uploadError}</div>}
+        </div>
+        {/* End Profile Picture Display and Upload */}
+
+        {/* New wrapper for all existing username and other profile content */}
+        <div className="profile-details-content">
+          <div className="username-display">
+            Current Username: <strong>{user.displayName || 'Not set'}</strong>
           </div>
-        )}
+
+          {/* Conditional rendering for edit button OR editor form */}
+          {!isEditingUsername ? (
+            <div className="change-username-section">
+              <button 
+                onClick={() => setIsEditingUsername(true)} 
+                className="edit-username-button"
+              >
+                Change Username
+              </button>
+              {usernameChangeSuccess && (
+                <div className="username-success">Username updated successfully!</div>
+              )}
+            </div>
+          ) : (
+            <div className="username-editor">
+              <input
+                type="text"
+                value={newUsername}
+                onChange={(e) => setNewUsername(e.target.value)}
+                placeholder="Enter new username"
+                className="username-input"
+                maxLength={30}
+              />
+              <div className="username-actions">
+                <button onClick={handleUsernameChange} className="save-username-button">
+                  Save
+                </button>
+                <button onClick={() => {
+                  setIsEditingUsername(false);
+                  setNewUsername(user.displayName);
+                  setUsernameError('');
+                }} className="cancel-username-button">
+                  Cancel
+                </button>
+              </div>
+              {usernameError && <div className="username-error">{usernameError}</div>}
+            </div>
+          )}
+
+          {/* MOVED user-idols display HERE */}
+          <div className="user-idols" style={{ fontSize: '1.2rem', color: '#ffcc00', fontWeight: 'bold' }}>
+            Hidden Immunity Idols: {userIdols} 🏆
+          </div>
+
+          {/* Total Upvotes Display */}
+          <div className="user-total-upvotes" style={{ fontSize: '1.2rem', color: '#34c759', fontWeight: 'bold' }}>
+            Total Upvotes: {totalUserUpvotes} 👍
+          </div>
+
+          {/* You can add other existing profile items here if there were any */}
+        </div>
+        {/* End profile-details-content */}
       </div>
       )}
       {/* End of user profile section conditional */}

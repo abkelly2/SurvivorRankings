@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { db } from '../firebase';
 import { 
   collection, getDocs, doc, updateDoc, arrayUnion, arrayRemove, getDoc, query, where, 
-  addDoc, serverTimestamp, orderBy, Timestamp, setDoc, deleteDoc
+  addDoc, serverTimestamp, orderBy, Timestamp, setDoc, deleteDoc, runTransaction
 } from 'firebase/firestore';
 import { survivorSeasons } from '../data/survivorData';
 import { UserContext } from '../UserContext';
@@ -76,6 +76,9 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
   
   // Add state for user's idol count
   const [userIdols, setUserIdols] = useState(0);
+  
+  const [commentAuthorProfilePics, setCommentAuthorProfilePics] = useState({}); // New state for comment author pics
+  const placeholderCommenterPic = 'https://via.placeholder.com/30/CCCCCC/808080?Text=U'; // Small placeholder
   
   useEffect(() => {
     const fetchPublicLists = async () => {
@@ -1196,6 +1199,45 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
   };
   // --- End Carousel Swipe Handlers ---
 
+  // Function to fetch and cache profile picture for a comment author
+  const getAuthorProfilePic = async (authorId) => {
+    if (!authorId) return placeholderCommenterPic; // Should not happen if comment has userId
+    if (commentAuthorProfilePics[authorId]) {
+      return commentAuthorProfilePics[authorId]; // Return cached URL
+    }
+
+    try {
+      const userProfileRef = doc(db, 'users', authorId);
+      const userProfileDoc = await getDoc(userProfileRef);
+      if (userProfileDoc.exists() && userProfileDoc.data().profilePictureUrl) {
+        const url = userProfileDoc.data().profilePictureUrl;
+        setCommentAuthorProfilePics(prevPics => ({ ...prevPics, [authorId]: url }));
+        return url;
+      } else {
+        // Optionally, fetch a random one and store it (less ideal for just viewing others' comments)
+        // For now, set a specific placeholder or null if no pic, to avoid multiple random fetches here
+        setCommentAuthorProfilePics(prevPics => ({ ...prevPics, [authorId]: placeholderCommenterPic }));
+        return placeholderCommenterPic;
+      }
+    } catch (err) {
+      console.error(`Error fetching profile picture for user ${authorId}:`, err);
+      setCommentAuthorProfilePics(prevPics => ({ ...prevPics, [authorId]: placeholderCommenterPic })); // Cache placeholder on error
+      return placeholderCommenterPic;
+    }
+  };
+
+  // Modify fetchComments or a new useEffect to populate author pics
+  useEffect(() => {
+    if (comments.length > 0) {
+      const authorIds = new Set(comments.map(c => c.userId));
+      authorIds.forEach(id => {
+        if (!commentAuthorProfilePics[id]) { // Fetch only if not already cached
+          getAuthorProfilePic(id); // Call it to fetch and cache
+        }
+      });
+    }
+  }, [comments]); // Re-run when comments change
+
   if (loading) return <div className="other-lists loading">Loading rankings...</div>;
   if (error) return <div className="other-lists error">{error}</div>;
   
@@ -1402,6 +1444,11 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
                   return (
                     <div key={comment.id} className="comment-item">
                       <div className="comment-header">
+                        <img 
+                          src={commentAuthorProfilePics[comment.userId] || placeholderCommenterPic} 
+                          alt={`${comment.userName || 'User'}'s avatar`}
+                          className="comment-author-avatar"
+                        />
                         <span 
                           className="comment-author"
                           onClick={(e) => viewUserLists(comment.userId, comment.userName, e)}
@@ -1492,8 +1539,13 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
                           {replies.map(reply => (
                             <div key={reply.id} className="reply-item">
                               <div className="reply-header">
+                                <img 
+                                  src={commentAuthorProfilePics[reply.userId] || placeholderCommenterPic} 
+                                  alt={`${reply.userName || 'User'}'s avatar`}
+                                  className="comment-author-avatar" /* Reusing same class */
+                                />
                                 <span 
-                                  className="reply-author"
+                                  className="reply-author" /* Or just .comment-author if styles are identical */
                                   onClick={(e) => viewUserLists(reply.userId, reply.userName, e)}
                                   title="View all rankings by this user"
                                 >
@@ -1881,4 +1933,4 @@ const OtherLists = ({ initialUserId, initialUserName, source = 'other', initialS
 export default OtherLists; 
  
  
- 
+  
