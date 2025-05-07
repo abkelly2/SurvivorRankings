@@ -21,13 +21,13 @@ const RankingsPage = () => {
       />
     );
   } else {
-    return (
-      <OtherLists 
+  return (
+    <OtherLists 
         // initialUserId={null}
         // initialUserName={userName}
         // source={'other'}
-      />
-    );
+    />
+  );
   }
 };
 

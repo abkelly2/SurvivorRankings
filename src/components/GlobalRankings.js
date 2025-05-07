@@ -1765,15 +1765,17 @@ const GlobalRankings = ({ seasonListRef }) => {
   // Render main listings page
   return (
     <div className="global-rankings-main-view global-rankings-page-wrapper">
-      <h1>Global Rankings</h1>
-      
+      <h1 className="global-rankings-title">Global Rankings</h1>
+
       <div className="global-rankings-description">
         <p>
           Welcome to the Global Rankings! This page features special ranking categories that change periodically. Submit your votes for the current category to see how your choices compare to the community's overall ranking. Check back often for new ranking challenges!
         </p>
       </div>
       
-      <h2 className="section-title">Current Global Ranking</h2> {/* Updated title */}
+      <hr className="title-separator" /> {/* ADDED SEPARATOR LINE */}
+
+      {/* <h2 className="section-title">Current Global Ranking</h2> */} {/* REMOVED */}
       <div className="global-lists-container">
         {sampleLists.map(list => renderRankingListCard(list))}
       </div>

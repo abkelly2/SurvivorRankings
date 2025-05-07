@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext, useCallback } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import './App.css';
 import SeasonList from './components/SeasonList';
@@ -15,6 +15,7 @@ import { UserProvider } from './UserContext';
 import GlobalRankingsIcon from './images/GlobalRankings.png';
 import { preloadImages } from './utils/imageCache';
 import Notifications from './components/Notifications';
+import PalmFrondTransition from './components/PalmFrondTransition/PalmFrondTransition';
 
 // Import pages
 import HomePage from './pages/HomePage';
@@ -27,6 +28,9 @@ import GlobalRankings from './components/GlobalRankings';
 
 // Import survivor background image directly
 import survivorBackgroundImg from './images/survivor-background.jpg';
+import globalBackgroundImg from './images/global-background.png';
+
+const LIST_CREATOR_DRAFT_KEY = 'listCreatorDraft'; // Define key for sessionStorage
 
 function App() {
   const navigate = useNavigate();
@@ -43,6 +47,9 @@ function App() {
   const [listTags, setListTags] = useState([]);
   const [editingListId, setEditingListId] = useState(null);
   const seasonListRef = useRef(null);
+  const [isAnimatingTransition, setIsAnimatingTransition] = useState(false);
+  const [transitionCallback, setTransitionCallback] = useState(null);
+  const [transitionDirection, setTransitionDirection] = useState('forward');
   
   // Determine current page from location
   const currentPage = location.pathname;
@@ -50,8 +57,9 @@ function App() {
   // --- MODIFIED createMode LOGIC --- 
   // Create mode is active on the /create page OR on a global ranking detail page IF logged in
   const isOnCreatePage = currentPage === '/create';
-  const isOnGlobalRankingDetailPage = currentPage.startsWith('/global-rankings/') && currentPage.split('/').length > 2;
-  const createMode = isOnCreatePage || (isOnGlobalRankingDetailPage && !!user);
+  const isOnGlobalRankingsPage = currentPage.startsWith('/global-rankings'); 
+  const isOnGlobalRankingDetailPage = isOnGlobalRankingsPage && currentPage.split('/').length > 2;
+  const createMode = isOnCreatePage || (isOnGlobalRankingDetailPage && !!user && !isOnGlobalRankingsPage);
   // --- END MODIFIED LOGIC ---
   
   const showUserLists = currentPage === '/mylists';
@@ -59,26 +67,30 @@ function App() {
   
   // Set data-page attribute on body based on current page
   useEffect(() => {
-    if (createMode) {
+    if (isOnGlobalRankingsPage) {
+      document.body.setAttribute('data-page', 'global');
+    } else if (createMode) {
       document.body.setAttribute('data-page', 'create');
     } else {
       document.body.setAttribute('data-page', 'other');
       
-      // Make sure to remove any mobile menu classes when not in create mode
-      document.body.classList.remove('show-seasons-mobile');
+      // Ensure mobile menu classes are managed correctly based on actual page context
+      if (!createMode && !isOnGlobalRankingsPage) { // Or adjust if global page can have mobile menu for seasons
+          document.body.classList.remove('show-seasons-mobile');
+      }
     }
     
     return () => {
       // Cleanup function
       document.body.removeAttribute('data-page');
     };
-  }, [createMode, currentPage]);
+  }, [createMode, currentPage, isOnGlobalRankingsPage]);
   
   // Set background images dynamically
   useEffect(() => {
-    // Add background image paths as CSS variables
     document.documentElement.style.setProperty('--survivor-background', `url(${survivorBackgroundImg})`);
     document.documentElement.style.setProperty('--tribal-background', tribalBackground);
+    document.documentElement.style.setProperty('--global-background', `url(${globalBackgroundImg})`);
   }, []);
 
   // <<< ADD NEW EFFECT: Check for pending redirect on any page load >>>
@@ -125,6 +137,79 @@ function App() {
 
     return () => unsubscribe();
   }, []); // Keep empty dependency array
+
+  // --- EFFECT TO LOAD DRAFT or HANDLE EXPLICIT NAVIGATION TO /create ---
+  useEffect(() => {
+    if (location.pathname === '/create' && user) { // Only attempt to load draft if on /create and logged in
+      const postLoginActionString = sessionStorage.getItem('postLoginAction');
+      if (postLoginActionString) {
+        try {
+          const action = JSON.parse(postLoginActionString);
+          sessionStorage.removeItem('postLoginAction'); // Consume immediately
+          if (action.path === '/create' && action.data) {
+            console.log('[App.js] Applying postLoginAction data to /create state.');
+            setUserList(action.data.contestants || []);
+            setListName(action.data.name || '');
+            setListDescription(action.data.description || '');
+            setListTags(action.data.tags || []);
+            setEditingListId(action.data.id || null);
+            sessionStorage.removeItem(LIST_CREATOR_DRAFT_KEY); // Clear any other draft
+            return; // Applied, so exit
+          }
+        } catch (error) {
+          console.error('Error processing postLoginAction for /create:', error);
+        }
+      }
+
+      // If navigating with explicit editingListId in state (from editExistingList), prioritize that.
+      // The editExistingList function itself sets the state from the actual list data.
+      // This check ensures we don't then overwrite it with a stale sessionStorage draft.
+      if (location.state?.editingListId && location.state?.source === 'editExistingList') {
+        console.log('[App.js] Navigated to /create via editExistingList. Draft loading skipped.');
+        // editExistingList should have already cleared the draft.
+        return;
+      }
+      
+      const draftDataString = sessionStorage.getItem(LIST_CREATOR_DRAFT_KEY);
+      if (draftDataString) {
+        try {
+          console.log('[App.js] Found list creator draft in sessionStorage for /create. Applying to state.');
+          const draftData = JSON.parse(draftDataString);
+          setUserList(draftData.userList || []);
+          setListName(draftData.listName || '');
+          setListDescription(draftData.listDescription || '');
+          setListTags(draftData.listTags || []);
+          setEditingListId(draftData.editingListId || null);
+        } catch (error) {
+          console.error('Error parsing list creator draft from sessionStorage:', error);
+          sessionStorage.removeItem(LIST_CREATOR_DRAFT_KEY); // Clear corrupted draft
+        }
+      }
+    }
+  }, [location.pathname, location.state, user, navigate]); // user and navigate added for robust handling of postLoginAction
+
+  // --- EFFECT TO SAVE DRAFT TO SESSION STORAGE ---
+  useEffect(() => {
+    // Only save draft if on /create page OR if editingListId is active (implies create/edit session)
+    // And if the user is logged in.
+    if (user && (location.pathname === '/create' || editingListId !== null)) {
+      const draftData = {
+        userList,
+        listName,
+        listDescription,
+        listTags,
+        editingListId,
+      };
+      // Avoid saving an "empty" initial draft if all fields are default/empty, unless an editingListId is present
+      const isEmptyNewDraft = !editingListId && !userList.length && !listName && !listDescription && !listTags.length;
+
+      if (!isEmptyNewDraft || editingListId) {
+        // console.log('[App.js] Saving list creator draft to sessionStorage:', draftData);
+        sessionStorage.setItem(LIST_CREATOR_DRAFT_KEY, JSON.stringify(draftData));
+      }
+    }
+    // Dependencies are the actual data points for the draft.
+  }, [userList, listName, listDescription, listTags, editingListId, user, location.pathname]);
 
   // Load initial data from Firestore
   useEffect(() => {
@@ -201,33 +286,63 @@ function App() {
   };
 
   const navigateToMyLists = () => {
-    navigate('/mylists');
+    // Check if currently on global rankings
+    if (location.pathname.startsWith('/global-rankings')) {
+      startTransitionAndNavigate('/mylists');
+    } else {
+      navigate('/mylists');
+    }
   };
 
   const navigateToOtherLists = () => {
-    navigate('/rankings');
+    // Check if currently on global rankings
+    if (location.pathname.startsWith('/global-rankings')) {
+      startTransitionAndNavigate('/rankings');
+    } else {
+      navigate('/rankings');
+    }
   };
 
   const navigateToHome = () => {
-    navigate('/');
+    // Check if currently on global rankings
+    if (location.pathname.startsWith('/global-rankings')) {
+      startTransitionAndNavigate('/');
+    } else {
+      navigate('/');
+    }
   };
 
   const startNewList = () => {
-    setUserList([]);
-    setListName('');
-    setListDescription('');
-    setListTags([]);
-    setEditingListId(null);
+    const existingDraft = sessionStorage.getItem(LIST_CREATOR_DRAFT_KEY);
+
+    if (existingDraft) {
+      console.log('[App.js] startNewList: Existing draft found in sessionStorage. Navigating to /create to load it.');
+      // Don't clear states here; the /create page loader will pick up the sessionStorage draft.
+    } else {
+      console.log('[App.js] startNewList: No draft found. Clearing states for a fresh list.');
+      setUserList([]);
+      setListName('');
+      setListDescription('');
+      setListTags([]);
+      setEditingListId(null);
+      // No need to remove draft from session storage if it doesn't exist.
+    }
     navigate('/create');
   };
 
   const editExistingList = (list) => {
+    // When explicitly editing a list, we load ITS data, not a potential draft.
+    // The list data itself is fetched in MyListsPage and passed here.
+    // Or, if only ID is passed, it would be fetched from Firestore.
+    // For now, assume `list` object is complete as passed from MyListsPage.
     setUserList(list.contestants || []);
     setListName(list.name || '');
     setListDescription(list.description || '');
     setListTags(list.tags || []);
     setEditingListId(list.id);
-    navigate('/create');
+    sessionStorage.removeItem(LIST_CREATOR_DRAFT_KEY); // Clear any draft
+    console.log(`[App.js] Editing existing list ID: ${list.id}. Draft cleared.`);
+    navigate('/create', { state: { editingListId: list.id, source: 'editExistingList' } }); // Pass source for clarity
   };
 
   const handleLogout = async () => {
@@ -239,6 +354,7 @@ function App() {
       setListDescription('');
       setListTags([]);
       setEditingListId(null);
+      sessionStorage.removeItem(LIST_CREATOR_DRAFT_KEY); // Clear draft on logout
       navigate('/login');
     } catch (error) {
       console.error('Logout failed:', error);
@@ -274,13 +390,42 @@ function App() {
     // Dependency only on pathname and the state value itself
   }, [location.pathname, location.state?.editingListId, editingListId]);
 
+  const startTransitionAndNavigate = (path, direction = 'forward') => {
+    setTransitionDirection(direction);
+    setTransitionCallback(() => () => navigate(path)); 
+    setIsAnimatingTransition(true);
+  };
+
+  const handleAnimationHalfway = useCallback(() => {
+    if (transitionCallback) {
+      const navigateFn = transitionCallback();
+      if (navigateFn) {
+        navigateFn();
+      }
+    }
+  }, [transitionCallback]);
+
+  const handleAnimationComplete = useCallback(() => {
+    setIsAnimatingTransition(false);
+    setTransitionCallback(null);
+  }, [setIsAnimatingTransition, setTransitionCallback]);
+  
+  // Example of how to use it for another navigation if needed
+  // const navigateToHomeWithTransition = () => startTransitionAndNavigate('/', 'backward'); 
+
   return (
     <div className="App">
+      <PalmFrondTransition 
+        isAnimating={isAnimatingTransition}
+        direction={transitionDirection}
+        onAnimationHalfway={handleAnimationHalfway}
+        onAnimationComplete={handleAnimationComplete}
+      />
       <UserProvider user={user}>
         <header className="App-header">
           <div className="global-rankings-container">
             <button 
-              onClick={() => navigate('/global-rankings')} 
+              onClick={() => startTransitionAndNavigate('/global-rankings')} 
               className="global-rankings-button"
               title="Global Rankings"
             >

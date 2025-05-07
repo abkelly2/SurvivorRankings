@@ -482,35 +482,35 @@ const UserListManager = ({ user, onSelectList, onCreateNew }) => {
               )}
             </div>
           ) : (
-            <div className="username-editor">
-              <input
-                type="text"
-                value={newUsername}
-                onChange={(e) => setNewUsername(e.target.value)}
-                placeholder="Enter new username"
-                className="username-input"
-                maxLength={30}
-              />
-              <div className="username-actions">
-                <button onClick={handleUsernameChange} className="save-username-button">
-                  Save
-                </button>
-                <button onClick={() => {
-                  setIsEditingUsername(false);
-                  setNewUsername(user.displayName);
-                  setUsernameError('');
-                }} className="cancel-username-button">
-                  Cancel
-                </button>
-              </div>
-              {usernameError && <div className="username-error">{usernameError}</div>}
+          <div className="username-editor">
+            <input
+              type="text"
+              value={newUsername}
+              onChange={(e) => setNewUsername(e.target.value)}
+              placeholder="Enter new username"
+              className="username-input"
+              maxLength={30}
+            />
+            <div className="username-actions">
+              <button onClick={handleUsernameChange} className="save-username-button">
+                Save
+              </button>
+              <button onClick={() => {
+                setIsEditingUsername(false);
+                setNewUsername(user.displayName);
+                setUsernameError('');
+              }} className="cancel-username-button">
+                Cancel
+              </button>
             </div>
+            {usernameError && <div className="username-error">{usernameError}</div>}
+          </div>
           )}
 
           {/* MOVED user-idols display HERE */}
           <div className="user-idols" style={{ fontSize: '1.2rem', color: '#ffcc00', fontWeight: 'bold' }}>
             Hidden Immunity Idols: {userIdols} 🏆
-          </div>
+            </div>
 
           {/* Total Upvotes Display */}
           <div className="user-total-upvotes" style={{ fontSize: '1.2rem', color: '#34c759', fontWeight: 'bold' }}>

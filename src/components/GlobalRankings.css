@@ -45,7 +45,7 @@
 
 /* Vote section styling */
 .vote-section {
-  background-color: rgba(255, 204, 0, 0.1);
+  background-color: rgb(149 119 2 / 73%);
   border-left: 3px solid #ffcc00;
   padding: 20px;
   margin-top: 10px;
@@ -519,16 +519,28 @@
   margin: 15px auto 30px; /* Center and add space */
   padding: 15px 20px;
   text-align: center;
-  color: #ddd; /* Lighter text color */
+  color: #ffffff; /* Lighter text color */
   font-size: 1.1rem;
   line-height: 1.6;
-  background-color: rgba(0, 0, 0, 0.1); /* Subtle background */
+  background-color: rgba(0, 0, 0, 0.596); /* Subtle background */
   border-left: 3px solid #ffcc00; /* Accent border */
   border-radius: 0 8px 8px 0; /* Rounded corners on right */
 }
 
 .global-rankings-description p {
   margin: 0;
+}
+
+/* Style for the gold separator line */
+.title-separator {
+  display: block;
+  width: 100%; /* Make it full width of its container */
+  max-width: 8000px; /* Optional: Limit max width like description */
+  height: 6px;
+  background-color: #ffd900; /* Brighter gold */
+  margin: 30px auto; 
+  border: none; 
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.6); /* Brighter glow */
 }
 
 /* NEW Redesigned Header Card Styles */
@@ -610,7 +622,7 @@
   }
 }/* <<< ADD styles for the individual list card container - PREFIXED >>> */
 .global-rankings-page-wrapper > .global-lists-container > .ranking-list-container {
-  background-color: rgba(20, 20, 20, 0.9); 
+  background-color: rgb(20, 20, 20); 
   
   /* <<< Remove background image and animation properties >>> */
   /* background-image: 
@@ -669,7 +681,7 @@
 .global-rankings-page-wrapper .ranking-list-container .list-title {
   font-family: 'Survivant', sans-serif;
   color: #ffd700; /* Gold title */
-  font-size: 1.9rem; /* Increase title size slightly */
+  font-size: 2.9rem; /* Increase title size slightly */
   margin: 0 0 8px 0;
   text-align: center;
   text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.5); /* Slightly stronger shadow */
@@ -806,5 +818,154 @@
 
 .inline-login-button:hover {
   color: #ffd633;
+}
+
+/* Styles for the main global rankings view */
+.global-rankings-main-view {
+  /* Add padding or other layout styles if needed */
+}
+
+.global-rankings-title {
+  font-family: 'Survivant', sans-serif; 
+  font-size: clamp(4rem, 15vw, 11rem); /* Max size increased by user */
+  font-weight: bold;
+  line-height: .8; /* Reduced by user */
+  margin: 20px 0 30px 0; 
+  color: transparent; 
+  position: relative; /* Added for pseudo-element positioning */
+
+  /* Enhanced Gold gradient for more varied glint */
+  background: linear-gradient(110deg, 
+    #B8860B 15%, /* DarkGoldenrod */
+    #FFD700 25%, /* Gold */
+    #FFFFE0 30%, /* LightYellow */
+    #FFFFFF 35%, /* White glint */
+    #FFFFE0 40%, /* LightYellow */
+    #FFD700 50%, /* Gold */
+    #DAA520 60%, /* Goldenrod */
+    #FFFACD 75%, /* LemonChiffon */
+    #FFD700 85%, /* Gold */
+    #B8860B 95%  /* DarkGoldenrod */
+  );
+  background-size: 300% 100%; /* Even larger size for slower perceived movement */
+  background-clip: text;
+  -webkit-background-clip: text;
+
+  -webkit-text-stroke: 1px black; 
+  text-stroke: 1px black; 
+
+  /* Much slower shimmer animation */
+  animation: shimmer 30s ease-in-out infinite; 
+}
+
+/* Glisten effect for title */
+.global-rankings-title::before,
+.global-rankings-title::after {
+  content: '✨'; /* Use sparkles emoji for a cartoony look */
+  position: absolute;
+  font-size: 0.8rem; /* MODIFIED: Made sparkles smaller */
+  color: #FFD700; /* Gold color, may or may not affect emoji fully */
+  text-shadow: 0 0 4px white, 0 0 7px #FFD700; /* Glow effect */
+  opacity: 0;
+  transform: scale(0.5);
+  pointer-events: none; /* Don't interfere with mouse events */
+  z-index: 1; /* Ensure they are on top of the text's background */
+  /* Removed: width, height, background, border-radius */
+}
+
+.global-rankings-title::before {
+  animation: sparkle1 18s infinite; /* MODIFIED: Slower spawn rate & sparkle effect */
+}
+
+.global-rankings-title::after {
+  animation: sparkle2 15s infinite 0.7s; /* MODIFIED: Slower spawn rate & sparkle effect, adjusted delay */
+}
+
+/* ADDED back shimmer keyframes */
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0; 
+  }
+  100% {
+    background-position: -200% 0; 
+  }
+}
+
+@keyframes sparkle1 {
+  /* P1 targeting "Global": e.g., top: 20%, left: 20% */
+  /* P2 targeting "Rankings": e.g., top: 65%, left: 75% */
+  /* P3 targeting "Global": e.g., top: 40%, left: 10% */
+
+  0%    { opacity: 0; transform: scale(0.5); top: 20%; left: 20%; } /* Settle P1 */
+  
+  /* Flash 1 */
+  2%    { opacity: 0; transform: scale(0.5); top: 20%; left: 20%; } /* Start Fade In P1 */
+  7%    { opacity: 1; transform: scale(1.2); }                      /* End Fade In P1 */
+  22%   { opacity: 1; transform: scale(1.2); }                      /* Hold P1 */
+  27%   { opacity: 0; transform: scale(0.5); }                      /* End Fade Out P1 */
+  27.1% { opacity: 0; transform: scale(0.5); top: 20%; left: 20%; } /* Settle P1, invisible */
+
+  /* Teleport to P2 */
+  33%   { opacity: 0; transform: scale(0.5); top: 65%; left: 75%; } /* Settle P2 */
+
+  /* Flash 2 */
+  35%   { opacity: 0; transform: scale(0.5); top: 65%; left: 75%; } /* Start Fade In P2 */
+  40%   { opacity: 1; transform: scale(1.2); }                      /* End Fade In P2 */
+  55%   { opacity: 1; transform: scale(1.2); }                      /* Hold P2 */
+  60%   { opacity: 0; transform: scale(0.5); }                      /* End Fade Out P2 */
+  60.1% { opacity: 0; transform: scale(0.5); top: 65%; left: 75%; } /* Settle P2, invisible */
+
+  /* Teleport to P3 */
+  66%   { opacity: 0; transform: scale(0.5); top: 40%; left: 10%; } /* Settle P3 */
+
+  /* Flash 3 */
+  68%   { opacity: 0; transform: scale(0.5); top: 40%; left: 10%; } /* Start Fade In P3 */
+  73%   { opacity: 1; transform: scale(1.2); }                      /* End Fade In P3 */
+  88%   { opacity: 1; transform: scale(1.2); }                      /* Hold P3 */
+  93%   { opacity: 0; transform: scale(0.5); }                      /* End Fade Out P3 */
+  93.1% { opacity: 0; transform: scale(0.5); top: 40%; left: 10%; } /* Settle P3, invisible */
+  
+  100%  { opacity: 0; transform: scale(0.5); top: 40%; left: 10%; } /* Ensure it ends invisible at last known P3 for smooth loop */
+}
+
+@keyframes sparkle2 {
+  /* P1 targeting "Global": e.g., top: 50%, left: 30% */
+  /* P2 targeting "Rankings": e.g., top: 30%, left: 60% */
+  /* P3 targeting "Rankings": e.g., top: 75%, left: 85% */
+
+  0%    { opacity: 0; transform: scale(0.5); top: 50%; left: 30%; } /* Settle P1 */
+
+  /* Flash 1 */
+  2%    { opacity: 0; transform: scale(0.5); top: 50%; left: 30%; } /* Start Fade In P1 */
+  7%    { opacity: 1; transform: scale(1.2); }                      /* End Fade In P1 */
+  22%   { opacity: 1; transform: scale(1.2); }                      /* Hold P1 */
+  27%   { opacity: 0; transform: scale(0.5); }                      /* End Fade Out P1 */
+  27.1% { opacity: 0; transform: scale(0.5); top: 50%; left: 30%; } /* Settle P1, invisible */
+
+  /* Teleport to P2 */
+  33%   { opacity: 0; transform: scale(0.5); top: 30%; left: 60%; } /* Settle P2 */
+
+  /* Flash 2 */
+  35%   { opacity: 0; transform: scale(0.5); top: 30%; left: 60%; } /* Start Fade In P2 */
+  40%   { opacity: 1; transform: scale(1.2); }                      /* End Fade In P2 */
+  55%   { opacity: 1; transform: scale(1.2); }                      /* Hold P2 */
+  60%   { opacity: 0; transform: scale(0.5); }                      /* End Fade Out P2 */
+  60.1% { opacity: 0; transform: scale(0.5); top: 30%; left: 60%; } /* Settle P2, invisible */
+
+  /* Teleport to P3 */
+  66%   { opacity: 0; transform: scale(0.5); top: 75%; left: 85%; } /* Settle P3 */
+
+  /* Flash 3 */
+  68%   { opacity: 0; transform: scale(0.5); top: 75%; left: 85%; } /* Start Fade In P3 */
+  73%   { opacity: 1; transform: scale(1.2); }                      /* End Fade In P3 */
+  88%   { opacity: 1; transform: scale(1.2); }                      /* Hold P3 */
+  93%   { opacity: 0; transform: scale(0.5); }                      /* End Fade Out P3 */
+  93.1% { opacity: 0; transform: scale(0.5); top: 75%; left: 85%; } /* Settle P3, invisible */
+  
+  100%  { opacity: 0; transform: scale(0.5); top: 75%; left: 85%; } /* Ensure it ends invisible at last known P3 for smooth loop */
+}
+
+.global-rankings-description {
+  /* ... rest of CSS ... */
 }
 

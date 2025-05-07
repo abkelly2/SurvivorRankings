@@ -37,26 +37,34 @@ const UserProfileViewer = ({ viewedUserId, onSelectList }) => {
           if (userData.profilePictureUrl) {
             setProfileImageUrl(userData.profilePictureUrl);
             savedProfileImageUrlRef.current = userData.profilePictureUrl;
-          } else if (!isFetchingRandomPic) {
-            console.log("[Viewer] No profile picture, attempting to set a random one for viewed user.");
-            setIsFetchingRandomPic(true);
-            const randomUrl = await getRandomContestantHeadshotUrl();
-            if (randomUrl) {
-              // For a viewer, we might not want to SAVE this random pic to THEIR profile,
-              // unless that's intended. For now, just display.
-              // If persistence of this random default FOR THE VIEWED USER is desired,
-              // an updateDoc call would be needed here, but that has implications.
-              // Let's assume for now we just display it for this session or until they get one.
-              console.log("[Viewer] Assigning random profile picture for display:", randomUrl);
-              // To make it persistent for the viewed user (if they truly have no pic):
-              // await updateDoc(userProfileRef, { profilePictureUrl: randomUrl }); 
-              setProfileImageUrl(randomUrl);
-              savedProfileImageUrlRef.current = randomUrl; // Store it as if it were "saved" for this view session
-            } else {
-              setProfileImageUrl('');
-              savedProfileImageUrlRef.current = '';
+          } else { // userData.profilePictureUrl is falsy, meaning no PFP is set
+            if (!isFetchingRandomPic) { // And we're not already fetching one
+              setIsFetchingRandomPic(true);
+              console.log(`[Viewer] User ${viewedUserId} has no profile picture. Attempting to fetch, save, and display a random one.`);
+              try {
+                const randomUrl = await getRandomContestantHeadshotUrl();
+                if (randomUrl) {
+                  console.log(`[Viewer] Fetched random PFP: ${randomUrl}. Saving to Firestore for user ${viewedUserId}.`);
+                  // Save the randomly fetched PFP to Firestore for persistence
+                  await updateDoc(userProfileRef, { profilePictureUrl: randomUrl });
+                  console.log(`[Viewer] Successfully saved PFP to Firestore for user ${viewedUserId}.`);
+                  setProfileImageUrl(randomUrl);
+                  savedProfileImageUrlRef.current = randomUrl;
+                } else {
+                  console.warn(`[Viewer] Failed to fetch random headshot URL for user ${viewedUserId}. No PFP will be set.`);
+                  setProfileImageUrl(''); 
+                  savedProfileImageUrlRef.current = '';
+                }
+              } catch (error) {
+                console.error(`[Viewer] Error during fetch/save of random PFP for user ${viewedUserId}:`, error);
+                // On error, ensure PFP is cleared or set to a default, and log
+                setProfileImageUrl('');
+                savedProfileImageUrlRef.current = '';
+              } finally {
+                // Ensure the fetching flag is always reset
+                setIsFetchingRandomPic(false);
+              }
             }
-            setIsFetchingRandomPic(false);
           }
         } else {
           setError('User profile not found.');
@@ -71,7 +79,7 @@ const UserProfileViewer = ({ viewedUserId, onSelectList }) => {
     };
 
     fetchViewedUserProfile();
-  }, [viewedUserId, isFetchingRandomPic]); // Depend on viewedUserId and the fetching flag
+  }, [viewedUserId]); // Depend on viewedUserId and the fetching flag
 
   // Load viewed user's lists
   useEffect(() => {

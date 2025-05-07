@@ -317,7 +317,8 @@ const UserListCreator = ({
           await updateDoc(userDocRef, {
             lists: existingLists
           });
-          
+          sessionStorage.removeItem('listCreatorDraft'); // Clear draft after successful update
+          console.log('[UserListCreator] List updated, draft cleared.');
           // Navigate to the updated list page
           navigate(`/list/${user.uid}/${currentListId}`);
           
@@ -347,8 +348,10 @@ const UserListCreator = ({
         await setDoc(userDocRef, {
           lists: [...existingLists, newList],
           // Clear draft after saving
-          draft: null
+          draft: null // This clears the Firestore draft, keep it.
         }, { merge: true });
+        sessionStorage.removeItem('listCreatorDraft'); // Clear draft after successful save
+        console.log('[UserListCreator] New list saved, draft cleared.');
         
         // Store the ID of the newly created list
         // setCurrentListId(newListId); // No longer needed if we navigate away
@@ -382,42 +385,42 @@ const UserListCreator = ({
 
     // Only perform item reordering visuals (shifting items) if it's an internal reorder drag.
     if (fromIndex !== null && listContainer && draggedElement) {
-        const mouseY = e.clientY; 
-        const allListItems = Array.from(listContainer.querySelectorAll('.ranking-item'));
+    const mouseY = e.clientY;
+    const allListItems = Array.from(listContainer.querySelectorAll('.ranking-item'));
+    
+    let currentTargetIndex = userList.length; // Default to the end
+
+    for (let i = 0; i < allListItems.length; i++) {
+        const item = allListItems[i];
+        if (item === draggedElement) continue; 
+
+        const itemRect = item.getBoundingClientRect();
         
-        let currentTargetIndex = userList.length; // Default to the end
-
-        for (let i = 0; i < allListItems.length; i++) {
-            const item = allListItems[i];
-            if (item === draggedElement) continue; 
-
-            const itemRect = item.getBoundingClientRect();
-            
             if (mouseY < itemRect.top + itemRect.height / 2) {
-                currentTargetIndex = parseInt(item.dataset.index, 10);
+            currentTargetIndex = parseInt(item.dataset.index, 10);
                 break; 
             }
         }
         
-        const draggedHeight = draggedElement.offsetHeight > 0 ? draggedElement.offsetHeight : 50;
-        
-        allListItems.forEach((item) => {
+    const draggedHeight = draggedElement.offsetHeight > 0 ? draggedElement.offsetHeight : 50;
+
+    allListItems.forEach((item) => {
           if (item === draggedElement) return; 
-          
-          const itemIndex = parseInt(item.dataset.index, 10);
-          let transformY = 0;
+      
+      const itemIndex = parseInt(item.dataset.index, 10);
+      let transformY = 0;
 
           if (fromIndex < currentTargetIndex) { 
-             if (itemIndex > fromIndex && itemIndex < currentTargetIndex) {
-                transformY = -draggedHeight;
-             }
+         if (itemIndex > fromIndex && itemIndex < currentTargetIndex) {
+            transformY = -draggedHeight;
+         }
           } else if (fromIndex > currentTargetIndex) { 
-             if (itemIndex >= currentTargetIndex && itemIndex < fromIndex) {
-                transformY = draggedHeight;
-             }
-          }
-          item.style.transform = `translateY(${transformY}px)`;
-        });
+         if (itemIndex >= currentTargetIndex && itemIndex < fromIndex) {
+            transformY = draggedHeight;
+         }
+      }
+      item.style.transform = `translateY(${transformY}px)`;
+    });
     } 
     // If not an internal reorder (e.g., external item), the item shifting logic above is skipped,
     // but e.preventDefault() has been called, allowing the drop.
@@ -475,7 +478,7 @@ const UserListCreator = ({
     window.removeEventListener('dragend', removeDesktopWindowListeners);
     console.log('[Desktop Drag] Removed window scroll listeners');
   };
-
+  
   // Make list items draggable for reordering
   const handleItemDragStart = (e, index) => {
     if (isMobile) return;
