@@ -364,69 +364,63 @@ const UserListCreator = ({
     }
   };
   
-  // Drag and drop handlers
+  // <<< MODIFIED: This function will now ONLY handle item shifting, not scrolling >>>
   const handleDragOver = (e) => {
     if (isMobile) return;
-    // Scrolling is now handled by a window event listener for desktop
-    // e.preventDefault(); // Prevent default is called by the window listener or is needed for drop target
-    // e.stopPropagation(); // Stop propagation might still be useful if nested
+
+    // Always call preventDefault and setDragOver for the list container to be a valid drop target
+    // and to show visual feedback when dragging over it.
+    e.preventDefault();
+    e.stopPropagation(); // Good practice for nested drag/drop scenarios
+    setDragOver(true);
+
+    // Scrolling is now handled by the window event listener for desktop.
 
     const fromIndex = draggedItemFromIndexRef.current;
     const listContainer = listRef.current;
     const draggedElement = draggedItemDesktopRef.current;
 
-    if (fromIndex === null || !listContainer || !draggedElement) {
-        return; // Not a valid reorder drag
-    }
-    // Ensure preventDefault is called if we are over a valid drop target area within listRef
-    // This is important for the drop event to fire on listRef.
-    e.preventDefault(); 
-    e.stopPropagation(); 
-
-    setDragOver(true);
-
-    // --- Auto-scroll logic for desktop (REMOVED FROM HERE) ---
-
-    // --- Revised Target Index Calculation (Restored DOM logic) --- 
-    const mouseY = e.clientY; 
-    
-    const allListItems = Array.from(listContainer.querySelectorAll('.ranking-item'));
-    
-    let currentTargetIndex = userList.length; // Default to the end
-
-    for (let i = 0; i < allListItems.length; i++) {
-        const item = allListItems[i];
-        // Skip the element being dragged itself when determining the target based on others
-        if (item === draggedElement) continue; 
-
-        const itemRect = item.getBoundingClientRect();
+    // Only perform item reordering visuals (shifting items) if it's an internal reorder drag.
+    if (fromIndex !== null && listContainer && draggedElement) {
+        const mouseY = e.clientY; 
+        const allListItems = Array.from(listContainer.querySelectorAll('.ranking-item'));
         
-        // Find the first item whose top is below the cursor
-        if (mouseY < itemRect.top + itemRect.height / 2) { // Use midpoint as threshold
-            currentTargetIndex = parseInt(item.dataset.index, 10);
-            break; 
-        }
-    }
-    
-    const draggedHeight = draggedElement.offsetHeight > 0 ? draggedElement.offsetHeight : 50;
-    
-    allListItems.forEach((item) => {
-      if (item === draggedElement) return; // Skip the item being dragged
-      
-      const itemIndex = parseInt(item.dataset.index, 10);
-      let transformY = 0;
+        let currentTargetIndex = userList.length; // Default to the end
 
-      if (fromIndex < currentTargetIndex) { // Moving Down
-         if (itemIndex > fromIndex && itemIndex < currentTargetIndex) {
-            transformY = -draggedHeight;
-         }
-      } else if (fromIndex > currentTargetIndex) { // Moving Up
-         if (itemIndex >= currentTargetIndex && itemIndex < fromIndex) {
-            transformY = draggedHeight;
-         }
-      }
-      item.style.transform = `translateY(${transformY}px)`;
-    });
+        for (let i = 0; i < allListItems.length; i++) {
+            const item = allListItems[i];
+            if (item === draggedElement) continue; 
+
+            const itemRect = item.getBoundingClientRect();
+            
+            if (mouseY < itemRect.top + itemRect.height / 2) {
+                currentTargetIndex = parseInt(item.dataset.index, 10);
+                break; 
+            }
+        }
+        
+        const draggedHeight = draggedElement.offsetHeight > 0 ? draggedElement.offsetHeight : 50;
+        
+        allListItems.forEach((item) => {
+          if (item === draggedElement) return; 
+          
+          const itemIndex = parseInt(item.dataset.index, 10);
+          let transformY = 0;
+
+          if (fromIndex < currentTargetIndex) { 
+             if (itemIndex > fromIndex && itemIndex < currentTargetIndex) {
+                transformY = -draggedHeight;
+             }
+          } else if (fromIndex > currentTargetIndex) { 
+             if (itemIndex >= currentTargetIndex && itemIndex < fromIndex) {
+                transformY = draggedHeight;
+             }
+          }
+          item.style.transform = `translateY(${transformY}px)`;
+        });
+    } 
+    // If not an internal reorder (e.g., external item), the item shifting logic above is skipped,
+    // but e.preventDefault() has been called, allowing the drop.
   };
   
   const handleDragLeave = () => {
