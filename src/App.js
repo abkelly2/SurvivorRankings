@@ -15,6 +15,7 @@ import { UserProvider } from './UserContext';
 import GlobalRankingsIcon from './images/GlobalRankings.png';
 import { preloadImages } from './utils/imageCache';
 import Notifications from './components/Notifications';
+import MuteButton from './components/MuteButton';
 import PalmFrondTransition from './components/PalmFrondTransition/PalmFrondTransition';
 
 // Import pages
@@ -444,6 +445,9 @@ function App() {
             <div className="user-actions">
                 {/* Notifications Button */}
                 {user && <Notifications />}
+                
+                {/* Mute Button */}
+                <MuteButton />
                 
                 {/* My Lists Button */} 
                 <button 

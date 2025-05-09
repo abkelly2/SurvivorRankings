@@ -67,6 +67,20 @@
             document.addEventListener('click', unlockAudio);
           });
         }
+
+        // Stop music when user switches tabs or minimizes browser
+        document.addEventListener('visibilitychange', function() {
+          if (document.hidden) {
+            themeMusic.pause();
+          } else {
+            themeMusic.play().catch(e => console.log("Couldn't resume audio:", e));
+          }
+        });
+
+        // Stop music when user navigates away from the page
+        window.addEventListener('beforeunload', function() {
+          themeMusic.pause();
+        });
       });
     </script>
   </body>
