@@ -248,7 +248,7 @@ export const survivorSeasons = [
       { id: "brianna-varel", name: "Brianna Varel" },
       { id: "brooke-struck", name: "Brooke Struck" },
       { id: "blake-towsley", name: "Blake Towsley" },
-      { id: "brian-corum", name: "Brian Corum" },
+      { id: "brian-corridan", name: "Brian Corridan" },
       { id: "jim-lynch", name: "Jim Lynch" },
       { id: "morgan-mcdaniel", name: "Morgan McDaniel" }
     ]

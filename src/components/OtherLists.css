@@ -1466,8 +1466,9 @@
   }
   
   .comment-header {
-    flex-direction: column;
-    gap: 5px;
+    flex-direction: row; /* MODIFIED: Changed from column to row */
+    /* gap: 5px; */ /* Consider if this gap is desired horizontally, or remove/adjust */
+    align-items: center; /* Explicitly keep vertical alignment to center */
   }
   
   .comment-date::before {

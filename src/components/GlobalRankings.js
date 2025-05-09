@@ -11,6 +11,9 @@ import './OtherLists.css';
 // <<< Import the new effect component >>>
 import RainingTrophiesEffect from './RainingTrophiesEffect';
 
+// Import placeholder image
+// import placeholderCommenterPic from '../images/placeholder-commenter.png'; // <<< COMMENTED OUT
+
 // Define commentsRef at the component level
 const commentsRef = collection(db, 'comments');
 
@@ -81,6 +84,7 @@ const GlobalRankings = ({ seasonListRef }) => {
   const [loadingComments, setLoadingComments] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null); // { id: commentId, userName: commentUserName }
   const [replyText, setReplyText] = useState('');
+  const [commentAuthorProfilePics, setCommentAuthorProfilePics] = useState({}); // ADDED state for profile pics
   // ---------------------
 
   // Sample data for the list cards - this would be replaced with real data from your API
@@ -1202,50 +1206,54 @@ const GlobalRankings = ({ seasonListRef }) => {
   // Function to fetch comments for a specific GLOBAL list
   const fetchComments = async (globalListId) => {
     if (!globalListId) return;
-    console.log(`Fetching comments for global list: ${globalListId}`);
     setLoadingComments(true);
-    setComments([]); // Clear previous comments
     try {
-      // Use component-level ref
-      const q = query(
-        commentsRef, // Use component-level ref
-        where('listId', '==', globalListId),
-        orderBy('createdAt', 'desc')
-      );
+      const q = query(commentsRef, where('listId', '==', globalListId), orderBy('createdAt', 'desc'));
       const querySnapshot = await getDocs(q);
       const fetchedComments = [];
+      const authorIds = new Set(); // To avoid duplicate fetches for the same author
+
       querySnapshot.forEach((doc) => {
-        fetchedComments.push({ id: doc.id, ...doc.data() });
+        const commentData = { id: doc.id, ...doc.data() };
+        fetchedComments.push(commentData);
+        if (commentData.userId) {
+          authorIds.add(commentData.userId);
+        }
       });
-      setComments(fetchedComments);
-      console.log(`Fetched ${fetchedComments.length} comments.`);
-    } catch (error) {
-      // Handle potential index error (Firestore might require composite index)
-      if (error.code === 'failed-precondition') {
-          console.warn("Firestore index missing for comments query. Fetching without ordering.");
-          try {
-              // Use component-level ref
-              const simpleQuery = query(commentsRef, where('listId', '==', globalListId));
-              const querySnapshot = await getDocs(simpleQuery);
-              let fetchedComments = [];
-              querySnapshot.forEach((doc) => {
-                  fetchedComments.push({ id: doc.id, ...doc.data() });
-              });
-              // Manual sort client-side
-              fetchedComments.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
-              setComments(fetchedComments);
-              console.log(`Fetched ${fetchedComments.length} comments (manual sort).`);
-          } catch (innerError) {
-              console.error("Error fetching comments without order:", innerError);
-              setComments([]); 
+
+      // Fetch profile pictures for authors
+      const profilePics = {};
+      for (const userId of authorIds) {
+        try {
+          const userDocRef = doc(db, 'users', userId);
+          const userDocSnap = await getDoc(userDocRef);
+          if (userDocSnap.exists() && userDocSnap.data().profilePictureUrl) {
+            profilePics[userId] = userDocSnap.data().profilePictureUrl;
+          } else {
+            profilePics[userId] = null; // Fallback if no URL (MODIFIED: was placeholderCommenterPic)
           }
-      } else {
-          console.error("Error fetching comments:", error);
-          setComments([]); 
+        } catch (error) {
+          console.error(`Error fetching profile picture for user ${userId}:`, error);
+          profilePics[userId] = null; // Fallback on error (MODIFIED: was placeholderCommenterPic)
+        }
       }
-    } finally {
-      setLoadingComments(false);
+      setCommentAuthorProfilePics(profilePics);
+      
+      // Sort comments: parent comments first, then by createdAt. Replies will be nested later.
+      const sortedComments = fetchedComments.sort((a, b) => {
+        // Prioritize parent comments (those without parentId)
+        if (!a.parentId && b.parentId) return -1;
+        if (a.parentId && !b.parentId) return 1;
+        // Then sort by creation date (newest first for parents, oldest for replies handled in render)
+        return (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0);
+      });
+
+      setComments(sortedComments);
+    } catch (error) {
+      console.error("Error fetching comments:", error);
+      // Handle error state if necessary
     }
+    setLoadingComments(false);
   };
 
   // Function to add a new comment or reply for a GLOBAL list
@@ -1651,6 +1659,14 @@ const GlobalRankings = ({ seasonListRef }) => {
                   return (
                     <div key={comment.id} className="comment-item">
                       <div className="comment-header">
+                        {/* Conditionally render image */}
+                        {commentAuthorProfilePics[comment.userId] && (
+                          <img 
+                            src={commentAuthorProfilePics[comment.userId]} // Use the fetched URL
+                            alt={`${comment.userName || 'User'}'s avatar`}
+                            className="comment-author-avatar"
+                          />
+                        )}
                         <span className="comment-author">
                            {/* Add link to user profile later if needed */} 
                            {comment.userName}
@@ -1721,6 +1737,14 @@ const GlobalRankings = ({ seasonListRef }) => {
                           {replies.map(reply => (
                             <div key={reply.id} className="reply-item">
                               <div className="reply-header">
+                                 {/* Conditionally render image */}
+                                 {commentAuthorProfilePics[reply.userId] && (
+                                   <img 
+                                    src={commentAuthorProfilePics[reply.userId]} // Use the fetched URL
+                                    alt={`${reply.userName || 'User'}'s avatar`}
+                                    className="comment-author-avatar"
+                                  />
+                                 )}
                                  <span className="reply-author">{reply.userName}</span>
                                  <span className="reply-date">{formatCommentDate(reply.createdAt)}</span>
                               </div>

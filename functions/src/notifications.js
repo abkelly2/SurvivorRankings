@@ -30,18 +30,23 @@ exports.onCreateListLike = onDocumentUpdated("userLists/{userId}", async (event)
       const notificationPromises = listsWithNewUpvotes.map(async list => {
         // Get the user who liked the list (the last upvote)
         const likerId = list.upvotes[list.upvotes.length - 1];
-        console.log('Liker ID:', likerId);
+        const ownerId = event.params.userId; // Get owner ID
+        console.log('Liker ID:', likerId, 'Owner ID:', ownerId);
+        
+        // *** ADD CHECK: Don't notify if liker is owner ***
+        if (likerId === ownerId) {
+          console.log(`Skipping notification: User ${likerId} liked their own list ${list.id}.`);
+          return null; // Return null to filter out later
+        }
         
         // Get the liker's display name
         const likerDoc = await admin.firestore().collection('users').doc(likerId).get();
-        console.log('Liker document exists:', likerDoc.exists);
         const likerData = likerDoc.data();
-        console.log('Liker data:', likerData);
         const likerName = likerData?.displayName || 'Someone';
         console.log('Liker name:', likerName);
         
         const notificationData = {
-          userId: event.params.userId, // The list owner's ID
+          userId: ownerId, // The list owner's ID
           type: 'list_like',
           listId: list.id,
           createdBy: likerId,
@@ -49,10 +54,16 @@ exports.onCreateListLike = onDocumentUpdated("userLists/{userId}", async (event)
           isNew: true,
           createdAt: admin.firestore.FieldValue.serverTimestamp()
         };
-        console.log('Creating notification with data:', notificationData);
+        console.log('Creating list like notification with data:', notificationData);
         
         return admin.firestore().collection('notifications').add(notificationData);
-      });
+      }).filter(promise => promise !== null); // Filter out null promises
+      
+      // Only proceed if there are valid promises
+      if (notificationPromises.length === 0) {
+          console.log("No valid list like notifications to send after self-like check.");
+          return null;
+      }
       
       return Promise.all(notificationPromises);
     } catch (error) {
@@ -75,20 +86,26 @@ exports.onCreateCommentLike = onDocumentUpdated("comments/{commentId}", async (e
     const newUpvote = afterUpvotes.find(uid => !beforeUpvotes.includes(uid));
     if (!newUpvote) return null;
     
+    // *** ADD CHECK: Don't notify if liker is owner ***
+    const ownerId = afterData.userId; // Comment owner
+    const actorId = newUpvote;      // User who liked
+    if (actorId === ownerId) {
+      console.log(`Skipping notification: User ${actorId} liked their own comment ${event.params.commentId}.`);
+      return null; // Exit function
+    }
+    
     try {
       // Get the liker's display name
       const likerDoc = await admin.firestore().collection('users').doc(newUpvote).get();
-      console.log('Comment liker document exists:', likerDoc.exists);
       const likerData = likerDoc.data();
-      console.log('Comment liker data:', likerData);
       const likerName = likerData?.displayName || 'Someone';
       console.log('Comment liker name:', likerName);
       
       const notificationData = {
-        userId: afterData.userId, // The comment owner's ID
+        userId: ownerId, // The comment owner's ID
         type: 'comment_like',
         commentId: event.params.commentId,
-        createdBy: newUpvote,
+        createdBy: actorId, // Use actorId variable
         createdByName: likerName,
         isNew: true,
         createdAt: admin.firestore.FieldValue.serverTimestamp()
@@ -111,71 +128,95 @@ exports.onCreateComment = onDocumentCreated("comments/{commentId}", async (event
     const listUserId = commentData.listUserId;
     const listId = commentData.listId;
     const parentId = commentData.parentId;
+    const actorId = commentData.userId; // User who commented
     
-    if (!listUserId || !listId) {
-      console.error('Missing listUserId or listId in comment data');
-      return null;
+    // Check for Global Rankings comments (listUserId might be null or different)
+    // We assume for now that Global Rankings comments don't notify anyone
+    // OR that we don't have a reliable list owner ID for them.
+    // If global ranking comments SHOULD notify someone (e.g., admin), different logic is needed.
+    if (!listUserId) { 
+      console.log(`Comment ${event.params.commentId} has no listUserId, likely a Global Ranking comment. Skipping owner notification.`);
+      // Still need to check for replies below...
     }
+    
+    // Removed redundant check: if (!listUserId || !listId) ... 
+    // because listId check is not strictly needed for reply logic,
+    // and listUserId check is handled above.
     
     try {
       const notificationPromises = [];
 
       // Get the commenter's display name
-      const commenterDoc = await admin.firestore().collection('users').doc(commentData.userId).get();
-      console.log('Commenter document exists:', commenterDoc.exists);
+      const commenterDoc = await admin.firestore().collection('users').doc(actorId).get();
       const commenterData = commenterDoc.data();
-      console.log('Commenter data:', commenterData);
       const commenterName = commenterData?.displayName || 'Someone';
       console.log('Commenter name:', commenterName);
 
-      // Always notify the list owner about new comments
-      const listOwnerNotification = {
-        userId: listUserId,
-        type: 'comment',
-        content: commentData.text,
-        listId: listId,
-        commentId: event.params.commentId,
-        createdBy: commentData.userId,
-        createdByName: commenterName,
-        isNew: true,
-        createdAt: admin.firestore.FieldValue.serverTimestamp()
-      };
-      console.log('Creating list owner notification with data:', listOwnerNotification);
-      
-      notificationPromises.push(
-        admin.firestore().collection('notifications').add(listOwnerNotification)
-      );
+      // --- Notify list owner about new top-level comments (if listUserId exists) --- 
+      if (listUserId) { 
+          const listOwnerId = listUserId;
 
-      // If this is a reply to another comment, notify the parent comment's author
+          // *** ADD CHECK: Don't notify if commenter is list owner ***
+          if (actorId !== listOwnerId) {
+            const listOwnerNotification = {
+              userId: listOwnerId,
+              type: 'comment',
+              content: commentData.text,
+              listId: listId, // listId might be null for global, handle in UI
+              commentId: event.params.commentId,
+              createdBy: actorId,
+              createdByName: commenterName,
+              isNew: true,
+              createdAt: admin.firestore.FieldValue.serverTimestamp()
+            };
+            console.log('Creating list owner notification with data:', listOwnerNotification);
+            notificationPromises.push(
+              admin.firestore().collection('notifications').add(listOwnerNotification)
+            );
+          } else {
+            console.log(`Skipping notification: User ${actorId} commented on their own list ${listId}.`);
+          }
+      } 
+      // --- End Notify list owner ---
+
+      // --- Notify parent comment author about replies --- 
       if (parentId) {
-        // Get the parent comment to find its author
         const parentCommentRef = admin.firestore().collection('comments').doc(parentId);
         const parentCommentDoc = await parentCommentRef.get();
         
         if (parentCommentDoc.exists) {
           const parentCommentData = parentCommentDoc.data();
+          const parentAuthorId = parentCommentData.userId;
           
-          // Don't notify if replying to your own comment
-          if (parentCommentData.userId !== commentData.userId) {
+          // *** EXISTING CHECK: Don't notify if replying to your own comment ***
+          if (parentAuthorId !== actorId) {
             const replyNotification = {
-              userId: parentCommentData.userId,
+              userId: parentAuthorId, // Notify the parent comment's author
               type: 'comment_reply',
               content: commentData.text,
-              listId: listId,
+              listId: listId, // May be null for global list comments
               commentId: event.params.commentId,
               parentCommentId: parentId,
-              createdBy: commentData.userId,
+              createdBy: actorId,
               createdByName: commenterName,
               isNew: true,
               createdAt: admin.firestore.FieldValue.serverTimestamp()
             };
             console.log('Creating reply notification with data:', replyNotification);
-            
             notificationPromises.push(
               admin.firestore().collection('notifications').add(replyNotification)
             );
+          } else {
+             console.log(`Skipping notification: User ${actorId} replied to their own comment ${parentId}.`);
           }
         }
+      }
+      // --- End Notify parent comment author ---
+
+      // Only proceed if there are valid promises
+      if (notificationPromises.length === 0) {
+          console.log("No valid comment/reply notifications to send after self-action checks.");
+          return null;
       }
 
       return Promise.all(notificationPromises);
