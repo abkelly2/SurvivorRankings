@@ -455,7 +455,7 @@
   }
 
   .user-idols,
-  .user-total-upvotes {
+  .user-total-upvotes, .most-ranked-survivor {
     font-size: 0.9rem !important;
   }
 }
