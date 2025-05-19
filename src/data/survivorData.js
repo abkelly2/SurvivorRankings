@@ -597,6 +597,26 @@ export const survivorSeasons = [
     id: "s26",
     name: "Survivor: Caramoan",
     contestants: [
+      { id: "andrea-boehlke", name: "Andrea Boehlke" },
+      { id: "brandon-hantz", name: "Brandon Hantz" },
+      { id: "brenda-lowe", name: "Brenda Lowe" },
+      { id: "corinne-kaplan", name: "Corinne Kaplan" },
+      { id: "dawn-meehan", name: "Dawn Meehan" },
+      { id: "erik-reichenbach", name: "Erik Reichenbach" },
+      { id: "francesca-hogi", name: "Francesca Hogi" },
+      { id: "john-cochran", name: "John Cochran" },
+      { id: "malcolm-freberg", name: "Malcolm Freberg" },
+      { id: "phillip-sheppard", name: "Phillip Sheppard" },
+      { id: "allie-pohevitz", name: "Allie Pohevitz" },
+      { id: "eddie-fox", name: "Eddie Fox" },
+      { id: "hope-driskill", name: "Hope Driskill" },
+      { id: "julia-landauer", name: "Julia Landauer" },
+      { id: "vytas-baskauskas", name: "Laura Alexander" },
+      { id: "matt-bischoff", name: "Matt Bischoff" },
+      { id: "michael-snow", name: "Michael Snow" },
+      { id: "reynold-toepfer", name: "Reynold Toepfer" },
+      { id: "shamar-thomas", name: "Shamar Thomas" },
+      { id: "sherri-biethman", name: "Sherri Biethman" }
       
     ]
   },
