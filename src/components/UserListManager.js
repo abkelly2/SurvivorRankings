@@ -39,6 +39,7 @@ const UserListManager = ({ user, onSelectList, onCreateNew }) => {
   const [usernameError, setUsernameError] = useState('');
   const [userIdols, setUserIdols] = useState(0);
   const [totalUserUpvotes, setTotalUserUpvotes] = useState(0);
+  const [mostRankedSurvivor, setMostRankedSurvivor] = useState(null);
 
   // Profile Picture State
   const [profileImageUrl, setProfileImageUrl] = useState('');
@@ -49,6 +50,9 @@ const UserListManager = ({ user, onSelectList, onCreateNew }) => {
   const [isFetchingRandomPic, setIsFetchingRandomPic] = useState(false);
   const [isReRollingPicture, setIsReRollingPicture] = useState(false); // New state for re-roll button
   const savedProfileImageUrlRef = useRef(''); // To store the actual saved URL
+  const [lastRerollTime, setLastRerollTime] = useState(null);
+  const [cooldownRemaining, setCooldownRemaining] = useState(null);
+  const [lastRolledHeadshot, setLastRolledHeadshot] = useState(null);
 
   // Initialize new username from current display name when user object is available
   useEffect(() => {
@@ -172,6 +176,106 @@ const UserListManager = ({ user, onSelectList, onCreateNew }) => {
     fetchUserIdols();
   }, [user]);
   
+  // Calculate most ranked survivor whenever userLists changes
+  useEffect(() => {
+    if (userLists.length > 0) {
+      const contestantCounts = {};
+      
+      // Count occurrences of each contestant across all lists
+      userLists.forEach(list => {
+        if (list.contestants) {
+          list.contestants.forEach(contestant => {
+            if (!contestant.isSeason) { // Only count actual contestants, not seasons
+              const name = contestant.name;
+              contestantCounts[name] = (contestantCounts[name] || 0) + 1;
+            }
+          });
+        }
+      });
+
+      // Find the contestant with the highest count
+      let maxCount = 0;
+      let mostRanked = null;
+
+      Object.entries(contestantCounts).forEach(([name, count]) => {
+        if (count > maxCount) {
+          maxCount = count;
+          mostRanked = name;
+        } else if (count === maxCount && name < mostRanked) {
+          // If tied, choose alphabetically first
+          mostRanked = name;
+        }
+      });
+
+      setMostRankedSurvivor(mostRanked);
+    }
+  }, [userLists]);
+
+  // Add useEffect to fetch last reroll time
+  useEffect(() => {
+    const fetchLastRerollTime = async () => {
+      if (user) {
+        try {
+          const userProfileRef = doc(db, 'users', user.uid);
+          const userProfileDoc = await getDoc(userProfileRef);
+          if (userProfileDoc.exists() && userProfileDoc.data().lastRerollTime) {
+            setLastRerollTime(userProfileDoc.data().lastRerollTime.toDate());
+          }
+        } catch (err) {
+          console.error("Error fetching last reroll time:", err);
+        }
+      }
+    };
+    fetchLastRerollTime();
+  }, [user]);
+
+  // Add useEffect to handle cooldown timer
+  useEffect(() => {
+    let timer;
+    if (lastRerollTime) {
+      const updateCooldown = () => {
+        const now = new Date();
+        const timeSinceReroll = now - lastRerollTime;
+        const cooldownPeriod = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+        const remaining = cooldownPeriod - timeSinceReroll;
+
+        if (remaining <= 0) {
+          setCooldownRemaining(null);
+          setLastRerollTime(null);
+        } else {
+          const hours = Math.floor(remaining / (60 * 60 * 1000));
+          const minutes = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
+          setCooldownRemaining(`${hours}h ${minutes}m`);
+        }
+      };
+
+      updateCooldown();
+      timer = setInterval(updateCooldown, 60000); // Update every minute
+    }
+
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [lastRerollTime]);
+
+  // Add useEffect to fetch last rolled headshot
+  useEffect(() => {
+    const fetchLastRolledHeadshot = async () => {
+      if (user) {
+        try {
+          const userProfileRef = doc(db, 'users', user.uid);
+          const userProfileDoc = await getDoc(userProfileRef);
+          if (userProfileDoc.exists() && userProfileDoc.data().lastRolledHeadshot) {
+            setLastRolledHeadshot(userProfileDoc.data().lastRolledHeadshot);
+          }
+        } catch (err) {
+          console.error("Error fetching last rolled headshot:", err);
+        }
+      }
+    };
+    fetchLastRolledHeadshot();
+  }, [user]);
+
   const handleUsernameChange = async () => {
     if (!newUsername || newUsername.trim() === '') {
       setUsernameError('Username cannot be empty');
@@ -366,9 +470,16 @@ const UserListManager = ({ user, onSelectList, onCreateNew }) => {
       const randomUrl = await getRandomContestantHeadshotUrl();
       if (randomUrl) {
         const userProfileRef = doc(db, 'users', user.uid);
-        await updateDoc(userProfileRef, { profilePictureUrl: randomUrl });
+        const now = new Date();
+        await updateDoc(userProfileRef, { 
+          profilePictureUrl: randomUrl,
+          lastRerollTime: now,
+          lastRolledHeadshot: randomUrl
+        });
         setProfileImageUrl(randomUrl);
-        savedProfileImageUrlRef.current = randomUrl; // Update saved URL ref
+        savedProfileImageUrlRef.current = randomUrl;
+        setLastRerollTime(now);
+        setLastRolledHeadshot(randomUrl);
         console.log("Successfully re-rolled and assigned new random profile picture:", randomUrl);
       } else {
         setUploadError('Could not get a new random picture. Please try again.');
@@ -378,6 +489,21 @@ const UserListManager = ({ user, onSelectList, onCreateNew }) => {
       setUploadError('Failed to re-roll picture. Please try again.');
     } finally {
       setIsReRollingPicture(false);
+    }
+  };
+
+  const handleRestoreLastHeadshot = async () => {
+    if (!user || !lastRolledHeadshot) return;
+    try {
+      const userProfileRef = doc(db, 'users', user.uid);
+      await updateDoc(userProfileRef, { 
+        profilePictureUrl: lastRolledHeadshot
+      });
+      setProfileImageUrl(lastRolledHeadshot);
+      savedProfileImageUrlRef.current = lastRolledHeadshot;
+    } catch (err) {
+      console.error("Error restoring last headshot:", err);
+      setUploadError('Failed to restore last headshot. Please try again.');
     }
   };
   
@@ -450,12 +576,16 @@ const UserListManager = ({ user, onSelectList, onCreateNew }) => {
           {/* Re-roll Button - Conditionally Rendered */}
           {profileImageUrl && profileImageUrl !== placeholderProfilePic && (
             <button
-              onClick={handleAssignNewRandomPicture}
-              disabled={isReRollingPicture || isUploading}
-              className="reroll-profile-pic-button"
-              style={{ marginTop: '8px' }} // Simple styling for now
+              onClick={lastRolledHeadshot && profileImageUrl !== lastRolledHeadshot ? 
+                handleRestoreLastHeadshot : handleAssignNewRandomPicture}
+              disabled={isReRollingPicture || isUploading || (cooldownRemaining && profileImageUrl === lastRolledHeadshot)}
+              className={`reroll-profile-pic-button ${lastRolledHeadshot && profileImageUrl !== lastRolledHeadshot ? 'restore-headshot' : ''}`}
+              style={{ marginTop: '8px' }}
             >
-              {isReRollingPicture ? '🎲 Finding...' : '🎲 Re-roll Random'}
+              {isReRollingPicture ? '🎲 Finding...' : 
+               lastRolledHeadshot && profileImageUrl !== lastRolledHeadshot ? '🔄 Restore Headshot' :
+               cooldownRemaining ? `⏳ ${cooldownRemaining}` : 
+               '🎲 Re-roll Random'}
             </button>
           )}
           {uploadError && <div className="error-message" style={{color: 'red', marginTop: '5px'}}>{uploadError}</div>}
@@ -516,6 +646,12 @@ const UserListManager = ({ user, onSelectList, onCreateNew }) => {
           <div className="user-total-upvotes" style={{ fontSize: '1.2rem', color: '#34c759', fontWeight: 'bold' }}>
             Total Upvotes: {totalUserUpvotes} 👍
           </div>
+
+          {mostRankedSurvivor && (
+            <div className="most-ranked-survivor" style={{ fontSize: '1.2rem', color: '#ff6b00', fontWeight: 'bold' }}>
+              Most Ranked: {mostRankedSurvivor} 👑
+            </div>
+          )}
 
           {/* You can add other existing profile items here if there were any */}
         </div>

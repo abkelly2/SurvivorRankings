@@ -11,6 +11,7 @@ const UserProfileViewer = ({ viewedUserId, onSelectList }) => {
   const [userIdols, setUserIdols] = useState(0);
   const [totalUserUpvotes, setTotalUserUpvotes] = useState(0);
   const [profileImageUrl, setProfileImageUrl] = useState('');
+  const [mostRankedSurvivor, setMostRankedSurvivor] = useState(null);
   const placeholderProfilePic = 'https://via.placeholder.com/150/CCCCCC/808080?Text=No+Image';
   const [isFetchingRandomPic, setIsFetchingRandomPic] = useState(false);
   const savedProfileImageUrlRef = useRef(''); // To handle random pic assignment consistency
@@ -125,6 +126,41 @@ const UserProfileViewer = ({ viewedUserId, onSelectList }) => {
     loadUserLists();
   }, [viewedUserId]);
 
+  // Calculate most ranked survivor whenever userLists changes
+  useEffect(() => {
+    if (userLists.length > 0) {
+      const contestantCounts = {};
+      
+      // Count occurrences of each contestant across all lists
+      userLists.forEach(list => {
+        if (list.contestants) {
+          list.contestants.forEach(contestant => {
+            if (!contestant.isSeason) { // Only count actual contestants, not seasons
+              const name = contestant.name;
+              contestantCounts[name] = (contestantCounts[name] || 0) + 1;
+            }
+          });
+        }
+      });
+
+      // Find the contestant with the highest count
+      let maxCount = 0;
+      let mostRanked = null;
+
+      Object.entries(contestantCounts).forEach(([name, count]) => {
+        if (count > maxCount) {
+          maxCount = count;
+          mostRanked = name;
+        } else if (count === maxCount && name < mostRanked) {
+          // If tied, choose alphabetically first
+          mostRanked = name;
+        }
+      });
+
+      setMostRankedSurvivor(mostRanked);
+    }
+  }, [userLists]);
+
   // Format date (reused from UserListManager)
   const formatDate = (isoDate) => {
     if (!isoDate) return '';
@@ -177,6 +213,12 @@ const UserProfileViewer = ({ viewedUserId, onSelectList }) => {
           <div className="user-total-upvotes" style={{ fontSize: '1.2rem', color: '#34c759', fontWeight: 'bold' }}>
             Total Upvotes: {totalUserUpvotes} 👍
           </div>
+
+          {mostRankedSurvivor && (
+            <div className="most-ranked-survivor" style={{ fontSize: '1.2rem', color: '#ff6b00', fontWeight: 'bold' }}>
+              Most Ranked: {mostRankedSurvivor} 👑
+            </div>
+          )}
         </div>
       </div>
       

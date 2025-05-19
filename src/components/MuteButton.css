@@ -1,0 +1,42 @@
+.mute-button {
+  background-color: white;
+  color: #333;
+  border: 1px solid #ccc;
+  padding: 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.3s, box-shadow 0.3s;
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  font-weight: bold;
+  width: 40px;
+  height: 40px;
+  z-index: 1000;
+}
+
+.mute-button:hover {
+  background-color: #f8f8f8;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.mute-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+/* Mobile styles */
+@media (max-width: 768px) {
+  .mute-button {
+    display: none; /* Hide the mute button on mobile */
+  }
+
+  .mute-icon {
+    font-size: 18px;
+  }
+} 
