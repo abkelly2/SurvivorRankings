@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
 import { doc, setDoc, getDoc, serverTimestamp, collection, query, where, orderBy, getDocs, addDoc, updateDoc, deleteDoc, Timestamp, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { UserContext } from '../UserContext';
+import { survivorSeasons } from '../data/survivorData';
 import './GlobalRankings.css';
 // We need to import the HomePageLists.css to use its styles
 import './HomePageLists.css';
@@ -90,12 +91,12 @@ const GlobalRankings = ({ seasonListRef }) => {
   // Sample data for the list cards - this would be replaced with real data from your API
   const sampleLists = [
     {
-      id: 'season-48',
-      name: 'Season 48',
+      id: 'season-49',
+      name: 'Season 49',
       userName: 'Global Rankings',
       createdAt: new Date().toISOString(), // Use a consistent creation time or fetch it?
-      description: 'Vote for your favorite castaways from Survivor Season 48!',
-      contestants: Array(10).fill(null).map((_, i) => ({ id: `slot-s48-${i+1}`, name: `Vote for #${i+1}`, imageUrl: '/images/placeholder.jpg', isEmpty: true }))
+      description: 'Vote for your favorite castaways from Survivor Season 49!',
+      contestants: Array(10).fill(null).map((_, i) => ({ id: `slot-s49-${i+1}`, name: `Vote for #${i+1}`, imageUrl: '/images/placeholder.jpg', isEmpty: true }))
     }
     // Removed other sample lists
   ];
@@ -606,10 +607,130 @@ const GlobalRankings = ({ seasonListRef }) => {
     if (contestantDataStr) {
         let droppedContestant;
         try {
-            droppedContestant = JSON.parse(contestantDataStr);
+            // Check if the data starts with http - it might be a URL instead of JSON
+            if (contestantDataStr.startsWith('http')) {
+                console.log("Received URL instead of JSON, creating contestant from URL");
+                // Create a basic contestant object from the URL
+                // Extract id from image URL if possible, or use a timestamp
+                const urlParts = contestantDataStr.split('/');
+                const fileName = urlParts[urlParts.length - 1];
+                const possibleId = fileName.split('.')[0]; // Try to get id from filename
+                
+                droppedContestant = {
+                    id: possibleId || `contestant-${Date.now()}`,
+                    name: "Unknown Contestant", // We don't know the name from just the URL
+                    imageUrl: contestantDataStr,
+                    isEmpty: false
+                };
+            } else {
+                // Normal case - parse JSON data
+                droppedContestant = JSON.parse(contestantDataStr);
+            }
+            
             // Basic validation
-            if (!droppedContestant || typeof droppedContestant.id === 'undefined' || typeof droppedContestant.name === 'undefined') {
+            if (!droppedContestant || typeof droppedContestant.id === 'undefined') {
                 throw new Error("Invalid contestant data format.");
+            }
+
+            // If name is missing or "Unknown Contestant", look it up in survivorData
+            if (!droppedContestant.name || droppedContestant.name === "Unknown Contestant") {
+                console.log(`Looking up contestant id: ${droppedContestant.id} in survivorData`);
+                
+                let contestantFound = false;
+                
+                // First try direct ID match
+                for (const season of survivorSeasons) {
+                    const foundContestant = season.contestants.find(c => c.id === droppedContestant.id);
+                    if (foundContestant) {
+                        console.log(`Found contestant by direct ID match in season ${season.name}:`, foundContestant);
+                        droppedContestant.name = foundContestant.name;
+                        if (!droppedContestant.seasonId) droppedContestant.seasonId = season.id;
+                        if (!droppedContestant.seasonName) droppedContestant.seasonName = season.name;
+                        contestantFound = true;
+                        break;
+                    }
+                }
+                
+                // If not found by ID, try to extract contestant name from URL path
+                if (!contestantFound && typeof droppedContestant.id === 'string') {
+                    // Check if it's a URL path (likely contains '/' or '%2F')
+                    if (droppedContestant.id.includes('/') || droppedContestant.id.includes('%2F')) {
+                        // Extract last part of path (after last '/' or '%2F')
+                        let possibleName = droppedContestant.id;
+                        if (possibleName.includes('/')) {
+                            possibleName = possibleName.split('/').pop();
+                        } 
+                        if (possibleName.includes('%2F')) {
+                            possibleName = possibleName.split('%2F').pop();
+                        }
+                        
+                        // Clean up the name (remove file extension, etc.)
+                        possibleName = possibleName.replace(/\.\w+$/, '') // Remove file extension
+                                                   .replace(/_/g, ' ')     // Replace underscores with spaces
+                                                   .replace(/-/g, ' ')     // Replace hyphens with spaces
+                                                   .toLowerCase().trim();
+                        
+                        console.log(`Extracted possible name fragment: "${possibleName}" from URL`);
+                        
+                        // Search through all contestants for name matches
+                        for (const season of survivorSeasons) {
+                            // Look for contestants whose names include the extracted fragment
+                            const matchingContestants = season.contestants.filter(c => 
+                                c.name.toLowerCase().includes(possibleName) || 
+                                c.id.toLowerCase().includes(possibleName)
+                            );
+                            
+                            if (matchingContestants.length > 0) {
+                                // Use the first match (could be refined further if needed)
+                                const foundContestant = matchingContestants[0];
+                                console.log(`Found contestant by name fragment in season ${season.name}:`, foundContestant);
+                                droppedContestant.name = foundContestant.name;
+                                droppedContestant.originalId = droppedContestant.id; // Save original for reference
+                                droppedContestant.id = foundContestant.id; // Update to correct ID
+                                if (!droppedContestant.seasonId) droppedContestant.seasonId = season.id;
+                                if (!droppedContestant.seasonName) droppedContestant.seasonName = season.name;
+                                contestantFound = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                // If still not found, use ID as name (fallback)
+                if (!contestantFound) {
+                    console.warn(`Could not find contestant with id: ${droppedContestant.id} in survivorData`);
+                    // Extract a more readable name from the URL if possible
+                    if (typeof droppedContestant.id === 'string' && 
+                        (droppedContestant.id.includes('/') || droppedContestant.id.includes('%2F'))) {
+                        let readableName = droppedContestant.id;
+                        // Get the last part of the path
+                        if (readableName.includes('/')) {
+                            readableName = readableName.split('/').pop();
+                        }
+                        if (readableName.includes('%2F')) {
+                            readableName = readableName.split('%2F').pop();
+                        }
+                        // Clean up and capitalize
+                        readableName = readableName
+                            .replace(/\.\w+$/, '') // Remove file extension
+                            .replace(/_/g, ' ')    // Replace underscores with spaces
+                            .replace(/-/g, ' ')    // Replace hyphens with spaces
+                            .replace(/%20/g, ' '); // Replace URL encoded spaces
+                            
+                        // Capitalize each word
+                        readableName = readableName.split(' ')
+                            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                            .join(' ');
+                            
+                        droppedContestant.name = readableName;
+                    } else {
+                        droppedContestant.name = droppedContestant.id;
+                    }
+                } else {
+                    console.log(`Updated contestant name to: ${droppedContestant.name}`);
+                }
+            } else {
+                console.log(`Using existing contestant name: ${droppedContestant.name}`);
             }
         } catch (error) {
             console.error("Failed to parse dropped contestant data:", error);
@@ -843,35 +964,25 @@ const GlobalRankings = ({ seasonListRef }) => {
               const isFirstEmptySlot = !isDisplayingGlobal && index === 0 && contestant.isEmpty; 
 
               return (
-                <div
-                  key={`${contestant.id}-${index}`}
-                  className={`ranking-item ${contestant.isEmpty ? 'empty-slot' : ''}`}
+                <div 
+                  key={`${contestant.id}-${index}`} 
+                  className="ranking-item"
+                  onClick={() => handleMobileSlotClick(index)}
                 >
-                  <div className={`ranking-number ${!isDisplayingGlobal ? 'number-hidden' : ''}`}> {/* Show number if displaying global */}
-                    {index + 1}
-                  </div>
-                  <img
-                    src={contestant.imageUrl || "/images/placeholder.jpg"}
-                    alt={contestant.name}
-                    className={`contestant-image ${contestant.isSeason ? 'season-logo' : ''} ${contestant.isEmpty ? 'placeholder-hidden' : ''}`}
-                    draggable="false"
-                  />
-                  <div 
-                    className={`${contestant.isSeason ? "season-name" : "contestant-name"} ${contestant.isEmpty ? 'empty-name' : ''} ${contestant.isEmpty && !isFirstEmptySlot ? 'placeholder-hidden' : ''}`} 
-                    style={{ color: contestant.isEmpty ? '#999' : '#000000' }}
-                  >
-                    {isFirstEmptySlot
-                        ? <span className="submit-prompt-text">Submit your votes!</span> 
-                        : contestant.isEmpty
-                            ? contestant.name
-                            : (contestant.isSeason 
-                                ? contestant.name.replace("Survivor: ", "").replace("Survivor ", "") 
-                                : contestant.name)
-                    }
-                    {contestant.totalScore !== undefined && 
-                      <span className="global-score"> {contestant.totalScore} pts</span>
-                    }
-                  </div>
+                    <div className="ranking-number">{index + 1}</div>
+                    <img
+                        src={contestant.imageUrl || "/images/placeholder.jpg"}
+                        alt={contestant.name}
+                        className={`contestant-image`} 
+                        draggable="false"
+                    />
+                    <div className="contestant-name">
+                        {contestant.name}
+                        {/* Show total points if available */} 
+                        {contestant.totalScore !== undefined && 
+                          <span className="global-score"> {contestant.totalScore} pts</span> 
+                        }
+                    </div>
                 </div>
               );
             })
@@ -1430,6 +1541,107 @@ const GlobalRankings = ({ seasonListRef }) => {
 
   // -----------------------
 
+  // State for visual feedback on mobile clicks
+  const [lastClickedIndex, setLastClickedIndex] = useState(null);
+  const lastClickedTimeoutRef = useRef(null);
+  
+  // Function to handle mobile slot click
+  const handleMobileSlotClick = (index) => {
+    // Check if mobile first, regardless of other conditions
+    if (isMobile && seasonListRef && seasonListRef.current) {
+      console.log(`[GlobalRankings] Mobile click on slot ${index}, showing menu`);
+      
+      // Set target index for adding contestants
+      setTargetMobileAddIndex(index);
+      
+      // Set the last clicked index for visual feedback
+      setLastClickedIndex(index);
+      
+      // Clear any existing timeout
+      if (lastClickedTimeoutRef.current) {
+        clearTimeout(lastClickedTimeoutRef.current);
+      }
+      
+      // Clear the visual indicator after 1 second
+      lastClickedTimeoutRef.current = setTimeout(() => {
+        setLastClickedIndex(null);
+      }, 1000);
+      
+      // DIRECT DOM APPROACH: Trigger menu visibility via DOM manipulation
+      // and THEN call the component methods as backup
+      const seasonsSection = document.querySelector('.seasons-section');
+      if (seasonsSection) {
+        document.body.setAttribute('data-page', 'create');
+        
+        // Force display and visibility
+        seasonsSection.style.position = 'fixed';
+        seasonsSection.style.top = 'auto';
+        seasonsSection.style.bottom = '0';
+        seasonsSection.style.left = '0';
+        seasonsSection.style.right = '0';
+        seasonsSection.style.height = '85vh'; 
+        seasonsSection.style.maxHeight = '85vh';
+        seasonsSection.style.transform = 'translateY(0)';
+        seasonsSection.style.opacity = '1';
+        seasonsSection.style.visibility = 'visible';
+        seasonsSection.style.display = 'block';
+        seasonsSection.style.zIndex = '1000';
+        
+        // Add required classes
+        seasonsSection.classList.add('visible');
+        seasonsSection.classList.remove('collapsed');
+        
+        // Lock body scroll
+        document.body.style.overflow = 'hidden';
+        
+        console.log('[GlobalRankings] Forced seasons-section to be visible via DOM');
+        
+        // Try to auto-select Season 49
+        setTimeout(() => {
+          try {
+            // Find and click the season button for Season 49
+            const s49Button = seasonsSection.querySelector('[data-season-id="s49"], button[value="s49"], [data-id="s49"]');
+            if (s49Button) {
+              console.log('[GlobalRankings] Found Season 49 button, clicking it');
+              s49Button.click();
+            } else {
+              // Try by text content
+              const seasonCards = seasonsSection.querySelectorAll('.season-card');
+              seasonCards.forEach(card => {
+                if (card.textContent.includes('49') || card.textContent.includes('Season 49')) {
+                  console.log('[GlobalRankings] Found Season 49 card by text, clicking it');
+                  card.click();
+                }
+              });
+            }
+          } catch (err) {
+            console.error('[GlobalRankings] Error auto-selecting Season 49:', err);
+          }
+        }, 100); // Small delay to ensure DOM is ready
+      }
+      
+      // Try component methods as backup
+      try {
+        if (typeof seasonListRef.current.showMenu === 'function') {
+          seasonListRef.current.showMenu();
+          console.log('[GlobalRankings] Called showMenu successfully');
+        } else {
+          console.error('[GlobalRankings] seasonListRef.current.showMenu is not a function!', seasonListRef.current);
+        }
+        
+        // Also try to set showMenuOnMobile directly
+        if (typeof seasonListRef.current.setShowMenuOnMobile === 'function') {
+          seasonListRef.current.setShowMenuOnMobile(true);
+          console.log('[GlobalRankings] Called setShowMenuOnMobile(true)');
+        }
+      } catch (err) {
+        console.error('[GlobalRankings] Error showing season menu:', err);
+      }
+    } else {
+      console.log(`[GlobalRankings] Not showing menu. isMobile: ${isMobile}, isEditable: ${isEditable}, seasonListRef exists: ${!!seasonListRef && !!seasonListRef.current}`);
+    }
+  };
+
   // Render list detail view
   if (checkingSubmissionStatus) {
     return <div className="loading">Checking submission status...</div>;
@@ -1514,7 +1726,11 @@ const GlobalRankings = ({ seasonListRef }) => {
                                 : null;
 
                               return (
-                                <div key={`${contestant.id}-${index}`} className="ranking-item">
+                                <div 
+                                  key={`${contestant.id}-${index}`} 
+                                  className="ranking-item"
+                                  onClick={() => handleMobileSlotClick(index)}
+                                >
                                     <div className="ranking-number">{index + 1}</div>
                                     <img
                                         src={contestant.imageUrl || "/images/placeholder.jpg"}
@@ -1554,17 +1770,12 @@ const GlobalRankings = ({ seasonListRef }) => {
                   currentRanking.contestants.map((contestant, index) => (
                     <div
                       key={`${contestant.id}-${index}`}
-                      className={`ranking-item ${contestant.isEmpty ? 'empty-slot' : ''}`}
+                      className={`ranking-item ${contestant.isEmpty ? 'empty-slot' : ''} ${lastClickedIndex === index ? 'mobile-clicked' : ''}`}
                       data-index={index}
                       draggable={isEditable && !contestant.isEmpty}
                       onDragStart={(e) => isEditable && !contestant.isEmpty && handleItemDragStart(e, index)}
                       onDragEnd={isEditable ? handleItemDragEnd : undefined}
-                      onClick={() => {
-                        if (isMobile && isEditable && seasonListRef && seasonListRef.current) {
-                          setTargetMobileAddIndex(index);
-                          seasonListRef.current.showMenu();
-                        }
-                      }}
+                      onClick={() => handleMobileSlotClick(index)}
                       onTouchStart={(e) => handleTouchStart(e, index)}
                       onTouchMove={handleTouchMove}
                       onTouchEnd={handleTouchEnd}

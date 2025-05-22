@@ -1099,5 +1099,30 @@ export const survivorSeasons = [
       { id: "stephanie-berger", name: "Stephanie Berger" },
       { id: "thomas-krottinger", name: "Thomas Krottinger" }
     ]
+  },
+
+  {
+    id: "s49",
+    name: "Survivor 49",
+    contestants: [
+      { id: "michelle-chukwujekwu", name: "Michelle Chukwujekwu" },
+      { id: "kristina-miller", name: "Kristina Mills" },
+      { id: "jeremiah-ing", name: "Jeremiah Ing" },
+      { id: "alex-moore", name: "Alex Moore" },
+      { id: "savannah-louie", name: "Savannah Louie" },
+      { id: "nicole-mazullo", name: "Nicole Mazullo" },
+      { id: "rizo-velovic", name: "Rizo Velovic" },
+      { id: "sage-ahrens-nichols", name: "Sage Ahrens-Nichols" },
+      { id: "sophia-balerdi", name: "Sophia 'Sophi' Balerdi" },
+      { id: "sophia-segreti", name: "Sophia 'Sophie' Segreti" },
+      { id: "jake-latimer", name: "Jake Latimer" },
+      { id: "shannon-fairweather", name: "Shannon Fairweather" },
+      { id: "annie-davis", name: "Annie Davis" },
+      { id: "jawan-pitts", name: "Jawan Pitts" },
+      { id: "jason-treul", name: "Jason Treul" },
+      { id: "matt-williams", name: "Matt Williams" },
+      { id: "steven-ramm", name: "Steven Ramm" },
+      { id: "nate-moore", name: "Nate Moore" },
+    ]
   }
-]; 
+]

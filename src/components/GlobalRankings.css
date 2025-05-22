@@ -969,3 +969,17 @@
   /* ... rest of CSS ... */
 }
 
+/* Add highlighting for mobile clicked items */
+.mobile-clicked {
+  background-color: rgba(0, 123, 255, 0.2) !important;
+  border: 2px solid #007bff !important;
+  box-shadow: 0 0 8px rgba(0, 123, 255, 0.5) !important;
+  animation: pulse 1s ease;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}
+

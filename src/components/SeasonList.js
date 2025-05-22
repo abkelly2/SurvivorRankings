@@ -571,12 +571,19 @@ const SeasonList = forwardRef(({
       return;
     }
 
+    console.log("Starting drag with contestant:", contestant);
+    
+    // Get image URL but ensure it's either a proper URL or null
     const imageUrl = getCachedImageUrl(contestant.id);
+    
+    // Ensure we're creating a valid JSON data object
     const data = {
       id: contestant.id,
       name: contestant.name || 'Unknown Contestant',
-      imageUrl: imageUrl,
-      isSeason: false // Mark as contestant
+      imageUrl: imageUrl && !imageUrl.startsWith('data:') ? imageUrl : '/images/placeholder.jpg', // Ensure valid URL
+      isSeason: false, // Mark as contestant
+      seasonId: contestant.seasonId || null,
+      seasonName: contestant.seasonName || null
     };
 
     try {
@@ -585,10 +592,18 @@ const SeasonList = forwardRef(({
       e.dataTransfer.setData('text/plain', jsonData);
       e.dataTransfer.setData('application/json', jsonData);
       e.dataTransfer.effectAllowed = 'move';
+      
+      // Create a custom drag image if needed
+      if (e.target.querySelector('img')) {
+        const img = e.target.querySelector('img');
+        e.dataTransfer.setDragImage(img, 25, 25);
+      }
+      
       if (e.currentTarget) {
         e.currentTarget.classList.add('dragging-item');
       }
       setDraggedContestant(data); // Keep track of dragged item if needed
+      console.log("Drag started with data:", jsonData);
     } catch (error) {
       console.error("Error during drag start:", error);
       e.preventDefault();
@@ -597,10 +612,19 @@ const SeasonList = forwardRef(({
 
   // Restore handleSeasonDragStart for seasons
   const handleSeasonDragStart = (e, season) => {
+    if (!season || !season.id) {
+      console.error("Drag start failed: No season or ID");
+      e.preventDefault();
+      return;
+    }
+
+    // Get image URL but ensure it's either a proper URL or null
     const imageUrl = getCachedImageUrl(season.id);
+    
+    // Ensure we're creating a valid JSON data object
     const seasonWithImage = {
       ...season,
-      imageUrl: imageUrl,
+      imageUrl: imageUrl && !imageUrl.startsWith('data:') ? imageUrl : '/images/placeholder.jpg', // Ensure valid URL
       isSeason: true // Mark as season
     };
 
@@ -618,6 +642,7 @@ const SeasonList = forwardRef(({
       if (e.currentTarget) {
         e.currentTarget.classList.add('dragging'); // Use 'dragging' or 'dragging-item'
       }
+      console.log("Season drag started with data:", jsonData);
     } catch (error) {
       console.error('Error in handleSeasonDragStart:', error);
       e.preventDefault();
