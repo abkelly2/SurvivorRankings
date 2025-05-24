@@ -181,11 +181,25 @@
   background-color: #f5f5f5;
 }
 
-/* Styling for the remove button */
-.remove-contestant-button {
+/* Styling for the remove button wrapper */
+.remove-button-wrapper {
   position: absolute;
   top: 5px;
   right: 5px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  touch-action: none;
+}
+
+/* Styling for the remove button */
+.remove-contestant-button {
+  position: relative;
+  top: auto;
+  right: auto;
   background-color: #ff6b6b;
   color: white;
   border: none;
@@ -203,6 +217,22 @@
 .remove-contestant-button:hover {
   opacity: 1;
   background-color: #f44336;
+}
+
+/* Ensure the wrapper is tappable on mobile */
+@media (max-width: 768px) {
+  .remove-button-wrapper {
+    width: 40px;
+    height: 40px;
+    padding: 5px;
+  }
+  
+  .remove-contestant-button {
+    width: 24px;
+    height: 24px;
+    font-size: 16px;
+    line-height: 22px;
+  }
 }
 
 /* Style for item being dragged for reordering (Desktop) */

@@ -860,6 +860,17 @@ const GlobalRankings = ({ seasonListRef }) => {
         isEmpty: true
     };
     setCurrentRanking(prev => ({ ...prev, contestants: newList }));
+
+    // Clear target index from all sources
+    setTargetMobileAddIndex(null);
+    targetMobileAddIndexRef.current = null;
+    if (listRef.current) {
+      delete listRef.current.dataset.targetIndex;
+    }
+    
+    // Remove highlight from all items
+    const allItems = document.querySelectorAll('.ranking-item');
+    allItems.forEach(item => item.classList.remove('mobile-clicked'));
   };
 
   const handleSubmitRanking = async () => {
@@ -1904,13 +1915,23 @@ const GlobalRankings = ({ seasonListRef }) => {
                        </div>
                        {/* Show remove button only if editable and not empty */} 
                        {isEditable && !contestant.isEmpty && (
-                         <button 
-                            className="remove-contestant-button" 
-                            onClick={(e) => { e.stopPropagation(); handleRemoveContestant(index); }}
-                            title="Remove from list"
+                         <div 
+                           className="remove-button-wrapper"
+                           onClick={(e) => {
+                             e.preventDefault();
+                             e.stopPropagation();
+                             handleRemoveContestant(index);
+                           }}
+                           onTouchStart={(e) => {
+                             e.preventDefault();
+                             e.stopPropagation();
+                             handleRemoveContestant(index);
+                           }}
                          >
-                            &times;
-                         </button>
+                           <button className="remove-contestant-button">
+                             &times;
+                           </button>
+                         </div>
                        )}
                     </div>
                   ))

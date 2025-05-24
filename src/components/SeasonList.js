@@ -157,17 +157,22 @@ const SeasonList = forwardRef(({
           // Force show the menu state
           setShowMenuOnMobile(true);
           
+          // Check if we're in global rankings view
+          const isGlobalRankings = window.location.pathname.includes('/global-rankings/season-49');
+          
           // Trigger animation
           requestAnimationFrame(() => {
             seasonsSection.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
             seasonsSection.style.transform = 'translateY(0)';
             seasonsSection.style.opacity = '1';
             
-            // Auto-select Season 49 after animation starts
-            setTimeout(() => {
-              console.log('[SeasonList] Auto-selecting Season 49');
-              handleSeasonCardClick({ id: 's49', name: 'Season 49' });
-            }, 100);
+            // If in global rankings, directly show Season 49 contestants
+            if (isGlobalRankings) {
+              console.log('[SeasonList] In global rankings, directly showing Season 49');
+              setSelectedSeason('s49');
+              // Clear any search term to ensure we show all contestants
+              setSearchTerm('');
+            }
           });
         }
       }
@@ -852,7 +857,8 @@ const SeasonList = forwardRef(({
         />
       )}
       
-      {!selectedSeason ? (
+      {/* Only show season selection if NOT in global rankings */}
+      {!selectedSeason && !window.location.pathname.includes('/global-rankings/season-49') ? (
         // Show seasons list
         <>
           <h2 className="section-title">
@@ -929,8 +935,7 @@ const SeasonList = forwardRef(({
                 >
                   <img
                     className="season-logo"
-                    // Use getCachedImageUrl for season logos in grid
-                    src={getCachedImageUrl(season.id)} // Use cache
+                    src={getCachedImageUrl(season.id)}
                     alt={`Season ${season.id.replace('s', '')} Logo`}
                     loading="lazy"
                   />
@@ -940,20 +945,16 @@ const SeasonList = forwardRef(({
             </div>
           )}
         </>
-      ) :
+      ) : (
         // Show contestants when a season is selected
         <div className="contestants-container">
           <h2 className="section-title">
-            {(!isMobile) && (
-              <div 
-                className={`collapse-toggle ${isCollapsed ? 'collapsed' : ''}`}
-                onClick={toggleCollapse}
-                title={isCollapsed ? "Expand seasons menu" : "Collapse seasons menu"}
-              />
+            {/* Only show back button if NOT in global rankings */}
+            {!window.location.pathname.includes('/global-rankings/season-49') && (
+              <button className="back-button" onClick={handleBackClick}>
+                ← Back to Seasons
+              </button>
             )}
-            <button className="back-button" onClick={handleBackClick}>
-              ← Back to Seasons
-            </button>
             <span>
               {survivorSeasons.find(s => s.id === selectedSeason)?.name}
             </span>
@@ -1005,31 +1006,18 @@ const SeasonList = forwardRef(({
                   }) : undefined}
                 onDragEnd={createMode ? handleDragEnd : undefined}
               >
-                <img
+                <img 
+                  src={getCachedImageUrl(contestant.id) || `/images/Headshots/Season ${selectedSeason.substring(1)}/${contestant.id}.png`}
                   className="contestant-image"
-                  src={getCachedImageUrl(contestant.id)} // Use cache
-                  alt={contestant.name}
+                  alt=""
                   loading="lazy"
                 />
                 <div className="contestant-name">{contestant.name}</div>
               </div>
             ))}
           </div>
-
-          {/* Add larger season image on mobile for adding the entire season */}
-          {isMobile && createMode && (
-            <div className="season-image-container" onClick={() => handleAddSeasonToList(survivorSeasons.find(s => s.id === selectedSeason))}>
-              <img
-                className="season-large-image"
-                src={getCachedImageUrl(selectedSeason)}
-                alt={`${survivorSeasons.find(s => s.id === selectedSeason)?.name} Logo`}
-                loading="lazy"
-              />
-              <div className="season-add-prompt">Tap to add the season to the list</div>
-            </div>
-          )}
         </div>
-      }
+      )}
     </div>
   );
 });
