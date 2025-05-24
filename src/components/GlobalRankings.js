@@ -895,44 +895,84 @@ const GlobalRankings = ({ seasonListRef }) => {
     setSubmitSuccess(false);
     setSubmitError('');
 
-    const userRankingRef = doc(db, 'userGlobalRankings', user.uid);
-    const rankingData = {
-      ranking: currentRanking.contestants, // Save the full list (including empty slots)
-      submittedAt: serverTimestamp()
-    };
-
     try {
+      // First save the user's submission
+      const userRankingRef = doc(db, 'userGlobalRankings', user.uid);
+      const rankingData = {
+        ranking: currentRanking.contestants,
+        submittedAt: serverTimestamp()
+      };
+
       // Use setDoc with merge:true to update only the specific list's data
       await setDoc(userRankingRef, {
         [listId]: rankingData
       }, { merge: true });
 
+      // Now update the global rankings
+      const globalRankingRef = doc(db, 'globalRankingsData', listId);
+      
+      // Get current global rankings data
+      const globalSnap = await getDoc(globalRankingRef);
+      const globalData = globalSnap.exists() ? globalSnap.data() : { totalVotes: 0, contestantScores: {} };
+      
+      // Initialize or get existing contestant scores
+      const contestantScores = globalData.contestantScores || {};
+      
+      // Calculate points for each contestant in the submission (10 points for 1st, 9 for 2nd, etc.)
+      currentRanking.contestants.forEach((contestant, index) => {
+        if (!contestant.isEmpty) {
+          const points = 10 - index; // 10 points for index 0, 9 for index 1, etc.
+          if (!contestantScores[contestant.id]) {
+            contestantScores[contestant.id] = {
+              id: contestant.id,
+              name: contestant.name,
+              imageUrl: contestant.imageUrl,
+              totalScore: points,
+              seasonId: contestant.seasonId,
+              seasonName: contestant.seasonName
+            };
+          } else {
+            contestantScores[contestant.id].totalScore += points;
+          }
+        }
+      });
+
+      // Calculate top 10 based on total scores
+      const top10 = Object.values(contestantScores)
+        .sort((a, b) => b.totalScore - a.totalScore)
+        .slice(0, 10);
+
+      // Update global rankings document
+      await setDoc(globalRankingRef, {
+        totalVotes: (globalData.totalVotes || 0) + 1,
+        contestantScores,
+        top10,
+        lastUpdated: serverTimestamp()
+      });
+
       setSubmitSuccess(true);
-      setUserHasSubmitted(true); // Mark as submitted
-      setShowingGlobalRanking(true); // Switch view to global
+      setUserHasSubmitted(true);
+      setShowingGlobalRanking(true);
       setTimeout(() => setSubmitSuccess(false), 3000);
       console.log(`Ranking submitted successfully for ${listId}`);
 
-      // Trigger fetch for potentially updated global data
-      setLoadingGlobalRanking(true);
-      setErrorGlobalRanking(''); // Clear previous errors
-      const globalRankingRef = doc(db, 'globalRankingsData', listId);
-      try {
-        const globalSnap = await getDoc(globalRankingRef);
-        if (globalSnap.exists()) {
-          setGlobalTop10(globalSnap.data().top10 || []);
-        } else { setGlobalTop10([]); }
-      } catch (error) { 
-        console.error("Error reloading global ranking after submit:", error);
-        setErrorGlobalRanking('Failed to reload global ranking.'); 
-        setGlobalTop10([]); 
-      }
-      finally { setLoadingGlobalRanking(false); }
+      // Update local state with new global data
+      setGlobalTop10(top10);
+      setCurrentListTotalVotes((globalData.totalVotes || 0) + 1);
+      
+      // Also update the globalRankings state for the overview
+      setGlobalRankings(prev => ({
+        ...prev,
+        [listId]: {
+          top10,
+          totalVotes: (globalData.totalVotes || 0) + 1
+        }
+      }));
 
     } catch (error) {
       console.error("Error submitting ranking:", error);
       setSubmitError("Failed to submit ranking. Please try again.");
-      setTimeout(() => setSubmitError(''), 5000); // Hide error after 5s
+      setTimeout(() => setSubmitError(''), 5000);
     } finally {
       setIsSubmitting(false);
     }
