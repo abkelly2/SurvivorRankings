@@ -1935,7 +1935,8 @@ const GlobalRankings = ({ seasonListRef }) => {
                        />
                        <div className={`${contestant.isSeason ? "season-name" : "contestant-name"} ${contestant.isEmpty ? 'empty-name' : ''}`} 
                             style={{ color: contestant.isEmpty ? '#999' : '#000000' }}>
-                          {contestant.isEmpty ? contestant.name :
+                          {contestant.isEmpty ? 
+                            (isMobile ? "tap to vote!" : contestant.name) :
                             (contestant.isSeason
                               ? contestant.name.replace('Survivor: ', '').replace('Survivor ', '')
                               : contestant.name)
