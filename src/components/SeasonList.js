@@ -122,6 +122,9 @@ const SeasonList = forwardRef(({
         if (seasonsSection) {
           console.log('[SeasonList] Found seasons-section, applying styles');
           
+          // Log initial data-page state
+          console.log('[SeasonList] Current data-page before menu show:', document.body.dataset.page);
+          
           // Immediately set critical display properties
           seasonsSection.style.display = 'block';
           seasonsSection.style.visibility = 'visible';
@@ -158,7 +161,17 @@ const SeasonList = forwardRef(({
           setShowMenuOnMobile(true);
           
           // Check if we're in global rankings view
-          const isGlobalRankings = window.location.pathname.includes('/global-rankings/season-49');
+          const isGlobalRankings = window.location.pathname.includes('/global-rankings/');
+          console.log('[SeasonList] isGlobalRankings:', isGlobalRankings, 'pathname:', window.location.pathname);
+          
+          // IMPORTANT: Only set data-page to "create" if we're NOT in global rankings
+          // AND if we don't already have a data-page attribute
+          if (!isGlobalRankings && !document.body.dataset.page) {
+            console.log('[SeasonList] Setting data-page to "create"');
+            document.body.setAttribute('data-page', 'create');
+          } else {
+            console.log('[SeasonList] Preserving existing data-page:', document.body.dataset.page);
+          }
           
           // Trigger animation
           requestAnimationFrame(() => {
@@ -172,6 +185,8 @@ const SeasonList = forwardRef(({
               setSelectedSeason('s49');
               // Clear any search term to ensure we show all contestants
               setSearchTerm('');
+              // Log data-page state after showing Season 49
+              console.log('[SeasonList] data-page after showing Season 49:', document.body.dataset.page);
             }
           });
         }
@@ -212,8 +227,10 @@ const SeasonList = forwardRef(({
       setListUpdateCallback(() => callback);
     },
     cleanup: () => {
-      // Reset body attributes
-      if (document.body.getAttribute('data-page') === 'create') {
+      // Only remove data-page if we're not in global rankings
+      // AND if it's currently set to "create"
+      const isGlobalRankings = window.location.pathname.includes('/global-rankings');
+      if (!isGlobalRankings && document.body.dataset.page === 'create') {
         document.body.removeAttribute('data-page');
       }
       
@@ -228,10 +245,14 @@ const SeasonList = forwardRef(({
         seasonsSection.classList.remove('visible');
         
         // Reset any inline styles
+        seasonsSection.style.position = '';
+        seasonsSection.style.bottom = '';
         seasonsSection.style.height = '';
         seasonsSection.style.maxHeight = '';
-        seasonsSection.style.bottom = '';
+        seasonsSection.style.zIndex = '';
+        seasonsSection.style.transition = '';
         seasonsSection.style.padding = '';
+        seasonsSection.style.top = '';
       }
       setListUpdateCallback(null);
     }
@@ -325,6 +346,8 @@ const SeasonList = forwardRef(({
   
   // Easter egg - chance to find an idol on season card click
   const handleSeasonClick = async (seasonId) => {
+    console.log('🎯 [handleSeasonClick] Called with seasonId:', seasonId);
+    
     // Save current scroll position before navigating
     const scrollContainer = document.querySelector('.seasons-section') || 
                            document.querySelector('.seasons-grid')?.parentElement;
@@ -332,13 +355,15 @@ const SeasonList = forwardRef(({
     if (scrollContainer) {
       const currentPosition = scrollContainer.scrollTop;
       setScrollPosition(currentPosition);
-      console.log('Saved scroll position:', currentPosition);
+      console.log('📜 [handleSeasonClick] Saved scroll position:', currentPosition);
     }
     
+    console.log('🔄 [handleSeasonClick] Setting selectedSeason to:', seasonId);
     setSelectedSeason(seasonId);
     
     // 50% chance of finding an immunity idol for testing purposes
     if (Math.random() < 0.05) {
+      console.log('🏆 [handleSeasonClick] Found an idol!');
       setShowIdolNotification(true);
       setTimeout(() => setShowIdolNotification(false), 3000);
       // Track idol find in Firestore
@@ -353,7 +378,7 @@ const SeasonList = forwardRef(({
           idolsFound: currentIdols + 1
         });
       } catch (error) {
-        console.error('Error tracking idol find:', error);
+        console.error('❌ [handleSeasonClick] Error tracking idol find:', error);
       }
     }
   };
@@ -507,28 +532,82 @@ const SeasonList = forwardRef(({
   
   // New function to handle clicking on a season to add it to the list
   const handleSeasonCardClick = async (season) => {
-    console.log('Season card clicked:', season.name, 'createMode:', createMode, 'isMobile:', isMobile);
+    console.log('🎮 [handleSeasonCardClick] Called with:', {
+      seasonName: season.name,
+      createMode,
+      isMobile,
+      pathname: window.location.pathname,
+      selectedSeason: selectedSeason
+    });
     
-    // Always navigate to the season's contestants view
+    // Save current scroll position before navigating
+    const scrollContainer = document.querySelector('.seasons-section') || 
+                           document.querySelector('.seasons-grid')?.parentElement;
+    
+    if (scrollContainer) {
+      const currentPosition = scrollContainer.scrollTop;
+      setScrollPosition(currentPosition);
+      console.log('📜 [handleSeasonCardClick] Saved scroll position:', currentPosition);
+    }
+
+    // Check conditions for navigation
+    const isGlobalRankings = window.location.pathname.includes('/global-rankings/');
+    console.log('🔍 [handleSeasonCardClick] Checking navigation conditions:', {
+      notCreateMode: !createMode,
+      isDesktop: !isMobile,
+      isGlobalRankings,
+      shouldNavigate: !createMode || !isMobile || isGlobalRankings
+    });
+
+    // For mobile in create mode (not in global rankings), we want to show contestants first
+    if (isMobile && createMode && !isGlobalRankings) {
+      console.log('📱 [handleSeasonCardClick] Mobile create mode - showing contestants');
+      await handleSeasonClick(season.id);
+      return;
+    }
+
+    // For all other cases (desktop, non-create mode, or global rankings)
+    console.log('➡️ [handleSeasonCardClick] Standard navigation - showing season:', season.id);
     await handleSeasonClick(season.id);
-    
-    // For mobile in create mode, we don't want to hide yet
-    // (we want to show the contestants first, then hide after selection)
   };
 
   // Handle updating parent elements when not rendering
   useEffect(() => {
-    // console.log(`[SeasonList Effect] Running. isMobile=${isMobile}, createMode=${createMode}, showMenuOnMobile=${showMenuOnMobile}`);
-    if (isMobile) {
-      // Always try to find the element fresh
-      const seasonsSection = document.querySelector('.seasons-section'); 
-      // console.log('[SeasonList Effect] Found seasonsSection:', seasonsSection);
+    console.log('[SeasonList Effect] Running with:', {
+      isMobile,
+      createMode,
+      showMenuOnMobile,
+      currentDataPage: document.body.dataset.page,
+      pathname: window.location.pathname
+    });
 
+    if (isMobile) {
+      const seasonsSection = document.querySelector('.seasons-section'); 
       if (seasonsSection) {
+        const isGlobalRankings = window.location.pathname.includes('/global-rankings');
+        console.log('[SeasonList Effect] isGlobalRankings:', isGlobalRankings);
+        
+        // IMPORTANT: If we're in global rankings, ensure we maintain "global" data-page
+        if (isGlobalRankings && document.body.dataset.page !== 'global') {
+          console.log('[SeasonList Effect] Restoring data-page to "global" in global rankings context');
+          document.body.setAttribute('data-page', 'global');
+        }
+        
         if (createMode && showMenuOnMobile) {
           // --- SHOWING MENU --- 
-          // console.log('[SeasonList Effect] Applying styles to SHOW menu.');
-          document.body.setAttribute('data-page', 'create'); // Keep for potential global styles
+          console.log('[SeasonList Effect] Showing menu. Current data-page:', document.body.dataset.page);
+          
+          // Only set data-page to "create" if we're not in global rankings
+          // AND if we don't already have a data-page attribute
+          if (!isGlobalRankings && !document.body.dataset.page) {
+            console.log('[SeasonList Effect] Setting data-page to "create"');
+            document.body.setAttribute('data-page', 'create');
+          } else if (isGlobalRankings) {
+            console.log('[SeasonList Effect] Ensuring data-page is "global" in global rankings');
+            document.body.setAttribute('data-page', 'global');
+          } else {
+            console.log('[SeasonList Effect] Preserving existing data-page:', document.body.dataset.page);
+          }
           
           // Apply styles directly
           seasonsSection.style.position = 'fixed';
@@ -551,9 +630,12 @@ const SeasonList = forwardRef(({
           
           document.body.style.overflow = 'hidden';
           
+          console.log('[SeasonList Effect] After showing menu. data-page:', document.body.dataset.page);
+          
         } else {
           // --- HIDING MENU --- 
-          // console.log('[SeasonList Effect] Applying styles to HIDE menu.');
+          console.log('[SeasonList Effect] Hiding menu. Current data-page:', document.body.dataset.page);
+          
           seasonsSection.style.transform = 'translateY(100%)'; // Slide down
           seasonsSection.style.opacity = '0';
           seasonsSection.classList.remove('visible'); // Remove class
@@ -561,9 +643,16 @@ const SeasonList = forwardRef(({
           // Re-enable body scrolling
           document.body.style.overflow = '';
           
-          // Remove attribute if it exists
-          if (document.body.getAttribute('data-page') === 'create') {
+          // Only remove data-page if we're not in global rankings
+          // AND if it's currently set to "create"
+          if (!isGlobalRankings && document.body.dataset.page === 'create') {
+            console.log('[SeasonList Effect] Removing data-page "create"');
             document.body.removeAttribute('data-page');
+          } else if (isGlobalRankings) {
+            console.log('[SeasonList Effect] Ensuring data-page is "global" in global rankings');
+            document.body.setAttribute('data-page', 'global');
+          } else {
+            console.log('[SeasonList Effect] Preserving data-page:', document.body.dataset.page);
           }
 
           // Reset styles after transition completes
@@ -581,18 +670,34 @@ const SeasonList = forwardRef(({
               seasonsSection.style.transition = ''; // Clear transition when hidden
               seasonsSection.style.padding = '';
               seasonsSection.style.top = '';
+              
+              // Ensure we maintain "global" in global rankings context
+              if (isGlobalRankings) {
+                document.body.setAttribute('data-page', 'global');
+              }
+              
+              console.log('[SeasonList Effect] After hiding menu. data-page:', document.body.dataset.page);
             }
           }, 300); // Match CSS transition time
         }
-      } else {
-          // console.warn('[SeasonList Effect] Could not find .seasons-section element.');
       }
     }
     
     // Cleanup function remains important
     return () => {
-      if (document.body.getAttribute('data-page') === 'create') {
+      const isGlobalRankings = window.location.pathname.includes('/global-rankings');
+      console.log('[SeasonList Effect] Cleanup. isGlobalRankings:', isGlobalRankings, 'data-page:', document.body.dataset.page);
+      
+      // Only remove data-page if we're not in global rankings
+      // AND if it's currently set to "create"
+      if (!isGlobalRankings && document.body.dataset.page === 'create') {
+        console.log('[SeasonList Effect] Cleanup: Removing data-page "create"');
         document.body.removeAttribute('data-page');
+      } else if (isGlobalRankings) {
+        console.log('[SeasonList Effect] Cleanup: Ensuring data-page is "global"');
+        document.body.setAttribute('data-page', 'global');
+      } else {
+        console.log('[SeasonList Effect] Cleanup: Preserving data-page:', document.body.dataset.page);
       }
       document.body.style.overflow = ''; // Ensure scroll is restored on unmount
     };
@@ -821,6 +926,15 @@ const SeasonList = forwardRef(({
     }
   };
 
+  // Add effect to automatically show Season 49 in global rankings view
+  useEffect(() => {
+    const isGlobalRankings = window.location.pathname.includes('/global-rankings/season-49');
+    if (isGlobalRankings && selectedSeason !== 's49') {
+      console.log('[SeasonList] Auto-selecting Season 49 for global rankings view');
+      setSelectedSeason('s49');
+    }
+  }, [window.location.pathname]); // Re-run if pathname changes
+
   // Don't render the component at all ONLY when it's the hidden mobile menu
   // in create mode and not explicitly shown.
   // Render in all other cases (desktop, mobile non-create, mobile create shown).
@@ -829,7 +943,18 @@ const SeasonList = forwardRef(({
     return null;
   }
 
-  // console.log('[SeasonList Render] Rendering component');
+  console.log('🎨 [SeasonList Render] Rendering with:', {
+    selectedSeason,
+    createMode,
+    isMobile,
+    pathname: window.location.pathname,
+    showMenuOnMobile
+  });
+
+  // MODIFIED: Determine if we should show contestants based on both selectedSeason and URL
+  const isGlobalRankings = window.location.pathname.includes('/global-rankings/season-49');
+  const shouldShowContestants = selectedSeason && (isGlobalRankings ? selectedSeason === 's49' : true);
+
   return (
     <div ref={sectionRef}>
       {showIdolNotification && (
@@ -839,7 +964,7 @@ const SeasonList = forwardRef(({
       )}
       
       {/* Add a swipe handle / close button for mobile that sits at the top of the menu */}
-      {isMobile && (createMode || window.location.pathname.includes('/global-rankings/')) && (
+      {isMobile && (createMode || isGlobalRankings) && (
         <div 
           className="menu-tab-handle" 
           onClick={(e) => { 
@@ -857,95 +982,8 @@ const SeasonList = forwardRef(({
         />
       )}
       
-      {/* Only show season selection if NOT in global rankings */}
-      {!selectedSeason && !window.location.pathname.includes('/global-rankings/season-49') ? (
-        // Show seasons list
-        <>
-          <h2 className="section-title">
-            {/* Only show collapse toggle on desktop */}
-            {(!isMobile) && (
-              <div 
-                className={`collapse-toggle ${isCollapsed ? 'collapsed' : ''}`}
-                onClick={toggleCollapse}
-                title={isCollapsed ? "Expand seasons menu" : "Collapse seasons menu"}
-              />
-            )}
-            <span>Survivor Seasons</span>
-          </h2>
-          
-          <div className="search-bar-container">
-            <input
-              ref={searchInputRef}
-              type="text"
-              className="contestant-search-bar"
-              placeholder="Search seasons or contestants..."
-              value={searchTerm}
-              onChange={handleSearchChange}
-            />
-            {searchTerm && (
-              <button className="clear-search-button" onClick={handleClearSearch}>
-                ×
-              </button>
-            )}
-          </div>
-          
-          {searchTerm.trim() ? (
-            // Show search results
-            <div className="search-results-container">
-              <h3 className="search-results-title">Search Results</h3>
-              <div className="search-results">
-                {getMatchingContestants().map(contestant => (
-                  <div
-                    key={`${contestant.id}-${contestant.seasonId}`}
-                    className="contestant-item"
-                    onClick={(e) => {
-                      if (createMode) {
-                        handleContestantClick(contestant, e);
-                        hideMenuOnMobile();
-                      }
-                    }}
-                    draggable={!isMobile}
-                    onDragStart={(e) => handleDragStart(e, contestant)}
-                    onDragEnd={handleDragEnd}
-                  >
-                    <img 
-                      src={getCachedImageUrl(contestant.id) || `/images/Headshots/Season ${contestant.seasonId.substring(1)}/${contestant.id}.png`}
-                      className="contestant-image"
-                      alt=""
-                    />
-                    <div className="contestant-name">{contestant.name}</div>
-                    <div className="season-name">
-                      {survivorSeasons.find(s => s.id === contestant.seasonId)?.name || `Season ${contestant.seasonId.substring(1)}`}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            // Show regular season grid
-            <div className="seasons-grid" ref={seasonsGridRef}>
-              {getFilteredSeasons().map((season) => (
-                <div
-                  key={season.id}
-                  className="season-card"
-                  onClick={() => handleSeasonCardClick(season)}
-                  draggable={createMode}
-                  onDragStart={createMode ? (e) => handleSeasonDragStart(e, season) : undefined}
-                  onDragEnd={createMode ? handleDragEnd : undefined}
-                >
-                  <img
-                    className="season-logo"
-                    src={getCachedImageUrl(season.id)}
-                    alt={`Season ${season.id.replace('s', '')} Logo`}
-                    loading="lazy"
-                  />
-                  <p>{season.name.replace('Survivor: ', '').replace('Survivor ', '')}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </>
-      ) : (
+      {/* MODIFIED: Show contestants view if shouldShowContestants is true */}
+      {shouldShowContestants ? (
         // Show contestants when a season is selected
         <div className="contestants-container">
           <h2 className="section-title">
@@ -1017,6 +1055,112 @@ const SeasonList = forwardRef(({
             ))}
           </div>
         </div>
+      ) : (
+        // Show season selection on desktop, or if not in global rankings on mobile */}
+        <>
+          <h2 className="section-title">
+            {/* Only show collapse toggle on desktop */}
+            {(!isMobile) && (
+              <div 
+                className={`collapse-toggle ${isCollapsed ? 'collapsed' : ''}`}
+                onClick={toggleCollapse}
+                title={isCollapsed ? "Expand seasons menu" : "Collapse seasons menu"}
+              />
+            )}
+            <span>Survivor Seasons</span>
+          </h2>
+          
+          <div className="search-bar-container">
+            <input
+              ref={searchInputRef}
+              type="text"
+              className="contestant-search-bar"
+              placeholder="Search seasons or contestants..."
+              value={searchTerm}
+              onChange={handleSearchChange}
+            />
+            {searchTerm && (
+              <button className="clear-search-button" onClick={handleClearSearch}>
+                ×
+              </button>
+            )}
+          </div>
+          
+          {searchTerm.trim() ? (
+            // Show search results
+            <div className="search-results-container">
+              <h3 className="search-results-title">Search Results</h3>
+              <div className="search-results">
+                {getMatchingContestants().map(contestant => (
+                  <div
+                    key={`${contestant.id}-${contestant.seasonId}`}
+                    className="contestant-item"
+                    onClick={(e) => {
+                      if (createMode) {
+                        handleContestantClick(contestant, e);
+                        hideMenuOnMobile();
+                      }
+                    }}
+                    draggable={!isMobile}
+                    onDragStart={(e) => handleDragStart(e, contestant)}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <img 
+                      src={getCachedImageUrl(contestant.id) || `/images/Headshots/Season ${contestant.seasonId.substring(1)}/${contestant.id}.png`}
+                      className="contestant-image"
+                      alt=""
+                    />
+                    <div className="contestant-name">{contestant.name}</div>
+                    <div className="season-name">
+                      {survivorSeasons.find(s => s.id === contestant.seasonId)?.name || `Season ${contestant.seasonId.substring(1)}`}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            // Show regular season grid
+            <div className="seasons-grid" ref={seasonsGridRef}>
+              {getFilteredSeasons().map((season) => {
+                console.log('🎴 [SeasonList Render] Rendering season card:', {
+                  seasonId: season.id,
+                  seasonName: season.name,
+                  createMode,
+                  isMobile,
+                  pathname: window.location.pathname
+                });
+                
+                return (
+                  <div
+                    key={season.id}
+                    className="season-card"
+                    onClick={() => {
+                      console.log('👆 [SeasonList] Season card clicked:', {
+                        seasonId: season.id,
+                        seasonName: season.name,
+                        createMode,
+                        isMobile,
+                        pathname: window.location.pathname
+                      });
+                      handleSeasonCardClick(season);
+                    }}
+                    draggable={createMode}
+                    onDragStart={createMode ? (e) => handleSeasonDragStart(e, season) : undefined}
+                    onDragEnd={createMode ? handleDragEnd : undefined}
+                  >
+                    <img
+                      className="season-logo"
+                      src={getCachedImageUrl(season.id)}
+                      alt={`Season ${season.id.replace('s', '')} Logo`}
+                      loading="lazy"
+                    />
+                    <p>{season.name.replace('Survivor: ', '').replace('Survivor ', '')}</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

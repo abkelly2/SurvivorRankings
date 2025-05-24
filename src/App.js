@@ -68,22 +68,42 @@ function App() {
   
   // Set data-page attribute on body based on current page
   useEffect(() => {
+    console.log('🔍 [App.js] Page Context Debug:', {
+      currentPage,
+      isOnGlobalRankingsPage,
+      createMode,
+      pathname: window.location.pathname,
+      currentDataPage: document.body.getAttribute('data-page')
+    });
+
     if (isOnGlobalRankingsPage) {
+      console.log('✨ [App.js] Setting data-page to "global"');
       document.body.setAttribute('data-page', 'global');
     } else if (createMode) {
+      console.log('✨ [App.js] Setting data-page to "create"');
       document.body.setAttribute('data-page', 'create');
     } else {
+      console.log('✨ [App.js] Setting data-page to "other"');
       document.body.setAttribute('data-page', 'other');
       
       // Ensure mobile menu classes are managed correctly based on actual page context
-      if (!createMode && !isOnGlobalRankingsPage) { // Or adjust if global page can have mobile menu for seasons
-          document.body.classList.remove('show-seasons-mobile');
+      if (!createMode && !isOnGlobalRankingsPage) {
+        console.log('🔄 [App.js] Removing show-seasons-mobile class');
+        document.body.classList.remove('show-seasons-mobile');
       }
     }
     
     return () => {
-      // Cleanup function
-      document.body.removeAttribute('data-page');
+      // Only remove data-page if we're not on a global rankings page
+      const currentPath = window.location.pathname;
+      console.log('🧹 [App.js] Cleanup - Current path:', currentPath);
+      
+      if (!currentPath.includes('/global-rankings')) {
+        console.log('❌ [App.js] Removing data-page attribute');
+        document.body.removeAttribute('data-page');
+      } else {
+        console.log('✅ [App.js] Keeping data-page attribute (on global rankings)');
+      }
     };
   }, [createMode, currentPage, isOnGlobalRankingsPage]);
   
@@ -563,7 +583,7 @@ function App() {
               setAndrewsList={createMode ? () => {} : updateAndrewsList}
               setKendallsList={createMode ? () => {} : updateKendallsList}
               user={user}
-              createMode={createMode}
+              createMode={createMode || window.location.pathname.includes('/global-rankings/')}
             />
           </section>
         </main>

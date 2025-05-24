@@ -152,14 +152,22 @@ const GlobalRankings = ({ seasonListRef }) => {
   // Effect to find the selected list, load user's ranking, check submission status, and load global ranking if needed
   useEffect(() => {
     const loadData = async () => {
+      console.log('🔍 [GlobalRankings] Loading Data Debug:', {
+        listId,
+        userHasSubmitted,
+        showingGlobalRanking,
+        dataPage: document.body.getAttribute('data-page'),
+        bodyClasses: document.body.className
+      });
+      
       setCheckingSubmissionStatus(true);
       setUserHasSubmitted(null);
-      setShowingGlobalRanking(false); // Default to user's view first
+      setShowingGlobalRanking(false);
       setGlobalTop10(null);
       setLoadingGlobalRanking(false);
       setErrorGlobalRanking('');
-      setCurrentRanking(null); // Reset current ranking
-      setCurrentListTotalVotes(0); // Reset current list total votes
+      setCurrentRanking(null);
+      setCurrentListTotalVotes(0);
 
       if (listId) {
         const baseList = sampleLists.find(list => list.id === listId);
@@ -931,12 +939,25 @@ const GlobalRankings = ({ seasonListRef }) => {
   };
 
   const toggleView = () => {
+    console.log('🔄 [GlobalRankings] Toggle View Debug - Before:', {
+      currentView: showingGlobalRanking ? 'global' : 'user',
+      dataPage: document.body.getAttribute('data-page'),
+      bodyClasses: document.body.className
+    });
+    
     setShowingGlobalRanking(prev => !prev);
     // Reset submission feedback when toggling
     setSubmitSuccess(false);
     setSubmitError('');
     
-    // Do NOT modify document.body attributes here - that's causing the background issue
+    // Ensure we maintain global background
+    document.body.setAttribute('data-page', 'global');
+    
+    console.log('🔄 [GlobalRankings] Toggle View Debug - After:', {
+      newView: !showingGlobalRanking ? 'global' : 'user',
+      dataPage: document.body.getAttribute('data-page'),
+      bodyClasses: document.body.className
+    });
   };
 
   // --- Render Functions ---
@@ -1661,14 +1682,15 @@ const GlobalRankings = ({ seasonListRef }) => {
   
   // Function to handle mobile slot click
   const handleMobileSlotClick = (index) => {
-    console.log('=== MOBILE SLOT CLICK DEBUG ===');
-    console.log('1. Initial click detected on index:', index);
-    console.log('2. Current state:', {
+    console.log('🎯 [GlobalRankings] Mobile Slot Click Debug:', {
+      index,
       isMobile,
       showingGlobalRanking,
       isEditable,
       userHasSubmitted,
-      pathname: window.location.pathname
+      pathname: window.location.pathname,
+      currentDataPage: document.body.getAttribute('data-page'),
+      bodyClasses: document.body.className
     });
     
     // Only proceed if we're:
@@ -1676,21 +1698,25 @@ const GlobalRankings = ({ seasonListRef }) => {
     // 2. In the edit view (not showing global ranking)
     // 3. The list is editable
     if (showingGlobalRanking) {
-      console.log('❌ Stopped: Showing global ranking view');
+      console.log('❌ [GlobalRankings] Stopped: Showing global ranking view');
       return;
     }
     
     if (!window.location.pathname.includes('/global-rankings/')) {
-      console.log('❌ Stopped: Not on global rankings detail page');
+      console.log('❌ [GlobalRankings] Stopped: Not on global rankings detail page');
       return;
     }
 
     if (!isEditable) {
-      console.log('❌ Stopped: List is not editable');
+      console.log('❌ [GlobalRankings] Stopped: List is not editable');
       return;
     }
 
-    console.log('✅ Passed initial checks');
+    console.log('✅ [GlobalRankings] Passed initial checks');
+
+    // IMPORTANT: Ensure we preserve the global background
+    console.log('🎨 [GlobalRankings] Setting data-page to "global"');
+    document.body.setAttribute('data-page', 'global');
 
     // Remove highlight from previously clicked item
     const allItems = document.querySelectorAll('.ranking-item');
@@ -1699,16 +1725,22 @@ const GlobalRankings = ({ seasonListRef }) => {
     // Add highlight to newly clicked item
     const clickedItem = document.querySelector(`.ranking-item[data-index="${index}"]`);
     if (clickedItem) {
+      console.log('✨ [GlobalRankings] Adding mobile-clicked class to item:', index);
       clickedItem.classList.add('mobile-clicked');
     }
 
     // Store the index in all available places
+    console.log('📝 [GlobalRankings] Updating target indices:', {
+      newIndex: index,
+      currentTargetMobileAddIndex: targetMobileAddIndex,
+      currentTargetMobileAddIndexRef: targetMobileAddIndexRef.current
+    });
+    
     setTargetMobileAddIndex(index);
     targetMobileAddIndexRef.current = index;
     if (listRef.current) {
       listRef.current.dataset.targetIndex = index;
     }
-    console.log('4. Set target index to:', index);
       
     // First make sure the callback is registered
     if (seasonListRef && seasonListRef.current) {
