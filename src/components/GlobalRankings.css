@@ -620,7 +620,9 @@
      text-align: left;
      margin-top: 15px;
   }
-}/* <<< ADD styles for the individual list card container - PREFIXED >>> */
+}
+
+/* <<< ADD styles for the individual list card container - PREFIXED >>> */
 .global-rankings-page-wrapper > .global-lists-container > .ranking-list-container {
   background-color: rgb(20, 20, 20); 
   
@@ -981,5 +983,119 @@
   0% { transform: scale(1); opacity: 1; }
   50% { transform: scale(1.05); opacity: 0.8; }
   100% { transform: scale(1); opacity: 1; }
+}
+
+/* Style for clickable items on mobile */
+.clickable-mobile {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.clickable-mobile:active {
+  transform: scale(0.98);
+  background-color: rgba(52, 152, 219, 0.1);
+}
+
+/* Remove the ::after pseudo-element */
+/* .clickable-mobile::after {
+  content: "";
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: rgba(52, 152, 219, 0.5);
+  animation: pulse 2s infinite;
+} */
+
+@media (max-width: 480px) {
+  .full-list-view .ranking-list {
+    padding: 10px 5px;
+  }
+
+  .full-list-view .ranking-list .ranking-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 60px;
+    padding: 8px;
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 8px;
+    background: #fff;
+  }
+
+  .full-list-view .ranking-list .ranking-item .ranking-number {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    flex-shrink: 0;
+  }
+
+  .full-list-view .ranking-list .ranking-item .contestant-image,
+  .full-list-view .ranking-list .ranking-item .contestant-image.season-logo {
+    width: 45px;
+    height: 45px;
+    min-width: 45px;
+    margin: 0;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  .full-list-view .ranking-list .ranking-item .contestant-name,
+  .full-list-view .ranking-list .ranking-item .season-name,
+  .full-list-view .ranking-list .ranking-item .empty-name {
+    font-size: 14px !important;
+    margin: 0 !important;
+    padding: 0;
+    flex-grow: 1;
+    min-width: 0;
+    white-space: normal;
+    word-break: break-word;
+    position: static;
+    transform: none !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    display: block !important;
+  }
+
+  /* Ensure empty slots maintain proper layout */
+  .full-list-view .ranking-list .ranking-item.empty-slot {
+    background-color: #f5f5f5;
+    border: 2px dashed #ccc;
+  }
+
+  .full-list-view .ranking-list .ranking-item.empty-slot .empty-name {
+    color: #999;
+    font-style: italic;
+    margin-left: 0 !important;
+    position: static !important;
+  }
+
+  /* Fix for remove button positioning */
+  .full-list-view .ranking-list .ranking-item .remove-contestant-button {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    z-index: 2;
+    margin-left: auto;
+  }
+
+  /* Ensure proper spacing in empty slots */
+  .full-list-view .ranking-list .ranking-item.empty-slot .submit-prompt-text {
+    margin: 0;
+    padding: 0;
+    position: static;
+  }
 }
 

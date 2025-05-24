@@ -345,7 +345,7 @@
 
   /* Ensure list items don't collapse */
   .ranking-list-container .ranking-item {
-      min-height: 45px !important; /* Set minimum height for items */
+      min-height: 60px !important; /* Set minimum height for items */
       /* Adjust padding if needed */
       padding-top: 4px !important;
       padding-bottom: 4px !important;

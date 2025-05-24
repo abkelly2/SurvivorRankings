@@ -30,6 +30,8 @@ const MAX_ROTATION = 30;  // Max rotation (degrees)
 */
 
 const GlobalRankings = ({ seasonListRef }) => {
+  console.log("[GlobalRankings] Component initialized with seasonListRef:", !!seasonListRef);
+  
   const { listId } = useParams();
   const navigate = useNavigate();
   const [selectedList, setSelectedList] = useState(null);
@@ -50,8 +52,54 @@ const GlobalRankings = ({ seasonListRef }) => {
   const [loadingGlobalRankings, setLoadingGlobalRankings] = useState({});
   const [currentListTotalVotes, setCurrentListTotalVotes] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-  const [targetMobileAddIndex, setTargetMobileAddIndex] = useState(null);
   
+  // DEBUG: Log mobile status when component mounts
+  useEffect(() => {
+    console.log("**** MOBILE DEBUG ****");
+    console.log("✅ Window width:", window.innerWidth);
+    console.log("✅ isMobile state:", isMobile);
+    console.log("✅ CSS Media Query match:", window.matchMedia("(max-width: 768px)").matches);
+    
+    // Force isMobile to true on small screens
+    if (window.innerWidth <= 768 && !isMobile) {
+      console.log("🔄 Forcing isMobile to TRUE");
+      setIsMobile(true);
+    }
+  }, []);
+  
+  const [targetMobileAddIndex, setTargetMobileAddIndex] = useState(null);
+  const targetMobileAddIndexRef = useRef(null);
+
+  // Add effect to sync ref with state and data attribute
+  useEffect(() => {
+    targetMobileAddIndexRef.current = targetMobileAddIndex;
+    // Also store in a data attribute on the list container for persistence
+    if (listRef.current) {
+      if (targetMobileAddIndex !== null) {
+        listRef.current.dataset.targetIndex = targetMobileAddIndex;
+      } else {
+        delete listRef.current.dataset.targetIndex;
+      }
+    }
+  }, [targetMobileAddIndex]);
+
+  // Add effect to restore target index on mount
+  useEffect(() => {
+    if (listRef.current && listRef.current.dataset.targetIndex !== undefined) {
+      const restoredIndex = parseInt(listRef.current.dataset.targetIndex, 10);
+      setTargetMobileAddIndex(restoredIndex);
+      targetMobileAddIndexRef.current = restoredIndex;
+      
+      // Restore visual highlight
+      const allItems = document.querySelectorAll('.ranking-item');
+      allItems.forEach(item => item.classList.remove('mobile-clicked'));
+      const clickedItem = document.querySelector(`.ranking-item[data-index="${restoredIndex}"]`);
+      if (clickedItem) {
+        clickedItem.classList.add('mobile-clicked');
+      }
+    }
+  }, []);
+
   // --- State/Refs for Mobile Touch Drag Reordering (COPIED FROM UserListCreator) --- 
   const touchDragTimer = useRef(null);
   const isTouchDragging = useRef(false);
@@ -164,7 +212,9 @@ const GlobalRankings = ({ seasonListRef }) => {
 
         // --- MODIFIED: Fetch global ranking regardless of submission status --- 
         // Default to showing global view if user HAS submitted OR if user is NOT logged in
-        setShowingGlobalRanking(submitted || !user); 
+        const shouldShowGlobalView = submitted || !user;
+        console.log(`[GlobalRankings] Setting initial view: showingGlobalRanking=${shouldShowGlobalView} (submitted=${submitted}, user=${!!user})`);
+        setShowingGlobalRanking(shouldShowGlobalView);
           setLoadingGlobalRanking(true);
           const globalRankingRef = doc(db, 'globalRankingsData', listId);
           try {
@@ -874,6 +924,8 @@ const GlobalRankings = ({ seasonListRef }) => {
     // Reset submission feedback when toggling
     setSubmitSuccess(false);
     setSubmitError('');
+    
+    // Do NOT modify document.body attributes here - that's causing the background issue
   };
 
   // --- Render Functions ---
@@ -964,15 +1016,15 @@ const GlobalRankings = ({ seasonListRef }) => {
               const isFirstEmptySlot = !isDisplayingGlobal && index === 0 && contestant.isEmpty; 
 
               return (
-                <div 
-                  key={`${contestant.id}-${index}`} 
-                  className="ranking-item"
-                  onClick={() => handleMobileSlotClick(index)}
-                >
+                                                <div 
+                                  key={`${contestant.id}-${index}`} 
+                                  className="ranking-item"
+                                  onClick={(e) => handleMobileSlotClick(index)}
+                                  onTouchStart={(e) => handleMobileSlotClick(index)}
+                                >
                     <div className="ranking-number">{index + 1}</div>
                     <img
                         src={contestant.imageUrl || "/images/placeholder.jpg"}
-                        alt={contestant.name}
                         className={`contestant-image`} 
                         draggable="false"
                     />
@@ -994,68 +1046,158 @@ const GlobalRankings = ({ seasonListRef }) => {
 
   // Function to add contestant locally (passed as callback)
   const handleAddContestantLocally = (contestant) => {
-    if (!currentRanking || showingGlobalRanking) return; 
-    if (targetMobileAddIndex !== null && targetMobileAddIndex >= 0 && targetMobileAddIndex < currentRanking.contestants.length) {
+    if (!currentRanking || showingGlobalRanking) {
+      console.log("[GlobalRankings] Can't add contestant: currentRanking empty or showing global view");
+      return;
+    }
+    
+    // Get target index from all available sources
+    const currentTargetIndex = targetMobileAddIndexRef.current ?? 
+                             targetMobileAddIndex ?? 
+                             (listRef.current ? parseInt(listRef.current.dataset.targetIndex, 10) : null);
+    
+    console.log("[GlobalRankings] Adding contestant locally:", contestant, "targetIndex:", currentTargetIndex);
+    
+    if (currentTargetIndex === null || isNaN(currentTargetIndex)) {
+      console.log("[GlobalRankings] No target index set. Please click a ranking slot first.");
+      alert("Please click a ranking slot first to select where to add the contestant.");
+      return;
+    }
+    
+    if (currentTargetIndex >= 0 && currentTargetIndex < currentRanking.contestants.length) {
       // Check if already in list (at a *different* index)
-      const existingIndex = currentRanking.contestants.findIndex(item => !item.isEmpty && item.id === contestant.id);
-      if (existingIndex !== -1 && existingIndex !== targetMobileAddIndex) {
+      const existingIndex = currentRanking.contestants.findIndex(
+        item => !item.isEmpty && item.id === contestant.id
+      );
+      
+      if (existingIndex !== -1 && existingIndex !== currentTargetIndex) {
         alert(`${contestant.name} is already ranked at position ${existingIndex + 1}.`);
-        setTargetMobileAddIndex(null); // Reset index
+        // Clear target index from all sources
+        setTargetMobileAddIndex(null);
+        targetMobileAddIndexRef.current = null;
+        if (listRef.current) {
+          delete listRef.current.dataset.targetIndex;
+        }
+        
+        // Remove highlight from all items
+        const allItems = document.querySelectorAll('.ranking-item');
+        allItems.forEach(item => item.classList.remove('mobile-clicked'));
         return;
       }
 
+      // Debug log the contestant data
+      console.log("[GlobalRankings] Contestant data:", contestant);
+
       const newList = [...currentRanking.contestants];
-      newList[targetMobileAddIndex] = { ...contestant, isEmpty: false }; // Place in target slot
+      
+      // Get the image URL from the clicked contestant card
+      const seasonListContainer = document.querySelector('.seasons-section');
+      const contestantCard = seasonListContainer?.querySelector(`[data-contestant-id="${contestant.id}"]`);
+      const imgElement = contestantCard?.querySelector('.contestant-image');
+      const imageUrl = imgElement?.src || contestant.imageUrl || '/images/placeholder.jpg';
+      
+      console.log("[GlobalRankings] Found image URL:", imageUrl);
+
+      // Create the contestant object with required properties first
+      const updatedContestant = {
+        id: contestant.id,
+        name: contestant.name || "Unknown Contestant",
+        imageUrl: imageUrl, // Use the found image URL or fallback to contestant.imageUrl
+        seasonId: contestant.seasonId,
+        seasonName: contestant.seasonName,
+        isEmpty: false,
+        isSeason: false
+      };
+
+      // Debug log the updated contestant
+      console.log("[GlobalRankings] Updated contestant:", updatedContestant);
+
+      newList[currentTargetIndex] = updatedContestant;
       setCurrentRanking(prev => ({ ...prev, contestants: newList }));
-      setTargetMobileAddIndex(null); // Reset index after adding
+      console.log("[GlobalRankings] Successfully added contestant at index", currentTargetIndex);
+      
+      // After successful addition, clear target index from all sources
+      setTargetMobileAddIndex(null);
+      targetMobileAddIndexRef.current = null;
+      if (listRef.current) {
+        delete listRef.current.dataset.targetIndex;
+      }
+      
+      // Remove highlight from all items
+      const allItems = document.querySelectorAll('.ranking-item');
+      allItems.forEach(item => item.classList.remove('mobile-clicked'));
+      
+      // Keep the menu open for a moment so user can see the selection
+      setTimeout(() => {
+        if (seasonListRef?.current?.hideMenu) {
+          seasonListRef.current.hideMenu();
+        }
+      }, 500);
     } else {
-        setTargetMobileAddIndex(null); // Reset index anyway
+      console.log("[GlobalRankings] Invalid target index:", currentTargetIndex);
+      // Clear target index from all sources
+      setTargetMobileAddIndex(null);
+      targetMobileAddIndexRef.current = null;
+      if (listRef.current) {
+        delete listRef.current.dataset.targetIndex;
+      }
+      
+      // Remove highlight from all items
+      const allItems = document.querySelectorAll('.ranking-item');
+      allItems.forEach(item => item.classList.remove('mobile-clicked'));
     }
   };
 
   // Effect to register/unregister the update callback with SeasonList
   useEffect(() => {
     // Determine if the current view is editable on mobile
-    const isEditableMobile = isMobile && user && (!userHasSubmitted || !showingGlobalRanking);
+    const isGlobalRankingDetailView = isMobile && 
+                                      window.location.pathname.includes('/global-rankings/season-') && 
+                                      !showingGlobalRanking;
 
-    if (isEditableMobile && seasonListRef && seasonListRef.current && typeof seasonListRef.current.setListUpdateCallback === 'function') {
+    if (isGlobalRankingDetailView && seasonListRef && seasonListRef.current && 
+        typeof seasonListRef.current.setListUpdateCallback === 'function') {
+      console.log('[GlobalRankings] Registering contestant callback for mobile editing');
       seasonListRef.current.setListUpdateCallback(handleAddContestantLocally);
-    } else if (seasonListRef && seasonListRef.current && typeof seasonListRef.current.setListUpdateCallback === 'function') {
+    } else if (seasonListRef && seasonListRef.current && 
+               typeof seasonListRef.current.setListUpdateCallback === 'function') {
       seasonListRef.current.setListUpdateCallback(null);
     }
 
     // Cleanup function
     return () => {
-      if (seasonListRef && seasonListRef.current && typeof seasonListRef.current.setListUpdateCallback === 'function') {
+      if (seasonListRef && seasonListRef.current && 
+          typeof seasonListRef.current.setListUpdateCallback === 'function') {
         seasonListRef.current.setListUpdateCallback(null);
       }
     };
-    // Dependencies ensure this runs when conditions change
-  }, [isMobile, user, userHasSubmitted, showingGlobalRanking, seasonListRef, handleAddContestantLocally]); // Add handleAddContestantLocally if using useCallback
+  }, [isMobile, showingGlobalRanking, seasonListRef]);
 
   // --- REPLACED Touch Handlers (COPIED FROM UserListCreator) --- 
   const handleTouchStart = (e, index) => {
-    if (!isMobile || !isEditable) return; // Added isEditable check
+    if (!isMobile || !isEditable) return;
 
+    console.log('[TouchStart] Starting touch interaction');
     e.stopPropagation(); 
     clearTimeout(touchDragTimer.current);
     const currentTarget = e.currentTarget;
     draggedItemElement.current = currentTarget;
+    draggedItemIndex.current = index; // Store index immediately
     
     const touch = e.touches[0];
     initialTouchX.current = touch.clientX;
     initialTouchY.current = touch.clientY;
 
+    // Use timer to differentiate between tap and drag
     touchDragTimer.current = setTimeout(() => {
+      console.log('[TouchStart] Long press detected - starting drag');
       isTouchDragging.current = true;
-      draggedItemIndex.current = index;
       if (currentTarget) {
           draggedItemHeight.current = currentTarget.offsetHeight; 
           currentTarget.classList.add('touch-dragging-item');
       }
       originalBodyOverflow.current = document.body.style.overflow; 
       document.body.style.overflow = 'hidden';
-      console.log('[TouchDrag - Global] Drag started after delay.');
     }, 150);
   };
 
@@ -1165,147 +1307,108 @@ const GlobalRankings = ({ seasonListRef }) => {
   };
 
   const handleTouchEnd = (e) => {
-    // --- Combined Start Checks ---
-    if (!isMobile || !isEditable || !isTouchDragging.current) { 
-      clearTimeout(touchDragTimer.current); 
-      touchDragTimer.current = null;
-      // If not dragging, reset flags anyway
-      isTouchDragging.current = false; 
+    console.log('[TouchEnd] Touch interaction ended');
+    
+    // Clear the drag timer first
+    clearTimeout(touchDragTimer.current); 
+    touchDragTimer.current = null;
+    
+    // If we didn't start dragging, this was a tap
+    if (!isTouchDragging.current && draggedItemIndex.current !== null) {
+      console.log('[TouchEnd] Detected as tap, calling handleMobileSlotClick');
+      const index = draggedItemIndex.current;
+      // Reset touch state
       draggedItemIndex.current = null;
       draggedItemElement.current = null; 
+      // Call the click handler
+      handleMobileSlotClick(index);
       return; 
     }
     
-    // --- Proceed with End Logic ---
-    clearTimeout(touchDragTimer.current); 
-    touchDragTimer.current = null;
-    e.stopPropagation(); // Important if nested touch handlers exist
+    // Handle drag end if we were dragging
+    if (isTouchDragging.current) {
+      console.log('[TouchEnd] Ending drag operation');
+      const draggedElement = draggedItemElement.current;
+      const startIndex = draggedItemIndex.current;
+      const listContainer = listRef.current;
 
-    const draggedElement = draggedItemElement.current;
-    const startIndex = draggedItemIndex.current;
-
-    // Reset visual styles FIRST
-    const listContainer = listRef.current; 
-    if(listContainer) {
-        const allItems = listContainer.querySelectorAll('.ranking-item'); 
-        allItems.forEach(item => {
-          item.style.transform = ''; 
-          item.style.transition = ''; // Clear transition override
-        });
-    }
-    if (draggedElement) {
-        draggedElement.classList.remove('touch-dragging-item');
-        draggedElement.style.transform = ''; 
-        draggedElement.style.transition = ''; 
-    }
-    // Restore body scroll
-    if (document.body.style.overflow === 'hidden') { // Only restore if we hid it
-        document.body.style.overflow = originalBodyOverflow.current;
-    }
-
-    // --- Determine Final Drop Target Index --- 
-    let targetIndex = -1; 
-    if (listContainer && startIndex !== null && currentRanking?.contestants) { // Add check for currentRanking
+      // Find the final drop position
+      if (listContainer && draggedElement && startIndex !== null) {
+        const touch = e.changedTouches[0];
         const listRect = listContainer.getBoundingClientRect();
-        const lastTouch = e.changedTouches?.[0]; 
-      
-        if (lastTouch) {
-            const finalTouchY = lastTouch.clientY;
-            const touchRelativeToContainer = finalTouchY - listRect.top;
-            const listItems = Array.from(listContainer.querySelectorAll('.ranking-item'));
+        const touchRelativeToContainer = touch.clientY - listRect.top;
+        const listItems = Array.from(listContainer.querySelectorAll('.ranking-item'));
         
-        let closestItemOriginalIndex = -1;
+        let targetIndex = -1;
         let minDistance = Infinity;
 
-            // Find closest item center logic (same as move)
-        for (let i = 0; i < listItems.length; i++) {
-            const item = listItems[i];
-                // Use static offsetTop, not potentially transformed position
-            const itemOriginalOffsetTop = item.offsetTop;
-            const itemHeight = item.offsetHeight;
-            const itemOriginalCenterY = itemOriginalOffsetTop + itemHeight / 2;
-            const distance = Math.abs(touchRelativeToContainer - itemOriginalCenterY);
+        // Find the closest item to the touch point
+        listItems.forEach((item, index) => {
+          if (item === draggedElement) return; // Skip the dragged item
+          
+          const itemRect = item.getBoundingClientRect();
+          const itemCenterY = itemRect.top + itemRect.height / 2;
+          const distance = Math.abs(touch.clientY - itemCenterY);
+          
+          if (distance < minDistance) {
+            minDistance = distance;
+            targetIndex = parseInt(item.dataset.index, 10);
+          }
+        });
 
-                // Check distance AND make sure we're not comparing the dragged item to itself visually
-                if (distance < minDistance && item !== draggedElement) { 
-                minDistance = distance;
-                const itemIndexAttr = item.dataset.index;
-                closestItemOriginalIndex = itemIndexAttr !== undefined ? parseInt(itemIndexAttr, 10) : i;
+        // Adjust target index based on whether we're dropping above or below the closest item
+        if (targetIndex !== -1) {
+          const closestItem = listItems.find(item => parseInt(item.dataset.index, 10) === targetIndex);
+          if (closestItem) {
+            const itemRect = closestItem.getBoundingClientRect();
+            const itemCenterY = itemRect.top + itemRect.height / 2;
+            if (touch.clientY > itemCenterY) {
+              targetIndex++; // Drop below if touch is below center
             }
-        }
-        
-            // Determine target index based on closest item
-            if (closestItemOriginalIndex !== -1) {
-            const closestItem = listItems.find(item => parseInt(item.dataset.index, 10) === closestItemOriginalIndex);
-            if (closestItem) {
-                const closestItemOriginalOffsetTop = closestItem.offsetTop;
-                const closestItemHeight = closestItem.offsetHeight;
-                const closestItemOriginalCenterY = closestItemOriginalOffsetTop + closestItemHeight / 2;
-                targetIndex = (touchRelativeToContainer < closestItemOriginalCenterY) ? closestItemOriginalIndex : closestItemOriginalIndex + 1;
-            } else { 
-                   // Fallback if item not found
-                 const tempHeight = draggedItemHeight.current > 0 ? draggedItemHeight.current : 50;
-                 targetIndex = Math.max(0, Math.min(Math.floor(touchRelativeToContainer / tempHeight), currentRanking.contestants.length));
-            }
-            } else if (listItems.length > 0) { // No specific closest, check edges
-                const firstItem = listItems.find(item => parseInt(item.dataset.index, 10) === 0);
-                const lastItem = listItems.find(item => parseInt(item.dataset.index, 10) === (currentRanking.contestants.length) -1);
-                 if (firstItem && touchRelativeToContainer < firstItem.offsetTop + firstItem.offsetHeight / 2) {
-                   targetIndex = 0;
-                 } else if (lastItem && touchRelativeToContainer > lastItem.offsetTop + lastItem.offsetHeight / 2){
-                   targetIndex = listItems.length; // Drop after last
+          }
         } else {
-                    // Fallback if edges check fails
-             const tempHeight = draggedItemHeight.current > 0 ? draggedItemHeight.current : 50;
-             targetIndex = Math.max(0, Math.min(Math.floor(touchRelativeToContainer / tempHeight), currentRanking.contestants.length));
+          // If no closest item found, determine if we should place at start or end
+          targetIndex = touchRelativeToContainer < listContainer.offsetHeight / 2 ? 0 : listItems.length;
         }
-            } else {
-                targetIndex = 0; // Dropping into empty list
-            }
 
-            // Clamp final index
-        targetIndex = Math.max(0, Math.min(targetIndex, currentRanking.contestants.length));
+        // Clamp target index to valid range
+        targetIndex = Math.max(0, Math.min(targetIndex, currentRanking.contestants.length - 1));
+        
+        console.log(`[TouchEnd] Moving item from index ${startIndex} to ${targetIndex}`);
 
-    } else {
-            console.log("[TouchDrag - Global End] No touch data found on touchend.");
-            targetIndex = startIndex; // Fallback: No move
-    }
-
-        // --- Perform State Update --- 
-        let insertIndex = targetIndex;
-        if (startIndex < targetIndex) { 
-            insertIndex = targetIndex - 1; 
+        // Only reorder if indices are different
+        if (startIndex !== targetIndex) {
+          const newList = [...currentRanking.contestants];
+          const [movedItem] = newList.splice(startIndex, 1);
+          newList.splice(targetIndex, 0, movedItem);
+          setCurrentRanking(prev => ({ ...prev, contestants: newList }));
         }
-        insertIndex = Math.max(0, Math.min(insertIndex, currentRanking.contestants.length -1)); // Clamp insert index
+      }
 
-        if (startIndex !== insertIndex) { // Only update if index actually changed
-            console.log(`[TouchDrag - Global End] Reordering: Item from index ${startIndex} to insert at ${insertIndex} (target: ${targetIndex})`);
-            
-            // <<< Adapt to use currentRanking and setCurrentRanking >>>
-            const itemToMove = currentRanking.contestants[startIndex]; 
-            const remainingItems = currentRanking.contestants.filter((_, i) => i !== startIndex);
-            const newList = [
-                ...remainingItems.slice(0, insertIndex), // Use insertIndex for slicing
-                itemToMove,
-                ...remainingItems.slice(insertIndex) // Use insertIndex for slicing
-            ];
-            // <<< Update state using setCurrentRanking >>>
-        setCurrentRanking(prevRanking => ({
-            ...prevRanking,
-            contestants: newList
-        }));
-            
-    } else {
-            console.log(`[TouchDrag - Global End] Drop occurred but insert index (${insertIndex}) is same as start (${startIndex}). No reorder.`);
-    }
-    } else {
-        console.log("[TouchDrag - Global End] List element, start index, or currentRanking missing.");
+      // Reset visual styles
+      if (listContainer) {
+        const allItems = listContainer.querySelectorAll('.ranking-item');
+        allItems.forEach(item => {
+          item.style.transform = '';
+          item.style.transition = '';
+        });
+      }
+      if (draggedElement) {
+        draggedElement.classList.remove('touch-dragging-item');
+        draggedElement.style.transform = '';
+        draggedElement.style.transition = '';
+      }
+
+      // Restore body scroll
+      if (document.body.style.overflow === 'hidden') {
+        document.body.style.overflow = originalBodyOverflow.current;
+      }
     }
 
-    // Final state reset (MUST run AFTER state update logic)
+    // Reset all state
     isTouchDragging.current = false;
     draggedItemIndex.current = null;
-    draggedItemElement.current = null; 
+    draggedItemElement.current = null;
     draggedItemHeight.current = 0;
     initialTouchX.current = 0;
     initialTouchY.current = 0;
@@ -1547,98 +1650,87 @@ const GlobalRankings = ({ seasonListRef }) => {
   
   // Function to handle mobile slot click
   const handleMobileSlotClick = (index) => {
-    // Check if mobile first, regardless of other conditions
-    if (isMobile && seasonListRef && seasonListRef.current) {
-      console.log(`[GlobalRankings] Mobile click on slot ${index}, showing menu`);
+    console.log('=== MOBILE SLOT CLICK DEBUG ===');
+    console.log('1. Initial click detected on index:', index);
+    console.log('2. Current state:', {
+      isMobile,
+      showingGlobalRanking,
+      isEditable,
+      userHasSubmitted,
+      pathname: window.location.pathname
+    });
+    
+    // Only proceed if we're:
+    // 1. On the detail page (/global-rankings/season-49)
+    // 2. In the edit view (not showing global ranking)
+    // 3. The list is editable
+    if (showingGlobalRanking) {
+      console.log('❌ Stopped: Showing global ranking view');
+      return;
+    }
+    
+    if (!window.location.pathname.includes('/global-rankings/')) {
+      console.log('❌ Stopped: Not on global rankings detail page');
+      return;
+    }
+
+    if (!isEditable) {
+      console.log('❌ Stopped: List is not editable');
+      return;
+    }
+
+    console.log('✅ Passed initial checks');
+
+    // Remove highlight from previously clicked item
+    const allItems = document.querySelectorAll('.ranking-item');
+    allItems.forEach(item => item.classList.remove('mobile-clicked'));
+
+    // Add highlight to newly clicked item
+    const clickedItem = document.querySelector(`.ranking-item[data-index="${index}"]`);
+    if (clickedItem) {
+      clickedItem.classList.add('mobile-clicked');
+    }
+
+    // Store the index in all available places
+    setTargetMobileAddIndex(index);
+    targetMobileAddIndexRef.current = index;
+    if (listRef.current) {
+      listRef.current.dataset.targetIndex = index;
+    }
+    console.log('4. Set target index to:', index);
       
-      // Set target index for adding contestants
-      setTargetMobileAddIndex(index);
-      
-      // Set the last clicked index for visual feedback
-      setLastClickedIndex(index);
-      
-      // Clear any existing timeout
-      if (lastClickedTimeoutRef.current) {
-        clearTimeout(lastClickedTimeoutRef.current);
+    // First make sure the callback is registered
+    if (seasonListRef && seasonListRef.current) {
+      if (typeof seasonListRef.current.setListUpdateCallback === 'function') {
+        console.log('5. Registering contestant callback');
+        seasonListRef.current.setListUpdateCallback(handleAddContestantLocally);
       }
       
-      // Clear the visual indicator after 1 second
-      lastClickedTimeoutRef.current = setTimeout(() => {
-        setLastClickedIndex(null);
-      }, 1000);
-      
-      // DIRECT DOM APPROACH: Trigger menu visibility via DOM manipulation
-      // and THEN call the component methods as backup
-      const seasonsSection = document.querySelector('.seasons-section');
-      if (seasonsSection) {
-        document.body.setAttribute('data-page', 'create');
-        
-        // Force display and visibility
-        seasonsSection.style.position = 'fixed';
-        seasonsSection.style.top = 'auto';
-        seasonsSection.style.bottom = '0';
-        seasonsSection.style.left = '0';
-        seasonsSection.style.right = '0';
-        seasonsSection.style.height = '85vh'; 
-        seasonsSection.style.maxHeight = '85vh';
-        seasonsSection.style.transform = 'translateY(0)';
-        seasonsSection.style.opacity = '1';
-        seasonsSection.style.visibility = 'visible';
-        seasonsSection.style.display = 'block';
-        seasonsSection.style.zIndex = '1000';
-        
-        // Add required classes
-        seasonsSection.classList.add('visible');
-        seasonsSection.classList.remove('collapsed');
-        
-        // Lock body scroll
-        document.body.style.overflow = 'hidden';
-        
-        console.log('[GlobalRankings] Forced seasons-section to be visible via DOM');
-        
-        // Try to auto-select Season 49
-        setTimeout(() => {
-          try {
-            // Find and click the season button for Season 49
-            const s49Button = seasonsSection.querySelector('[data-season-id="s49"], button[value="s49"], [data-id="s49"]');
-            if (s49Button) {
-              console.log('[GlobalRankings] Found Season 49 button, clicking it');
-              s49Button.click();
-            } else {
-              // Try by text content
-              const seasonCards = seasonsSection.querySelectorAll('.season-card');
-              seasonCards.forEach(card => {
-                if (card.textContent.includes('49') || card.textContent.includes('Season 49')) {
-                  console.log('[GlobalRankings] Found Season 49 card by text, clicking it');
-                  card.click();
-                }
-              });
-            }
-          } catch (err) {
-            console.error('[GlobalRankings] Error auto-selecting Season 49:', err);
-          }
-        }, 100); // Small delay to ensure DOM is ready
-      }
-      
-      // Try component methods as backup
-      try {
-        if (typeof seasonListRef.current.showMenu === 'function') {
-          seasonListRef.current.showMenu();
-          console.log('[GlobalRankings] Called showMenu successfully');
-        } else {
-          console.error('[GlobalRankings] seasonListRef.current.showMenu is not a function!', seasonListRef.current);
-        }
-        
-        // Also try to set showMenuOnMobile directly
-        if (typeof seasonListRef.current.setShowMenuOnMobile === 'function') {
-          seasonListRef.current.setShowMenuOnMobile(true);
-          console.log('[GlobalRankings] Called setShowMenuOnMobile(true)');
-        }
-      } catch (err) {
-        console.error('[GlobalRankings] Error showing season menu:', err);
+      if (typeof seasonListRef.current.showMenu === 'function') {
+        console.log('6. Attempting to show menu');
+        // Show the menu - SeasonList will handle Season 49 selection internally
+        seasonListRef.current.showMenu();
       }
     } else {
-      console.log(`[GlobalRankings] Not showing menu. isMobile: ${isMobile}, isEditable: ${isEditable}, seasonListRef exists: ${!!seasonListRef && !!seasonListRef.current}`);
+      console.log('❌ Could not access seasonListRef methods');
+    }
+  };
+
+  // Remove or modify the DEBUG_handleClick function
+  // Replace this entire function with a simple version that uses handleMobileSlotClick
+  const DEBUG_handleClick = (e, index) => {
+    e.stopPropagation();
+    
+    // Only use this for debugging - actual handling should go through handleMobileSlotClick
+    console.log("[DEBUG CLICK] Index:", index);
+    console.log("[DEBUG CLICK] View state: showingGlobalRanking=", showingGlobalRanking);
+    console.log("[DEBUG CLICK] Edit allowed: isEditable=", isEditable);
+    console.log("[DEBUG CLICK] User submitted:", userHasSubmitted);
+    console.log("[DEBUG CLICK] Path:", window.location.pathname);
+    
+    // If we're in the right context, call the real handler
+    if (isMobile && isEditable && !showingGlobalRanking && window.location.pathname.includes('/global-rankings/')) {
+      handleMobileSlotClick(index);
     }
   };
 
@@ -1729,12 +1821,12 @@ const GlobalRankings = ({ seasonListRef }) => {
                                 <div 
                                   key={`${contestant.id}-${index}`} 
                                   className="ranking-item"
-                                  onClick={() => handleMobileSlotClick(index)}
+                                  onClick={(e) => handleMobileSlotClick(index)}
+                                  onTouchStart={(e) => handleMobileSlotClick(index)}
                                 >
                                     <div className="ranking-number">{index + 1}</div>
                                     <img
                                         src={contestant.imageUrl || "/images/placeholder.jpg"}
-                                        alt={contestant.name}
                                         className={`contestant-image`} 
                                         draggable="false"
                                     />
@@ -1745,7 +1837,6 @@ const GlobalRankings = ({ seasonListRef }) => {
                                           <span className="global-score"> {contestant.totalScore} pts</span> 
                                         }
                                     </div>
-                                    {/* Optionally show vote count: <span className="global-votes">{currentListTotalVotes} votes</span> */}
                                 </div>
                               );
                           })
@@ -1770,13 +1861,23 @@ const GlobalRankings = ({ seasonListRef }) => {
                   currentRanking.contestants.map((contestant, index) => (
                     <div
                       key={`${contestant.id}-${index}`}
-                      className={`ranking-item ${contestant.isEmpty ? 'empty-slot' : ''} ${lastClickedIndex === index ? 'mobile-clicked' : ''}`}
+                      className={`ranking-item ${contestant.isEmpty ? 'empty-slot' : ''} ${isMobile ? 'clickable-mobile' : ''}`}
                       data-index={index}
                       draggable={isEditable && !contestant.isEmpty}
                       onDragStart={(e) => isEditable && !contestant.isEmpty && handleItemDragStart(e, index)}
                       onDragEnd={isEditable ? handleItemDragEnd : undefined}
-                      onClick={() => handleMobileSlotClick(index)}
-                      onTouchStart={(e) => handleTouchStart(e, index)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isMobile && isEditable && !showingGlobalRanking) {
+                          handleMobileSlotClick(index);
+                        }
+                      }}
+                      onTouchStart={(e) => {
+                        e.stopPropagation();
+                        if (isMobile && isEditable && !showingGlobalRanking) {
+                          handleTouchStart(e, index);
+                        }
+                      }}
                       onTouchMove={handleTouchMove}
                       onTouchEnd={handleTouchEnd}
                       onTouchCancel={handleTouchEnd}
@@ -1786,15 +1887,15 @@ const GlobalRankings = ({ seasonListRef }) => {
                        </div>
                        <img
                           src={contestant.imageUrl || "/images/placeholder.jpg"}
-                          alt={contestant.name}
                           className={`contestant-image ${contestant.isSeason ? 'season-logo' : ''}`}
                           draggable="false"
                        />
-                       <div className={`${contestant.isSeason ? "season-name" : "contestant-name"} ${contestant.isEmpty ? 'empty-name' : ''}`} style={{ color: contestant.isEmpty ? '#999' : '#000000' }}>
+                       <div className={`${contestant.isSeason ? "season-name" : "contestant-name"} ${contestant.isEmpty ? 'empty-name' : ''}`} 
+                            style={{ color: contestant.isEmpty ? '#999' : '#000000' }}>
                           {contestant.isEmpty ? contestant.name :
-                             (contestant.isSeason
-                               ? contestant.name.replace('Survivor: ', '').replace('Survivor ', '')
-                               : contestant.name)
+                            (contestant.isSeason
+                              ? contestant.name.replace('Survivor: ', '').replace('Survivor ', '')
+                              : contestant.name)
                           }
                           {/* Show total points if available */} 
                           {contestant.totalScore !== undefined && 

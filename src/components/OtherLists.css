@@ -409,8 +409,7 @@
 
   /* Ensure items inside still look ok */
   .full-list-view .ranking-item {
-    width: calc(100% - 20px); /* Adjust item width to account for container changes */
-    margin-left: 10px; /* Add some margin for items */
+    width: calc(100% - 20px); /* Adjust item width to account for container changes */ /* Add some margin for items */
     margin-right: 10px;
     min-height: 1px; /* Set min-height for mobile */
   }
@@ -2213,7 +2212,7 @@
 
 @media (max-width: 480px) {
   .ranking-item .contestant-image,
-  .ranking-item .contestant-image.season-logo{
+  .ranking-item .contestant-image.season-logo {
     width: 100px;
     height: 60px;
     font-size: 205px !important;

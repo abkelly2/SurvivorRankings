@@ -5,6 +5,7 @@ import './SeasonList.css';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { auth } from '../firebase';
+import { getContestantImageUrl } from '../firebase';
 
 const SeasonList = forwardRef(({ 
   maddysList, 
@@ -114,13 +115,92 @@ const SeasonList = forwardRef(({
   // Expose methods to parent components through ref
   useImperativeHandle(ref, () => ({
     showMenu: () => {
-      if (isMobile && createMode) {
-        setShowMenuOnMobile(true);
+      console.log('[SeasonList] showMenu called! isMobile=', isMobile, 'createMode=', createMode, 'document.body.dataset.page=', document.body.dataset.page);
+      
+      if (isMobile) {
+        const seasonsSection = document.querySelector('.seasons-section');
+        if (seasonsSection) {
+          console.log('[SeasonList] Found seasons-section, applying styles');
+          
+          // Immediately set critical display properties
+          seasonsSection.style.display = 'block';
+          seasonsSection.style.visibility = 'visible';
+          seasonsSection.style.position = 'fixed';
+          seasonsSection.style.top = 'auto';
+          seasonsSection.style.left = '0';
+          seasonsSection.style.right = '0';
+          seasonsSection.style.bottom = '0';
+          seasonsSection.style.height = '85vh';
+          seasonsSection.style.maxHeight = '85vh';
+          seasonsSection.style.zIndex = '1000';
+          
+          // Force a reflow by reading a layout property
+          const initialHeight = seasonsSection.offsetHeight;
+          console.log('[SeasonList] Initial height:', initialHeight);
+          
+          // Set initial animation state
+          seasonsSection.style.transform = 'translateY(100%)';
+          seasonsSection.style.opacity = '0';
+          seasonsSection.style.transition = 'none';
+          
+          // Force another reflow and verify height
+          const heightAfterTransform = seasonsSection.offsetHeight;
+          console.log('[SeasonList] Height after transform:', heightAfterTransform);
+          
+          // Add necessary classes
+          seasonsSection.classList.add('visible');
+          seasonsSection.classList.remove('collapsed');
+          
+          // Lock body scroll
+          document.body.style.overflow = 'hidden';
+          
+          // Force show the menu state
+          setShowMenuOnMobile(true);
+          
+          // Trigger animation
+          requestAnimationFrame(() => {
+            seasonsSection.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
+            seasonsSection.style.transform = 'translateY(0)';
+            seasonsSection.style.opacity = '1';
+            
+            // Auto-select Season 49 after animation starts
+            setTimeout(() => {
+              console.log('[SeasonList] Auto-selecting Season 49');
+              handleSeasonCardClick({ id: 's49', name: 'Season 49' });
+            }, 100);
+          });
+        }
       }
     },
     hideMenu: () => {
-      if (isMobile && createMode) {
-        setShowMenuOnMobile(false);
+      console.log("[SeasonList] hideMenu called");
+      setShowMenuOnMobile(false);
+      
+      // Apply direct DOM manipulations for consistent behavior
+      const seasonsSection = document.querySelector('.seasons-section');
+      if (seasonsSection) {
+        // Animate out first
+        seasonsSection.style.transform = 'translateY(100%)';
+        seasonsSection.style.opacity = '0';
+        seasonsSection.classList.remove('visible');
+        seasonsSection.classList.add('collapsed');
+        
+        // Restore body scroll
+        document.body.style.overflow = '';
+        
+        // After animation, hide completely
+        setTimeout(() => {
+          if (!showMenuOnMobile) {
+            seasonsSection.style.visibility = 'hidden';
+            seasonsSection.style.display = 'none';
+            
+            // Reset any inline styles when hiding
+            seasonsSection.style.height = '';
+            seasonsSection.style.maxHeight = '';
+            seasonsSection.style.bottom = '';
+            seasonsSection.style.padding = '';
+          }
+        }, 300); // Match the transition time in CSS (0.3s)
       }
     },
     setListUpdateCallback: (callback) => {
@@ -154,30 +234,34 @@ const SeasonList = forwardRef(({
   
   // Helper function to hide menu on mobile after selection
   const hideMenuOnMobile = () => {
-    if (isMobile && createMode) {
-      setShowMenuOnMobile(false);
+    console.log("[SeasonList] hideMenu called");
+    setShowMenuOnMobile(false);
+    
+    // Apply direct DOM manipulations for consistent behavior
+    const seasonsSection = document.querySelector('.seasons-section');
+    if (seasonsSection) {
+      // Animate out first
+      seasonsSection.style.transform = 'translateY(100%)';
+      seasonsSection.style.opacity = '0';
+      seasonsSection.classList.remove('visible');
+      seasonsSection.classList.add('collapsed');
       
-      // Hide the bottom sheet
-      const seasonsSection = document.querySelector('.seasons-section');
-      if (seasonsSection) {
-        seasonsSection.classList.remove('visible');
-        
-        // Re-enable body scrolling
-        document.body.style.overflow = '';
-        
-        // Completely hide after animation completes
-        setTimeout(() => {
-          if (!showMenuOnMobile) {
-            seasonsSection.style.display = 'none';
-            
-            // Reset any inline styles when hiding
-            seasonsSection.style.height = '';
-            seasonsSection.style.maxHeight = '';
-            seasonsSection.style.bottom = '';
-            seasonsSection.style.padding = '';
-          }
-        }, 300); // Match the transition time in CSS (0.3s)
-      }
+      // Restore body scroll
+      document.body.style.overflow = '';
+      
+      // After animation, hide completely
+      setTimeout(() => {
+        if (!showMenuOnMobile) {
+          seasonsSection.style.visibility = 'hidden';
+          seasonsSection.style.display = 'none';
+          
+          // Reset any inline styles when hiding
+          seasonsSection.style.height = '';
+          seasonsSection.style.maxHeight = '';
+          seasonsSection.style.bottom = '';
+          seasonsSection.style.padding = '';
+        }
+      }, 300); // Match the transition time in CSS (0.3s)
     }
   };
   
@@ -363,17 +447,56 @@ const SeasonList = forwardRef(({
   };
 
   // Function to handle clicking on contestants to add them to the list
-  const handleContestantClick = (contestant) => {
+  const handleContestantClick = async (contestant, event) => {
+    if (!event || !event.currentTarget) {
+      console.error("[SeasonList] No event or currentTarget available");
+      return;
+    }
+
+    // DEBUG: Log the entire clicked element
+    console.log("[SeasonList] Clicked element:", event.currentTarget);
+    
+    // Find the image element and get its URL
+    const imgElement = event.currentTarget.querySelector('img.contestant-image');
+    console.log("[SeasonList] Found img element:", imgElement);
+    
+    if (!imgElement || !imgElement.src) {
+      console.error("[SeasonList] Could not find image URL in clicked element");
+      return;
+    }
+
+    // Get the URL
+    const imageUrl = imgElement.src;
+    console.log("[SeasonList] Found image URL:", imageUrl);
+
     if (listUpdateCallback && typeof listUpdateCallback === 'function') {
-      // Prepare contestant data with image using getCachedImageUrl
-      const contestantWithImage = {
-        ...contestant,
-        imageUrl: getCachedImageUrl(contestant.id) // Use cache
+      const contestantData = {
+        id: contestant.id,
+        name: contestant.name,
+        imageUrl: imageUrl, // Use the URL we just grabbed
+        isSeason: false,
+        seasonId: selectedSeason || contestant.seasonId,
+        seasonName: survivorSeasons.find(s => s.id === (selectedSeason || contestant.seasonId))?.name || ''
       };
-      listUpdateCallback(contestantWithImage);
-      hideMenuOnMobile();
+
+      console.log("[SeasonList] Sending contestant data:", contestantData);
+      
+      // Call the callback with the contestant data
+      listUpdateCallback(contestantData);
+      
+      // Only hide the menu on mobile if not in global rankings view
+      const isInGlobalRankings = window.location.pathname.includes('/global-rankings/');
+      if (!isInGlobalRankings) {
+        hideMenuOnMobile();
+      } else {
+        setSelectedSeason(null);
+      }
     } else {
-      hideMenuOnMobile(); 
+      console.log("[SeasonList] No listUpdateCallback available");
+      if (window.location.pathname.includes('/global-rankings/')) {
+        alert("Please click a ranking slot first to select where to add the contestant.");
+      }
+      hideMenuOnMobile();
     }
   };
   
@@ -711,13 +834,13 @@ const SeasonList = forwardRef(({
       )}
       
       {/* Add a swipe handle / close button for mobile that sits at the top of the menu */}
-      {isMobile && createMode && (
+      {isMobile && (createMode || window.location.pathname.includes('/global-rankings/')) && (
         <div 
           className="menu-tab-handle" 
           onClick={(e) => { 
             // Prevent closing if drag just ended
             if (!isHandleDragging.current) { 
-                hideMenuOnMobile(); 
+              hideMenuOnMobile(); 
             }
           }}
           onTouchStart={handleResizeTouchStart}
@@ -733,7 +856,8 @@ const SeasonList = forwardRef(({
         // Show seasons list
         <>
           <h2 className="section-title">
-            {(!isMobile || !createMode) && (
+            {/* Only show collapse toggle on desktop */}
+            {(!isMobile) && (
               <div 
                 className={`collapse-toggle ${isCollapsed ? 'collapsed' : ''}`}
                 onClick={toggleCollapse}
@@ -764,32 +888,28 @@ const SeasonList = forwardRef(({
             <div className="search-results-container">
               <h3 className="search-results-title">Search Results</h3>
               <div className="search-results">
-                {getMatchingContestants().map((contestant) => (
+                {getMatchingContestants().map(contestant => (
                   <div
                     key={`${contestant.id}-${contestant.seasonId}`}
                     className="contestant-item"
-                    onClick={() => {
+                    onClick={(e) => {
                       if (createMode) {
-                        handleContestantClick(contestant);
+                        handleContestantClick(contestant, e);
                         hideMenuOnMobile();
                       }
                     }}
-                    draggable={createMode}
-                    onDragStart={createMode ? (e) => handleDragStart(e, contestant) : undefined}
-                    onDragEnd={createMode ? handleDragEnd : undefined}
+                    draggable={!isMobile}
+                    onDragStart={(e) => handleDragStart(e, contestant)}
+                    onDragEnd={handleDragEnd}
                   >
-                    <img
+                    <img 
+                      src={getCachedImageUrl(contestant.id) || `/images/Headshots/Season ${contestant.seasonId.substring(1)}/${contestant.id}.png`}
                       className="contestant-image"
-                      // Use getCachedImageUrl for contestant images in search results
-                      src={getCachedImageUrl(contestant.id)} // Use cache
-                      alt={contestant.name}
-                      loading="lazy"
+                      alt=""
                     />
-                    <div className="contestant-name">
-                      {contestant.name}
-                    </div>
-                    <div className="contestant-season-name">
-                      {contestant.seasonName.replace('Survivor: ', '').replace('Survivor ', '')}
+                    <div className="contestant-name">{contestant.name}</div>
+                    <div className="season-name">
+                      {survivorSeasons.find(s => s.id === contestant.seasonId)?.name || `Season ${contestant.seasonId.substring(1)}`}
                     </div>
                   </div>
                 ))}
@@ -824,7 +944,7 @@ const SeasonList = forwardRef(({
         // Show contestants when a season is selected
         <div className="contestants-container">
           <h2 className="section-title">
-            {(!isMobile || !createMode) && (
+            {(!isMobile) && (
               <div 
                 className={`collapse-toggle ${isCollapsed ? 'collapsed' : ''}`}
                 onClick={toggleCollapse}
@@ -850,14 +970,30 @@ const SeasonList = forwardRef(({
               <div 
                 key={contestant.id} 
                 className="contestant-card"
-                onClick={() => {
-                  if (createMode) {
-                    handleContestantClick({
+                data-contestant-id={contestant.id}
+                onClick={(e) => {
+                  // Allow clicking in both create mode and global rankings
+                  if (createMode || window.location.pathname.includes('/global-rankings/')) {
+                    // In global rankings, make sure we have a target index before proceeding
+                    if (window.location.pathname.includes('/global-rankings/') && !listUpdateCallback) {
+                      console.log('[SeasonList] No listUpdateCallback available, cannot add contestant');
+                      return;
+                    }
+
+                    const contestantData = {
                       ...contestant,
                       seasonId: selectedSeason,
                       seasonName: survivorSeasons.find(s => s.id === selectedSeason)?.name || ''
-                    });
-                    hideMenuOnMobile();
+                    };
+
+                    if (createMode) {
+                      handleContestantClick(contestantData, e);
+                      hideMenuOnMobile();
+                    } else {
+                      // For global rankings, just call the callback directly
+                      console.log('[SeasonList] Adding contestant in global rankings view:', contestantData);
+                      listUpdateCallback(contestantData);
+                    }
                   }
                 }}
                 draggable={createMode}
@@ -871,7 +1007,6 @@ const SeasonList = forwardRef(({
               >
                 <img
                   className="contestant-image"
-                  // Use getCachedImageUrl for contestant images in detail view
                   src={getCachedImageUrl(contestant.id)} // Use cache
                   alt={contestant.name}
                   loading="lazy"
