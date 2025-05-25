@@ -149,6 +149,23 @@ const GlobalRankings = ({ seasonListRef }) => {
     // Removed other sample lists
   ];
 
+  // Add legacy list data
+  const legacyLists = [
+    {
+      id: 'season-48',
+      name: 'Season 48',
+      userName: 'Global Rankings',
+      createdAt: new Date('2024-01-01').toISOString(), // Adjust date as needed
+      description: 'The final rankings for Survivor Season 48 contestants!',
+      contestants: Array(10).fill(null).map((_, i) => ({ id: `slot-s48-${i+1}`, name: `#${i+1}`, imageUrl: '/images/placeholder.jpg', isEmpty: true }))
+    }
+  ];
+
+  // Function to navigate to legacy page
+  const navigateToLegacy = () => {
+    navigate('/global-rankings/legacy');
+  };
+
   // Effect to find the selected list, load user's ranking, check submission status, and load global ranking if needed
   useEffect(() => {
     const loadData = async () => {
@@ -915,25 +932,36 @@ const GlobalRankings = ({ seasonListRef }) => {
       const globalSnap = await getDoc(globalRankingRef);
       const globalData = globalSnap.exists() ? globalSnap.data() : { totalVotes: 0, contestantScores: {} };
       
-      // Initialize or get existing contestant scores
-      const contestantScores = globalData.contestantScores || {};
+      // Get all user submissions for this list
+      const userRankingsQuery = query(collection(db, 'userGlobalRankings'));
+      const userRankingsSnap = await getDocs(userRankingsQuery);
       
-      // Calculate points for each contestant in the submission (10 points for 1st, 9 for 2nd, etc.)
-      currentRanking.contestants.forEach((contestant, index) => {
-        if (!contestant.isEmpty) {
-          const points = 10 - index; // 10 points for index 0, 9 for index 1, etc.
-          if (!contestantScores[contestant.id]) {
-            contestantScores[contestant.id] = {
-              id: contestant.id,
-              name: contestant.name,
-              imageUrl: contestant.imageUrl,
-              totalScore: points,
-              seasonId: contestant.seasonId,
-              seasonName: contestant.seasonName
-            };
-          } else {
-            contestantScores[contestant.id].totalScore += points;
-          }
+      // Initialize contestant scores
+      const contestantScores = {};
+      
+      // Process each user's submission
+      userRankingsSnap.forEach((userDoc) => {
+        const userData = userDoc.data();
+        if (userData[listId] && userData[listId].ranking) {
+          // Process this user's ranking
+          userData[listId].ranking.forEach((contestant, index) => {
+            if (!contestant.isEmpty) {
+              const points = 10 - index; // 10 points for 1st, 9 for 2nd, etc.
+              
+              if (!contestantScores[contestant.id]) {
+                contestantScores[contestant.id] = {
+                  id: contestant.id,
+                  name: contestant.name,
+                  imageUrl: contestant.imageUrl,
+                  totalScore: points,
+                  seasonId: contestant.seasonId,
+                  seasonName: contestant.seasonName
+                };
+              } else {
+                contestantScores[contestant.id].totalScore += points;
+              }
+            }
+          });
         }
       });
 
@@ -942,9 +970,9 @@ const GlobalRankings = ({ seasonListRef }) => {
         .sort((a, b) => b.totalScore - a.totalScore)
         .slice(0, 10);
 
-      // Update global rankings document
+      // Update global rankings document with recalculated scores
       await setDoc(globalRankingRef, {
-        totalVotes: (globalData.totalVotes || 0) + 1,
+        totalVotes: userRankingsSnap.size, // Total number of unique users who submitted
         contestantScores,
         top10,
         lastUpdated: serverTimestamp()
@@ -958,14 +986,14 @@ const GlobalRankings = ({ seasonListRef }) => {
 
       // Update local state with new global data
       setGlobalTop10(top10);
-      setCurrentListTotalVotes((globalData.totalVotes || 0) + 1);
+      setCurrentListTotalVotes(userRankingsSnap.size);
       
       // Also update the globalRankings state for the overview
       setGlobalRankings(prev => ({
         ...prev,
         [listId]: {
           top10,
-          totalVotes: (globalData.totalVotes || 0) + 1
+          totalVotes: userRankingsSnap.size
         }
       }));
 
@@ -1852,7 +1880,7 @@ const GlobalRankings = ({ seasonListRef }) => {
                  : 'Log in to create or edit your ranking.' // Message if not logged in
              }
            </p>
-        {(userHasSubmitted === true || isEditable) && (
+        {user ? (
              <>
             {/* Toggle Button - Only show if user HAS submitted */}
             {userHasSubmitted === true && (
@@ -1868,15 +1896,18 @@ const GlobalRankings = ({ seasonListRef }) => {
                 {submitError && <div className="submit-feedback error">{submitError}</div>}
                 <button
                   onClick={handleSubmitRanking}
-                  disabled={isSubmitting || !user} // Ensure user check here too
+                  disabled={isSubmitting}
                   className="submit-global-ranking-button"
                 >
                   {isSubmitting ? 'Submitting...' : 'Submit My Ranking'}
                 </button>
-                {!user && <p className="login-prompt">Please log in to submit your ranking.</p>}
               </>
             )}
              </>
+        ) : (
+          <button onClick={() => navigate('/login')} className="toggle-view-button">
+            Login to Vote
+          </button>
         )}
          </div>
 
@@ -2203,11 +2234,16 @@ const GlobalRankings = ({ seasonListRef }) => {
         </p>
       </div>
       
-      <hr className="title-separator" /> {/* ADDED SEPARATOR LINE */}
+      <hr className="title-separator" />
 
-      {/* <h2 className="section-title">Current Global Ranking</h2> */} {/* REMOVED */}
       <div className="global-lists-container">
         {sampleLists.map(list => renderRankingListCard(list))}
+      </div>
+
+      <div className="legacy-section">
+        <button onClick={navigateToLegacy} className="legacy-button">
+          Global Rankings Legacy
+        </button>
       </div>
     </div>
   );

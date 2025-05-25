@@ -26,6 +26,7 @@ import ListCreatorPage from './pages/ListCreatorPage';
 import LoginPage from './pages/LoginPage';
 import ListDetailPage from './pages/ListDetailPage';
 import GlobalRankings from './components/GlobalRankings';
+import GlobalRankingsLegacy from './components/GlobalRankingsLegacy';
 
 // Import survivor background image directly
 import survivorBackgroundImg from './images/survivor-background.jpg';
@@ -566,9 +567,9 @@ function App() {
                 } 
               />
               
-              <Route path="/global-rankings" element={<GlobalRankings seasonListRef={seasonListRef} />} />
-              
-              <Route path="/global-rankings/:listId" element={<GlobalRankings seasonListRef={seasonListRef} />} />
+              <Route path="/global-rankings" element={<GlobalRankings />} />
+              <Route path="/global-rankings/legacy" element={<GlobalRankingsLegacy />} />
+              <Route path="/global-rankings/:listId" element={<GlobalRankings />} />
               
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
