@@ -831,8 +831,8 @@
 @media (max-width: 768px) {
   /* Make sure list items are easier to grab */
   .user-ranking-list .ranking-item {
-    touch-action: none; /* Disable browser handling of all touch gestures */
-    user-select: none; /* Prevent text selection during touch */
+    touch-action: none; 
+    user-select: none;
     -webkit-user-select: none;
     max-width: none;
     min-width: 0;
@@ -937,7 +937,7 @@
   .ranking-item,
   .contestant-item,
   .drag-handle {
-    min-height: 44px; /* Apple's recommended minimum size for touch targets */
+    min-height: 44px; 
   }
 }
 
@@ -948,9 +948,9 @@
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25); 
   border-color: #aaa;
   z-index: 1000; 
-  /* Disable pointer events so elementFromPoint works correctly underneath */
+  
   pointer-events: none; 
-  /* Prevent transitions during direct manipulation for smoother following */
+
   transition: none; 
 }
 
@@ -988,8 +988,8 @@
 @media (max-width: 768px) {
   /* Make sure list items are easier to grab */
   .user-ranking-list .ranking-item {
-    touch-action: none; /* Disable browser handling of all touch gestures */
-    user-select: none; /* Prevent text selection during touch */
+    touch-action: none; 
+    user-select: none; 
     -webkit-user-select: none;
     max-width: none;
     min-width: 0;
@@ -999,7 +999,7 @@
   
   /* Make the drag handle more visible on mobile */
   .ranking-item::before {
-    content: ""; /* Explicitly set content to empty */
+    content: ""; 
     font-size: 16px;
     opacity: 0.8;
     left: 8px;
@@ -1074,7 +1074,7 @@
   .search-dropdown-container {
     position: absolute;
     z-index: 100;
-    width: calc(100% - 20px); /* Account for container padding */
+    width: calc(100% - 20px); 
     max-height: 300px;
     overflow-y: auto;
     left: 10px;
@@ -1132,8 +1132,7 @@
   transform: translateY(0px);
 }
 
-/* Keep existing mobile styles for the button if they exist */
-/* (Assuming mobile styles might be under .mobile-only-button or within a max-width query) */
+
  
  
  
